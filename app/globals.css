@@ -1,23 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #000000;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @layer utilities {
@@ -25,3 +26,38 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Streaming answer cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.streaming-cursor::after {
+  content: '|';
+  animation: blink 0.7s infinite;
+  color: #000;
+}
+
+/* Three dots logo animation */
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; }
+  33% { opacity: 0.2; }
+}
+
+.dot-1 { animation: dotPulse 1.2s ease-in-out infinite 0s; }
+.dot-2 { animation: dotPulse 1.2s ease-in-out infinite 0.4s; }
+.dot-3 { animation: dotPulse 1.2s ease-in-out infinite 0.8s; }
+
+/* Slide up animation */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Accordion */
+details summary::-webkit-details-marker { display: none; }

@@ -1,0 +1,148 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+
+function Logo() {
+  return (
+    <svg width="52" height="8" viewBox="0 0 52 8" fill="none">
+      <circle cx="4" cy="4" r="4" fill="#000" />
+      <line x1="8" y1="4" x2="20" y2="4" stroke="#000" strokeWidth="1.5" />
+      <circle cx="24" cy="4" r="4" fill="#000" />
+      <line x1="28" y1="4" x2="40" y2="4" stroke="#000" strokeWidth="1.5" />
+      <circle cx="44" cy="4" r="4" fill="#000" />
+    </svg>
+  )
+}
+
+const FILTERS = ['All', 'Mental game', 'Recovery', 'Shooting', 'Nutrition', 'Explosiveness']
+
+type Answer = {
+  id: string
+  question: string
+  answer: string
+  topic: string | null
+  created_at: string
+}
+
+export default function LibraryPage() {
+  const [answers, setAnswers] = useState<Answer[]>([])
+  const [filter, setFilter] = useState('All')
+  const [search, setSearch] = useState('')
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+
+  useEffect(() => {
+    // TODO: fetch from Supabase when auth is wired up
+    // For now, show empty state
+    setLoading(false)
+  }, [])
+
+  const filtered = answers.filter(a => {
+    const matchFilter = filter === 'All' || a.topic === filter
+    const matchSearch = !search || a.question.toLowerCase().includes(search.toLowerCase())
+    return matchFilter && matchSearch
+  })
+
+  const formatDate = (s: string) => new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+  return (
+    <div className="min-h-screen bg-white text-black flex flex-col">
+      <nav className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+        <Link href="/home"><Logo /></Link>
+        <Link href="/ask" className="text-sm font-semibold bg-black text-white px-4 py-2 hover:opacity-80 transition-opacity">
+          Ask now
+        </Link>
+      </nav>
+
+      <main className="flex-1 px-6 py-12 max-w-3xl mx-auto w-full pb-24">
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-8">Your playbook.</h1>
+
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="Search your answers..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full border border-gray-200 px-4 py-3 text-sm outline-none focus:border-black transition-colors mb-6"
+        />
+
+        {/* Filter chips */}
+        <div className="flex flex-wrap gap-2 mb-8">
+          {FILTERS.map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-sm px-3 py-1.5 transition-colors ${
+                filter === f
+                  ? 'bg-black text-white'
+                  : 'border border-gray-200 text-gray-500 hover:border-black hover:text-black'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="border border-gray-100 p-6 animate-pulse">
+                <div className="h-4 bg-gray-100 rounded w-3/4 mb-3" />
+                <div className="h-3 bg-gray-100 rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-xl font-bold tracking-tight mb-2">Your playbook starts here.</p>
+            <p className="text-gray-400 text-sm mb-8">Ask your first question to get started.</p>
+            <button
+              onClick={() => router.push('/ask')}
+              className="bg-black text-white px-6 py-3 text-sm font-semibold hover:opacity-80 transition-opacity"
+            >
+              Ask now →
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map(a => (
+              <div
+                key={a.id}
+                className="border border-gray-100 p-6 cursor-pointer hover:border-gray-300 transition-colors"
+                onClick={() => setExpanded(expanded === a.id ? null : a.id)}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <p className="font-bold text-sm tracking-tight flex-1">{a.question}</p>
+                  <span className="text-xs text-gray-400 whitespace-nowrap mt-0.5">{formatDate(a.created_at)}</span>
+                </div>
+                {expanded !== a.id && (
+                  <p className="text-gray-400 text-sm mt-2 line-clamp-2">{a.answer}</p>
+                )}
+                {expanded === a.id && (
+                  <p className="text-black text-sm mt-4 leading-relaxed">{a.answer}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* Mobile bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex md:hidden z-40">
+        {[
+          { href: '/home', label: 'Home' },
+          { href: '/library', label: 'Library' },
+          { href: '/browse', label: 'Browse' },
+          { href: '/ask-directly', label: 'Ask Directly' },
+        ].map(({ href, label }) => (
+          <Link key={href} href={href} className={`flex-1 flex flex-col items-center py-3 text-xs font-semibold tracking-tight ${href === '/library' ? 'text-black' : 'text-gray-400'}`}>
+            {label}
+          </Link>
+        ))}
+      </nav>
+    </div>
+  )
+}
