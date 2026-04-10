@@ -342,8 +342,6 @@ export default function HomePage() {
           <div className="w-16" />
         </nav>
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-8 max-w-sm mx-auto">
-          <div className="w-2 h-2 bg-white rounded-full" />
-
           <div>
             <h2 className="text-3xl font-bold mb-3">Elijah got your question.</h2>
             <p className="text-gray-500 text-base leading-relaxed">
@@ -355,8 +353,8 @@ export default function HomePage() {
           {/* Beta message */}
           <div className="border border-gray-800 px-6 py-5 text-left w-full">
             <p className="text-gray-500 text-sm leading-relaxed">
-              Since we&apos;re in beta, we personally verify every question and answer before it reaches you. Bear with us —{' '}
-              <span className="text-white">we&apos;re connecting the dots.</span>
+              Since we&apos;re in beta, we personally verify every question and answer before it reaches you. Bear with us.{' '}
+              <span className="text-white">We&apos;re connecting the dots.</span>
             </p>
           </div>
 
