@@ -1,8 +1,7 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 function Logo({ dark = false }: { dark?: boolean }) {
   const c = dark ? '#fff' : '#000'
@@ -17,6 +16,33 @@ function Logo({ dark = false }: { dark?: boolean }) {
   )
 }
 
+function ThinkingDots() {
+  return (
+    <>
+      <style>{`
+        @keyframes dotPulse {
+          0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+          40% { opacity: 1; transform: scale(1); }
+        }
+        .dot-pulse span {
+          display: inline-block;
+          width: 10px;
+          height: 10px;
+          margin: 0 5px;
+          background: white;
+          border-radius: 50%;
+          animation: dotPulse 1.4s ease-in-out infinite;
+        }
+        .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+        .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+      `}</style>
+      <div className="dot-pulse flex items-center justify-center">
+        <span /><span /><span />
+      </div>
+    </>
+  )
+}
+
 const SUGGESTIONS = [
   "I freeze up in real games but ball out in practice",
   "How do I get my confidence back after a bad game?",
@@ -28,22 +54,249 @@ const SUGGESTIONS = [
   "I'm scared to take shots when it matters",
 ]
 
+type Mode = 'idle' | 'loading' | 'preview' | 'email_gate' | 'submitted'
+
+const PREVIEW_CHARS = 300 // how many chars to show before blur
+
 export default function HomePage() {
   const [question, setQuestion] = useState('')
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const [mode, setMode] = useState<Mode>('idle')
+  const [streamedText, setStreamedText] = useState('')
+  const [email, setEmail] = useState('')
+  const [emailLoading, setEmailLoading] = useState(false)
+  const [ageConfirmed, setAgeConfirmed] = useState(false)
+  const fullAnswerRef = useRef('')
 
-  const handleSubmit = () => {
-    if (!question.trim() || loading) return
-    setLoading(true)
-    sessionStorage.setItem('pending_question', question.trim())
-    router.push('/ask')
+  const handleSubmit = async () => {
+    if (!question.trim() || mode !== 'idle') return
+    setMode('loading')
+    setStreamedText('')
+    fullAnswerRef.current = ''
+
+    try {
+      const res = await fetch('/api/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: question.trim() }),
+      })
+
+      if (!res.ok || !res.body) {
+        setMode('idle')
+        return
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let accumulated = ''
+      let modeSet = false
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        accumulated += decoder.decode(value, { stream: true })
+        fullAnswerRef.current = accumulated
+        setStreamedText(accumulated)
+
+        // Switch from loading to preview once we have enough text
+        if (!modeSet && accumulated.length > 80) {
+          modeSet = true
+          setMode('preview')
+        }
+      }
+
+      setMode('preview')
+    } catch {
+      setMode('idle')
+    }
+  }
+
+  const handleEmailSubmit = async () => {
+    if (!email.trim() || !ageConfirmed || emailLoading) return
+    setEmailLoading(true)
+
+    try {
+      await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: question.trim(),
+          email: email.trim(),
+          previewAnswer: fullAnswerRef.current,
+        }),
+      })
+      setMode('submitted')
+    } catch {
+      // still show submitted — question was received
+      setMode('submitted')
+    } finally {
+      setEmailLoading(false)
+    }
   }
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit() }
   }
 
+  const reset = () => {
+    setMode('idle')
+    setQuestion('')
+    setStreamedText('')
+    setEmail('')
+    setAgeConfirmed(false)
+    fullAnswerRef.current = ''
+  }
+
+  // ── Loading state ──────────────────────────────────────────────────────────
+  if (mode === 'loading') {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-6 py-5">
+          <Logo dark />
+          <div className="flex items-center gap-6">
+            <Link href="/sign-in" className="text-sm text-gray-500 hover:text-white transition-colors">Sign in</Link>
+            <Link href="/history" className="text-sm text-gray-500 hover:text-white transition-colors">My questions</Link>
+          </div>
+        </nav>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-8">
+          <ThinkingDots />
+          <div>
+            <p className="text-white text-lg font-semibold mb-1">Elijah is thinking...</p>
+            <p className="text-gray-600 text-sm">Pulling from 20 years of pro experience</p>
+          </div>
+          <div className="border border-gray-800 px-6 py-4 max-w-sm w-full text-left">
+            <p className="text-gray-600 text-xs uppercase tracking-widest mb-2">Your question</p>
+            <p className="text-gray-400 text-sm italic">&ldquo;{question}&rdquo;</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Preview + email gate ───────────────────────────────────────────────────
+  if (mode === 'preview' || mode === 'email_gate') {
+    const visibleText = streamedText.slice(0, PREVIEW_CHARS)
+    const hiddenText = streamedText.slice(PREVIEW_CHARS)
+    const isDone = streamedText.length > 0
+
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-6 py-5">
+          <button onClick={reset} className="text-gray-500 hover:text-white text-sm transition-colors">← Back</button>
+          <Logo dark />
+          <div className="w-16" />
+        </nav>
+
+        <div className="flex-1 flex flex-col items-center px-6 py-10 max-w-xl mx-auto w-full">
+          {/* Question */}
+          <div className="w-full mb-8">
+            <p className="text-gray-600 text-xs uppercase tracking-widest mb-2">Your question</p>
+            <p className="text-gray-300 text-base italic">&ldquo;{question}&rdquo;</p>
+          </div>
+
+          {/* Answer */}
+          <div className="w-full relative">
+            <p className="text-gray-500 text-xs uppercase tracking-widest mb-4">Elijah says</p>
+
+            {/* Visible part */}
+            <div className="text-white text-base leading-relaxed">
+              {visibleText}
+              {!isDone && <span className="inline-block w-1 h-4 bg-white ml-1 animate-pulse" />}
+            </div>
+
+            {/* Blurred part + gate */}
+            {hiddenText && (
+              <div className="relative mt-0">
+                <div
+                  className="text-white text-base leading-relaxed select-none pointer-events-none"
+                  style={{ filter: 'blur(6px)', opacity: 0.6, userSelect: 'none' }}
+                >
+                  {hiddenText}
+                </div>
+
+                {/* Email gate overlay */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-black via-black/90 to-transparent pt-8">
+                  <p className="text-white font-semibold text-lg mb-1 text-center">Get the full answer</p>
+                  <p className="text-gray-500 text-sm mb-6 text-center">Enter your email and Elijah will send it to you</p>
+
+                  <div className="w-full max-w-xs flex flex-col gap-3">
+                    <input
+                      type="email"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleEmailSubmit() }}
+                      className="w-full px-4 py-3 bg-transparent border border-gray-700 text-white placeholder-gray-600 outline-none focus:border-white transition-colors text-sm"
+                    />
+                    <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={ageConfirmed}
+                        onChange={e => setAgeConfirmed(e.target.checked)}
+                        className="mt-0.5 accent-white"
+                      />
+                      I confirm I am 13 years of age or older
+                    </label>
+                    <button
+                      onClick={handleEmailSubmit}
+                      disabled={!email.trim() || !ageConfirmed || emailLoading}
+                      className="w-full bg-white text-black py-3 text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
+                    >
+                      {emailLoading ? 'Sending...' : 'Send me the full answer →'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Submitted ──────────────────────────────────────────────────────────────
+  if (mode === 'submitted') {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-6 py-5">
+          <div className="w-16" />
+          <Logo dark />
+          <div className="w-16" />
+        </nav>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-8 max-w-sm mx-auto">
+          <div className="w-2 h-2 bg-white rounded-full" />
+
+          <div>
+            <h2 className="text-3xl font-bold mb-3">Elijah got your question.</h2>
+            <p className="text-gray-500 text-base leading-relaxed">
+              The full answer is on its way to
+            </p>
+            <p className="text-white font-semibold mt-1 mb-6">{email}</p>
+          </div>
+
+          {/* Beta message */}
+          <div className="border border-gray-800 px-6 py-5 text-left w-full">
+            <p className="text-gray-500 text-sm leading-relaxed">
+              Since we&apos;re in beta, we personally verify every question and answer before it reaches you. Bear with us —{' '}
+              <span className="text-white">we&apos;re connecting the dots.</span>
+            </p>
+          </div>
+
+          <div className="border-l-2 border-gray-800 pl-4 text-left w-full">
+            <p className="text-gray-600 text-sm italic">&ldquo;{question}&rdquo;</p>
+          </div>
+
+          <button
+            onClick={reset}
+            className="text-sm text-gray-600 hover:text-white transition-colors"
+          >
+            Ask another question
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Idle (homepage) ────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-screen bg-black">
 
@@ -56,15 +309,12 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero — everything above the fold */}
+      {/* Hero */}
       <section className="flex-1 flex flex-col items-center justify-center px-6 pb-16 text-center min-h-[calc(100vh-72px)]">
-
-        {/* Credibility */}
         <p className="text-xs text-gray-600 tracking-widest uppercase mb-8 font-medium">
           20 years of pro experience · Euroleague · NBA
         </p>
 
-        {/* Headline */}
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight mb-4 max-w-3xl text-white">
           You know how to train
           <br />your body.
@@ -78,7 +328,6 @@ export default function HomePage() {
           Elijah Bryant did both. Ask him anything.
         </p>
 
-        {/* Ask box */}
         <div className="w-full max-w-xl">
           <div className="border border-gray-700 focus-within:border-white transition-all bg-black">
             <textarea
@@ -96,15 +345,14 @@ export default function HomePage() {
               )}
               <button
                 onClick={handleSubmit}
-                disabled={!question.trim() || loading}
+                disabled={!question.trim()}
                 className="ml-auto bg-white text-black px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
               >
-                {loading ? 'Getting your answer...' : 'Ask Elijah →'}
+                Ask Elijah →
               </button>
             </div>
           </div>
 
-          {/* Suggestions */}
           <div className="flex flex-wrap gap-2 mt-4 justify-center">
             {SUGGESTIONS.slice(0, 4).map((s) => (
               <button
@@ -121,7 +369,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Below fold — for the undecided */}
+      {/* Below fold */}
       <section className="bg-white px-6 py-24">
         <div className="max-w-2xl mx-auto">
           <p className="text-xs text-gray-400 tracking-widest uppercase mb-8">The real problem</p>
@@ -151,7 +399,6 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Second ask box for those who scrolled */}
           <div className="border border-black focus-within:border-2 transition-all">
             <textarea
               value={question}
@@ -165,10 +412,10 @@ export default function HomePage() {
             <div className="flex items-center justify-between px-4 pb-3">
               <button
                 onClick={handleSubmit}
-                disabled={!question.trim() || loading}
+                disabled={!question.trim()}
                 className="ml-auto bg-black text-white px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
               >
-                {loading ? 'Getting your answer...' : 'Ask Elijah for Free →'}
+                Ask Elijah for Free →
               </button>
             </div>
           </div>

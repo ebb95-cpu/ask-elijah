@@ -18,15 +18,30 @@ function Logo({ dark = false }: { dark?: boolean }) {
   )
 }
 
-function AnimatedLogo() {
+function ThinkingDots() {
   return (
-    <svg width="52" height="8" viewBox="0 0 52 8" fill="none">
-      <circle cx="4" cy="4" r="4" fill="#fff" className="dot-1" />
-      <line x1="8" y1="4" x2="20" y2="4" stroke="#fff" strokeWidth="1.5" />
-      <circle cx="24" cy="4" r="4" fill="#fff" className="dot-2" />
-      <line x1="28" y1="4" x2="40" y2="4" stroke="#fff" strokeWidth="1.5" />
-      <circle cx="44" cy="4" r="4" fill="#fff" className="dot-3" />
-    </svg>
+    <>
+      <style>{`
+        @keyframes dotPulse {
+          0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+          40% { opacity: 1; transform: scale(1); }
+        }
+        .dot-pulse span {
+          display: inline-block;
+          width: 10px;
+          height: 10px;
+          margin: 0 5px;
+          background: white;
+          border-radius: 50%;
+          animation: dotPulse 1.4s ease-in-out infinite;
+        }
+        .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+        .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+      `}</style>
+      <div className="dot-pulse">
+        <span /><span /><span />
+      </div>
+    </>
   )
 }
 
@@ -593,9 +608,16 @@ export default function AskPage() {
   // Loading
   if (mode === 'loading') {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-6">
-        <AnimatedLogo />
-        <p className="text-gray-500 text-sm">Sending to Elijah...</p>
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-8 px-6 text-center">
+        <ThinkingDots />
+        <div>
+          <p className="text-white text-lg font-semibold mb-2">Elijah is thinking...</p>
+          <p className="text-gray-500 text-sm">Pulling from 20 years of pro experience</p>
+        </div>
+        <div className="border border-gray-800 rounded-lg px-6 py-4 max-w-sm w-full text-left">
+          <p className="text-gray-600 text-xs uppercase tracking-widest mb-2">Your question</p>
+          <p className="text-gray-300 text-sm italic">&ldquo;{question}&rdquo;</p>
+        </div>
       </div>
     )
   }

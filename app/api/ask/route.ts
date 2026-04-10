@@ -147,7 +147,7 @@ async function notifyElijah(
 
 export async function POST(req: NextRequest) {
   try {
-    const { question, email, language } = await req.json()
+    const { question, email, language, previewAnswer } = await req.json()
 
     if (!question?.trim()) {
       return NextResponse.json({ error: 'Question required' }, { status: 400 })
@@ -199,24 +199,28 @@ export async function POST(req: NextRequest) {
       ? `${ragContext}Now answer this question using the above context where relevant:\n\n${question}`
       : question
 
-    // Generate answer with Claude — not streamed, full response
+    // Use preview answer if already generated on the frontend, otherwise generate fresh
     let draft = ''
-    try {
-      const response = await getAnthropic().messages.create({
-        model: 'claude-haiku-4-5',
-        max_tokens: 1024,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userMessage + langInstruction }],
-      })
-      draft = response.content[0].type === 'text' ? response.content[0].text : ''
-    } catch {
-      const response = await getAnthropic().messages.create({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 1024,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userMessage + langInstruction }],
-      })
-      draft = response.content[0].type === 'text' ? response.content[0].text : ''
+    if (previewAnswer?.trim()) {
+      draft = previewAnswer.trim()
+    } else {
+      try {
+        const response = await getAnthropic().messages.create({
+          model: 'claude-haiku-4-5',
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: userMessage + langInstruction }],
+        })
+        draft = response.content[0].type === 'text' ? response.content[0].text : ''
+      } catch {
+        const response = await getAnthropic().messages.create({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: userMessage + langInstruction }],
+        })
+        draft = response.content[0].type === 'text' ? response.content[0].text : ''
+      }
     }
 
     // Save to Supabase as pending — strip verify markers from stored answer
