@@ -16,29 +16,36 @@ function Logo({ dark = false }: { dark?: boolean }) {
   )
 }
 
-function ThinkingDots() {
+function LoadingLogo() {
   return (
     <>
       <style>{`
-        @keyframes dotPulse {
-          0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
-          40% { opacity: 1; transform: scale(1); }
+        @keyframes drawLine {
+          0%   { stroke-dashoffset: 52; }
+          60%  { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: 0; }
         }
-        .dot-pulse span {
-          display: inline-block;
-          width: 10px;
-          height: 10px;
-          margin: 0 5px;
-          background: white;
-          border-radius: 50%;
-          animation: dotPulse 1.4s ease-in-out infinite;
+        @keyframes fadeDots {
+          0%, 100% { opacity: 0.3; }
+          50%       { opacity: 1; }
         }
-        .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
-        .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+        .loading-dot-1 { animation: fadeDots 1.6s ease-in-out infinite 0s; }
+        .loading-dot-2 { animation: fadeDots 1.6s ease-in-out infinite 0.4s; }
+        .loading-dot-3 { animation: fadeDots 1.6s ease-in-out infinite 0.8s; }
+        .scan-line {
+          stroke-dasharray: 52;
+          stroke-dashoffset: 52;
+          animation: drawLine 1.6s ease-in-out infinite;
+        }
       `}</style>
-      <div className="dot-pulse flex items-center justify-center">
-        <span /><span /><span />
-      </div>
+      <svg width="104" height="16" viewBox="0 0 52 8" fill="none">
+        {/* Static dim dots */}
+        <circle className="loading-dot-1" cx="4" cy="4" r="4" fill="white" />
+        <circle className="loading-dot-2" cx="24" cy="4" r="4" fill="white" />
+        <circle className="loading-dot-3" cx="44" cy="4" r="4" fill="white" />
+        {/* Animated scan line drawn left to right */}
+        <line className="scan-line" x1="0" y1="4" x2="52" y2="4" stroke="white" strokeWidth="1.5" />
+      </svg>
     </>
   )
 }
@@ -233,7 +240,7 @@ export default function HomePage() {
           </div>
         </nav>
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-8">
-          <ThinkingDots />
+          <LoadingLogo />
           <div>
             <p className="text-white text-lg font-semibold mb-1">Elijah is thinking...</p>
             <p className="text-gray-600 text-sm">Pulling from 20 years of pro experience</p>
