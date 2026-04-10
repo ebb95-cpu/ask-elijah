@@ -22,29 +22,25 @@ function LoadingLogo() {
       <style>{`
         @keyframes drawLine {
           0%   { stroke-dashoffset: 52; }
-          60%  { stroke-dashoffset: 0; }
+          70%  { stroke-dashoffset: 0; }
           100% { stroke-dashoffset: 0; }
         }
-        @keyframes fadeDots {
-          0%, 100% { opacity: 0.3; }
-          50%       { opacity: 1; }
-        }
-        .loading-dot-1 { animation: fadeDots 1.6s ease-in-out infinite 0s; }
-        .loading-dot-2 { animation: fadeDots 1.6s ease-in-out infinite 0.4s; }
-        .loading-dot-3 { animation: fadeDots 1.6s ease-in-out infinite 0.8s; }
         .scan-line {
           stroke-dasharray: 52;
           stroke-dashoffset: 52;
-          animation: drawLine 1.6s ease-in-out infinite;
+          animation: drawLine 1.5s ease-in-out infinite;
         }
       `}</style>
-      <svg width="104" height="16" viewBox="0 0 52 8" fill="none">
-        {/* Static dim dots */}
-        <circle className="loading-dot-1" cx="4" cy="4" r="4" fill="white" />
-        <circle className="loading-dot-2" cx="24" cy="4" r="4" fill="white" />
-        <circle className="loading-dot-3" cx="44" cy="4" r="4" fill="white" />
-        {/* Animated scan line drawn left to right */}
+      <svg width="130" height="20" viewBox="0 0 52 8" fill="none">
+        {/* Dim track lines */}
+        <line x1="8" y1="4" x2="20" y2="4" stroke="#444" strokeWidth="1.5" />
+        <line x1="28" y1="4" x2="40" y2="4" stroke="#444" strokeWidth="1.5" />
+        {/* Animated white line draws left → right through everything */}
         <line className="scan-line" x1="0" y1="4" x2="52" y2="4" stroke="white" strokeWidth="1.5" />
+        {/* Dots always on top */}
+        <circle cx="4" cy="4" r="4" fill="white" />
+        <circle cx="24" cy="4" r="4" fill="white" />
+        <circle cx="44" cy="4" r="4" fill="white" />
       </svg>
     </>
   )
