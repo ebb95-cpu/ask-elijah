@@ -399,10 +399,6 @@ export default function HomePage() {
           <br />how to train your mind.
         </h2>
 
-        <p className="text-gray-600 text-base md:text-lg max-w-md leading-relaxed mb-3">
-          Elijah Bryant did both. Ask him anything.
-        </p>
-
         <div className="w-full max-w-xl mt-10">
           <div className="border border-gray-700 focus-within:border-white transition-all bg-black">
             <textarea
