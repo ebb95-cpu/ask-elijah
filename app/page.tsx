@@ -75,7 +75,7 @@ function ActivityTicker() {
         .ticker-visible { animation: tickerFade 0.4s ease forwards; }
         .ticker-hidden { opacity: 0; transition: opacity 0.3s ease; }
       `}</style>
-      <div className={`flex items-center gap-2 text-xs bg-gray-900 border border-gray-800 px-3 py-2 rounded-full ${visible ? 'ticker-visible' : 'ticker-hidden'}`}>
+      <div className={`flex items-center gap-2 text-xs bg-gray-900 border border-gray-700 px-3 py-2 rounded-full ${visible ? 'ticker-visible' : 'ticker-hidden'}`}>
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
         <span className="text-gray-400">Question from</span>
         <span className="text-white font-medium">{ACTIVITY_CITIES[cityIndex]}</span>
@@ -97,8 +97,8 @@ function QuestionCounter() {
   }, [])
 
   return (
-    <p className="text-xs text-gray-700">
-      <span className="text-gray-400 font-semibold">{count.toLocaleString()}</span> questions answered
+    <p className="text-sm text-gray-500 mt-2">
+      <span className="text-white font-semibold">{count.toLocaleString()}</span> questions answered
     </p>
   )
 }
