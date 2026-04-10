@@ -20,27 +20,28 @@ function LoadingLogo() {
   return (
     <>
       <style>{`
-        @keyframes drawLine {
-          0%   { stroke-dashoffset: 52; }
+        @keyframes drawLeft {
+          0%   { stroke-dashoffset: 12; }
+          35%  { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: 0; }
+        }
+        @keyframes drawRight {
+          0%   { stroke-dashoffset: 12; }
+          35%  { stroke-dashoffset: 12; }
           70%  { stroke-dashoffset: 0; }
           100% { stroke-dashoffset: 0; }
         }
-        .scan-line {
-          stroke-dasharray: 52;
-          stroke-dashoffset: 52;
-          animation: drawLine 1.5s ease-in-out infinite;
-        }
+        .seg-left  { stroke-dasharray: 12; stroke-dashoffset: 12; animation: drawLeft  2s ease-in-out infinite; }
+        .seg-right { stroke-dasharray: 12; stroke-dashoffset: 12; animation: drawRight 2s ease-in-out infinite; }
       `}</style>
       <svg width="130" height="20" viewBox="0 0 52 8" fill="none">
-        {/* Dim track lines */}
-        <line x1="8" y1="4" x2="20" y2="4" stroke="#444" strokeWidth="1.5" />
-        <line x1="28" y1="4" x2="40" y2="4" stroke="#444" strokeWidth="1.5" />
-        {/* Animated white line draws left → right through everything */}
-        <line className="scan-line" x1="0" y1="4" x2="52" y2="4" stroke="white" strokeWidth="1.5" />
-        {/* Dots always on top */}
-        <circle cx="4" cy="4" r="4" fill="white" />
+        {/* Dots always visible */}
+        <circle cx="4"  cy="4" r="4" fill="white" />
         <circle cx="24" cy="4" r="4" fill="white" />
         <circle cx="44" cy="4" r="4" fill="white" />
+        {/* Lines draw in: left segment first, then right */}
+        <line className="seg-left"  x1="8" y1="4" x2="20" y2="4" stroke="white" strokeWidth="1.5" />
+        <line className="seg-right" x1="28" y1="4" x2="40" y2="4" stroke="white" strokeWidth="1.5" />
       </svg>
     </>
   )
