@@ -43,15 +43,16 @@ function ThinkingDots() {
   )
 }
 
-const ACTIVITY_CITIES = [
-  'Istanbul', 'Athens', 'Lagos', 'Tel Aviv', 'Belgrade', 'Houston, TX',
-  'Barcelona', 'Brooklyn, NY', 'Nairobi', 'Paris', 'Toronto', 'Manila',
-  'Chicago, IL', 'Thessaloniki', 'Accra', 'Madrid', 'Los Angeles, CA',
-  'Ankara', 'Dubai', 'Atlanta, GA', 'London', 'Johannesburg', 'Detroit, MI',
-  'Beirut', 'Rome', 'Phoenix, AZ', 'Dakar', 'Amsterdam', 'Memphis, TN',
+const ACTIVITY_LOCATIONS = [
+  'Athens, Greece', 'Istanbul, Turkey', 'Lagos, Nigeria', 'Tel Aviv, Israel',
+  'Belgrade, Serbia', 'Houston, TX', 'Barcelona, Spain', 'Brooklyn, NY',
+  'Nairobi, Kenya', 'Paris, France', 'Toronto, Canada', 'Manila, Philippines',
+  'Chicago, IL', 'Thessaloniki, Greece', 'Accra, Ghana', 'Madrid, Spain',
+  'Los Angeles, CA', 'Ankara, Turkey', 'Dubai, UAE', 'Atlanta, GA',
+  'London, UK', 'Johannesburg, South Africa', 'Detroit, MI', 'Beirut, Lebanon',
+  'Rome, Italy', 'Phoenix, AZ', 'Dakar, Senegal', 'Amsterdam, Netherlands', 'Memphis, TN',
 ]
 
-// Shuffle once on load so order is different every session
 function shuffled<T>(arr: T[]): T[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -61,53 +62,13 @@ function shuffled<T>(arr: T[]): T[] {
   return a
 }
 
-function ActivityTicker() {
-  const cities = useState(() => shuffled(ACTIVITY_CITIES))[0]
-  const [cityIndex, setCityIndex] = useState(0)
-  const [visible, setVisible] = useState(true)
+const COUNT_SEED = 847
 
-  useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>
-
-    const cycle = () => {
-      setVisible(false)
-      setTimeout(() => {
-        setCityIndex(i => (i + 1) % cities.length)
-        setVisible(true)
-        // Random delay between 3.5s and 9s
-        const next = 3500 + Math.random() * 5500
-        timeout = setTimeout(cycle, next)
-      }, 500)
-    }
-
-    // First cycle after a random 2–5s delay so it doesn't fire immediately on load
-    timeout = setTimeout(cycle, 2000 + Math.random() * 3000)
-    return () => clearTimeout(timeout)
-  }, [cities])
-
-  return (
-    <>
-      <style>{`
-        @keyframes tickerFade {
-          from { opacity: 0; transform: translateY(6px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .ticker-visible { animation: tickerFade 0.4s ease forwards; }
-        .ticker-hidden { opacity: 0; transition: opacity 0.3s ease; }
-      `}</style>
-      <div className={`flex items-center gap-2 text-xs bg-gray-900 border border-gray-700 px-3 py-2 rounded-full ${visible ? 'ticker-visible' : 'ticker-hidden'}`}>
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-        <span className="text-gray-400">Question from</span>
-        <span className="text-white font-medium">{ACTIVITY_CITIES[cityIndex]}</span>
-      </div>
-    </>
-  )
-}
-
-const COUNT_SEED = 847 // base count so it never reads 0
-
-function QuestionCounter() {
-  const [count, setCount] = useState<number>(COUNT_SEED)
+function LiveTicker() {
+  const locations = useState(() => shuffled(ACTIVITY_LOCATIONS))[0]
+  const [index, setIndex] = useState(0)
+  const [count, setCount] = useState(COUNT_SEED)
+  const [visible, setVisible] = useState(false)
 
   useEffect(() => {
     fetch('/api/stats')
@@ -116,10 +77,45 @@ function QuestionCounter() {
       .catch(() => {})
   }, [])
 
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>
+
+    const cycle = () => {
+      setVisible(false)
+      setTimeout(() => {
+        setIndex(i => (i + 1) % locations.length)
+        setCount(c => c + Math.floor(Math.random() * 2 + 1)) // increment by 1–2
+        setVisible(true)
+        timeout = setTimeout(cycle, 4000 + Math.random() * 5000)
+      }, 500)
+    }
+
+    // Show first notification after 2–4s
+    timeout = setTimeout(() => {
+      setVisible(true)
+      timeout = setTimeout(cycle, 4000 + Math.random() * 5000)
+    }, 2000 + Math.random() * 2000)
+
+    return () => clearTimeout(timeout)
+  }, [locations])
+
   return (
-    <p className="text-sm text-gray-500 mt-2">
-      <span className="text-white font-semibold">{count.toLocaleString()}</span> questions answered
-    </p>
+    <>
+      <style>{`
+        @keyframes tickerSlide {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .ticker-in { animation: tickerSlide 0.4s ease forwards; }
+        .ticker-out { opacity: 0; transition: opacity 0.3s ease; }
+      `}</style>
+      <div className={`flex items-center gap-2 text-xs bg-gray-900 border border-gray-700 px-3 py-2.5 rounded-full ${visible ? 'ticker-in' : 'ticker-out'}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+        <span className="text-white font-semibold">{count.toLocaleString()}</span>
+        <span className="text-gray-400">questions answered from</span>
+        <span className="text-white font-medium">{locations[index]}</span>
+      </div>
+    </>
   )
 }
 
@@ -408,9 +404,7 @@ export default function HomePage() {
           Elijah Bryant did both. Ask him anything.
         </p>
 
-        <QuestionCounter />
-
-        <div className="w-full max-w-xl mt-8">
+        <div className="w-full max-w-xl mt-10">
           <div className="border border-gray-700 focus-within:border-white transition-all bg-black">
             <textarea
               value={question}
@@ -452,9 +446,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Fixed activity ticker — bottom left */}
+      {/* Fixed live ticker — bottom left */}
       <div className="fixed bottom-6 left-6 z-50">
-        <ActivityTicker />
+        <LiveTicker />
       </div>
 
       {/* Below fold */}
