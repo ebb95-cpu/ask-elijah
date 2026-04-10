@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 function Logo({ dark = false }: { dark?: boolean }) {
   const c = dark ? '#fff' : '#000'
@@ -40,6 +40,65 @@ function ThinkingDots() {
         <span /><span /><span />
       </div>
     </>
+  )
+}
+
+const ACTIVITY_CITIES = [
+  'Istanbul', 'Athens', 'Lagos', 'Tel Aviv', 'Belgrade', 'Houston, TX',
+  'Barcelona', 'Brooklyn, NY', 'Nairobi', 'Paris', 'Toronto', 'Manila',
+  'Chicago, IL', 'Thessaloniki', 'Accra', 'Madrid', 'Los Angeles, CA',
+  'Ankara', 'Dubai', 'Atlanta, GA',
+]
+
+function ActivityTicker() {
+  const [cityIndex, setCityIndex] = useState(0)
+  const [visible, setVisible] = useState(true)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisible(false)
+      setTimeout(() => {
+        setCityIndex(i => (i + 1) % ACTIVITY_CITIES.length)
+        setVisible(true)
+      }, 400)
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <>
+      <style>{`
+        @keyframes tickerFade {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .ticker-visible { animation: tickerFade 0.4s ease forwards; }
+        .ticker-hidden { opacity: 0; }
+      `}</style>
+      <div className={`flex items-center gap-2 text-xs text-gray-500 ${visible ? 'ticker-visible' : 'ticker-hidden'}`}>
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+        Question from <span className="text-gray-300">{ACTIVITY_CITIES[cityIndex]}</span>
+      </div>
+    </>
+  )
+}
+
+const COUNT_SEED = 847 // base count so it never reads 0
+
+function QuestionCounter() {
+  const [count, setCount] = useState<number>(COUNT_SEED)
+
+  useEffect(() => {
+    fetch('/api/stats')
+      .then(r => r.json())
+      .then(d => setCount(COUNT_SEED + (d.count ?? 0)))
+      .catch(() => {})
+  }, [])
+
+  return (
+    <p className="text-xs text-gray-700">
+      <span className="text-gray-400 font-semibold">{count.toLocaleString()}</span> questions answered
+    </p>
   )
 }
 
@@ -353,19 +412,24 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 mt-4 justify-center">
-            {SUGGESTIONS.slice(0, 4).map((s) => (
-              <button
-                key={s}
-                onClick={() => setQuestion(s)}
-                className="text-xs border border-gray-800 px-3 py-1.5 text-gray-500 hover:border-gray-400 hover:text-gray-200 transition-colors text-left"
-              >
-                {s}
-              </button>
+          <div className="flex flex-wrap gap-x-3 gap-y-2 mt-4 justify-center items-center">
+            {SUGGESTIONS.slice(0, 4).map((s, i) => (
+              <span key={s} className="flex items-center gap-3">
+                <button
+                  onClick={() => setQuestion(s)}
+                  className="text-xs text-gray-600 hover:text-gray-200 transition-colors"
+                >
+                  {s}
+                </button>
+                {i < 3 && <span className="text-gray-800 text-xs">·</span>}
+              </span>
             ))}
           </div>
 
-          <p className="text-xs text-gray-700 mt-5">No account needed. First answer is free.</p>
+          <div className="flex items-center justify-between mt-5 w-full max-w-xl">
+            <ActivityTicker />
+            <QuestionCounter />
+          </div>
         </div>
       </section>
 
@@ -399,39 +463,19 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="border border-black focus-within:border-2 transition-all">
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder="What's actually going on in your head?"
-              rows={3}
-              className="w-full px-4 pt-4 pb-2 text-black placeholder-gray-300 text-lg leading-relaxed resize-none outline-none bg-transparent"
-              style={{ minHeight: '80px' }}
-            />
-            <div className="flex items-center justify-between px-4 pb-3">
-              <button
-                onClick={handleSubmit}
-                disabled={!question.trim()}
-                className="ml-auto bg-black text-white px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
-              >
-                Ask Elijah for Free →
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2 mt-4">
-            {SUGGESTIONS.slice(4).map((s) => (
-              <button
-                key={s}
-                onClick={() => setQuestion(s)}
-                className="text-sm border border-gray-200 px-3 py-1.5 text-gray-400 hover:border-black hover:text-black transition-colors"
-              >
-                {s}
-              </button>
+          <div className="flex flex-wrap gap-x-3 gap-y-2 items-center">
+            {SUGGESTIONS.slice(4).map((s, i) => (
+              <span key={s} className="flex items-center gap-3">
+                <button
+                  onClick={() => { setQuestion(s); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  className="text-sm text-gray-400 hover:text-black transition-colors"
+                >
+                  {s}
+                </button>
+                {i < SUGGESTIONS.slice(4).length - 1 && <span className="text-gray-300 text-xs">·</span>}
+              </span>
             ))}
           </div>
-          <p className="text-xs text-gray-300 mt-4">No account needed. First answer is free.</p>
         </div>
       </section>
 
