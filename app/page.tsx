@@ -69,15 +69,16 @@ function ActivityTicker() {
     <>
       <style>{`
         @keyframes tickerFade {
-          from { opacity: 0; transform: translateY(4px); }
+          from { opacity: 0; transform: translateY(6px); }
           to { opacity: 1; transform: translateY(0); }
         }
         .ticker-visible { animation: tickerFade 0.4s ease forwards; }
-        .ticker-hidden { opacity: 0; }
+        .ticker-hidden { opacity: 0; transition: opacity 0.3s ease; }
       `}</style>
-      <div className={`flex items-center gap-2 text-xs text-gray-500 ${visible ? 'ticker-visible' : 'ticker-hidden'}`}>
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-        Question from <span className="text-gray-300">{ACTIVITY_CITIES[cityIndex]}</span>
+      <div className={`flex items-center gap-2 text-xs bg-gray-900 border border-gray-800 px-3 py-2 rounded-full ${visible ? 'ticker-visible' : 'ticker-hidden'}`}>
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+        <span className="text-gray-400">Question from</span>
+        <span className="text-white font-medium">{ACTIVITY_CITIES[cityIndex]}</span>
       </div>
     </>
   )
@@ -383,11 +384,13 @@ export default function HomePage() {
           <br />how to train your mind.
         </h2>
 
-        <p className="text-gray-600 text-base md:text-lg max-w-md leading-relaxed mb-10">
+        <p className="text-gray-600 text-base md:text-lg max-w-md leading-relaxed mb-3">
           Elijah Bryant did both. Ask him anything.
         </p>
 
-        <div className="w-full max-w-xl">
+        <QuestionCounter />
+
+        <div className="w-full max-w-xl mt-8">
           <div className="border border-gray-700 focus-within:border-white transition-all bg-black">
             <textarea
               value={question}
@@ -426,12 +429,13 @@ export default function HomePage() {
             ))}
           </div>
 
-          <div className="flex items-center justify-between mt-5 w-full max-w-xl">
-            <ActivityTicker />
-            <QuestionCounter />
-          </div>
         </div>
       </section>
+
+      {/* Fixed activity ticker — bottom left */}
+      <div className="fixed bottom-6 left-6 z-50">
+        <ActivityTicker />
+      </div>
 
       {/* Below fold */}
       <section className="bg-white px-6 py-24">
