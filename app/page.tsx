@@ -47,23 +47,43 @@ const ACTIVITY_CITIES = [
   'Istanbul', 'Athens', 'Lagos', 'Tel Aviv', 'Belgrade', 'Houston, TX',
   'Barcelona', 'Brooklyn, NY', 'Nairobi', 'Paris', 'Toronto', 'Manila',
   'Chicago, IL', 'Thessaloniki', 'Accra', 'Madrid', 'Los Angeles, CA',
-  'Ankara', 'Dubai', 'Atlanta, GA',
+  'Ankara', 'Dubai', 'Atlanta, GA', 'London', 'Johannesburg', 'Detroit, MI',
+  'Beirut', 'Rome', 'Phoenix, AZ', 'Dakar', 'Amsterdam', 'Memphis, TN',
 ]
 
+// Shuffle once on load so order is different every session
+function shuffled<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
 function ActivityTicker() {
+  const cities = useState(() => shuffled(ACTIVITY_CITIES))[0]
   const [cityIndex, setCityIndex] = useState(0)
   const [visible, setVisible] = useState(true)
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    let timeout: ReturnType<typeof setTimeout>
+
+    const cycle = () => {
       setVisible(false)
       setTimeout(() => {
-        setCityIndex(i => (i + 1) % ACTIVITY_CITIES.length)
+        setCityIndex(i => (i + 1) % cities.length)
         setVisible(true)
-      }, 400)
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [])
+        // Random delay between 3.5s and 9s
+        const next = 3500 + Math.random() * 5500
+        timeout = setTimeout(cycle, next)
+      }, 500)
+    }
+
+    // First cycle after a random 2–5s delay so it doesn't fire immediately on load
+    timeout = setTimeout(cycle, 2000 + Math.random() * 3000)
+    return () => clearTimeout(timeout)
+  }, [cities])
 
   return (
     <>
