@@ -3,8 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from '@/lib/supabase-client'
 
 function Logo() {
   return (
@@ -18,86 +17,124 @@ function Logo() {
   )
 }
 
+type Step = 'email' | 'sent'
+
 export default function SignInPage() {
+  const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const router = useRouter()
+  const [ageConfirmed, setAgeConfirmed] = useState(false)
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email || !password) return
+  const handleSendLink = async () => {
+    if (!email.trim()) return
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError('Invalid email or password.')
+    try {
+      const supabase = getSupabaseClient()
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/ask`,
+          shouldCreateUser: true,
+        },
+      })
+      if (authError) throw authError
+      setStep('sent')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Try again.')
+    } finally {
       setLoading(false)
-    } else {
-      router.push('/home')
     }
   }
 
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSendLink()
+  }
+
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-      <Link href="/" className="mb-12">
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      <nav className="flex items-center justify-between px-6 py-5">
+        <Link href="/" className="text-gray-400 hover:text-white transition-colors text-sm">← Back</Link>
         <Logo />
-      </Link>
+        <div className="w-12" />
+      </nav>
 
-      <div className="w-full max-w-sm bg-white text-black p-10">
-        <h1 className="text-2xl font-bold tracking-tight mb-1">Welcome back.</h1>
-        <p className="text-gray-400 text-sm mb-8">
-          No account?{' '}
-          <Link href="/sign-up" className="text-black underline underline-offset-2 hover:opacity-70">
-            Sign up
-          </Link>
-        </p>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20">
+        <div className="w-full max-w-sm">
 
-        {error && (
-          <p className="text-sm text-gray-600 mb-4 border border-gray-200 px-4 py-2">{error}</p>
-        )}
+          {step === 'email' && (
+            <>
+              <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 text-center">Sign in</p>
+              <h1 className="text-3xl font-bold text-center mb-2">Enter your email.</h1>
+              <p className="text-gray-600 text-sm text-center mb-10">
+                We will send you a link. Click it and you are in. No password needed.
+              </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            className="w-full border border-gray-200 px-4 py-3 text-sm outline-none focus:border-black transition-colors"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            className="w-full border border-gray-200 px-4 py-3 text-sm outline-none focus:border-black transition-colors"
-            required
-          />
-          <button
-            type="submit"
-            disabled={loading || !email || !password}
-            className="w-full bg-black text-white py-3 text-sm font-semibold tracking-tight hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Signing in...' : 'Sign in →'}
-          </button>
-        </form>
+              <input
+                type="email"
+                autoFocus
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={handleKey}
+                className="w-full bg-transparent border-b border-gray-700 focus:border-white pb-3 text-xl text-center text-white placeholder-gray-700 outline-none transition-colors mb-8 block"
+              />
 
-        <div className="mt-6 text-center">
-          <Link href="/ask" className="text-xs text-gray-400 hover:text-black transition-colors">
-            Continue without account →
-          </Link>
+              {error && (
+                <p className="text-red-400 text-xs text-center mb-4">{error}</p>
+              )}
+
+              {/* COPPA age confirmation */}
+              <label className="flex items-start gap-3 mb-6 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={ageConfirmed}
+                  onChange={(e) => setAgeConfirmed(e.target.checked)}
+                  className="mt-0.5 accent-white w-4 h-4 flex-shrink-0"
+                />
+                <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-300 transition-colors">
+                  I confirm I am 13 years of age or older. If you are under 13, please ask a parent or guardian to create an account.
+                </span>
+              </label>
+
+              <button
+                onClick={handleSendLink}
+                disabled={!email.trim() || loading || !ageConfirmed}
+                className="w-full bg-white text-black py-3 text-sm font-semibold tracking-tight disabled:opacity-30 hover:opacity-80 transition-opacity"
+              >
+                {loading ? 'Sending...' : 'Send my link →'}
+              </button>
+
+              <p className="text-xs text-gray-700 text-center mt-6">
+                New here? No account needed. We create one automatically.
+              </p>
+            </>
+          )}
+
+          {step === 'sent' && (
+            <div className="text-center">
+              <Logo />
+              <div className="mt-10 mb-4">
+                <h1 className="text-3xl font-bold mb-4">Check your inbox.</h1>
+                <p className="text-gray-500 text-sm leading-relaxed mb-2">We sent a link to</p>
+                <p className="text-white font-semibold mb-6">{email}</p>
+                <p className="text-gray-600 text-sm leading-relaxed mb-10">
+                  Click it and you will be taken straight to Ask Elijah. The link expires in 1 hour.
+                </p>
+              </div>
+              <button
+                onClick={() => { setStep('email'); setError('') }}
+                className="text-xs text-gray-600 hover:text-white transition-colors"
+              >
+                Use a different email
+              </button>
+            </div>
+          )}
+
         </div>
       </div>
-
-      <p className="text-xs text-gray-700 mt-8">No card required to try free.</p>
     </div>
   )
 }

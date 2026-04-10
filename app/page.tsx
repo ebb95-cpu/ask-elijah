@@ -17,59 +17,15 @@ function Logo({ dark = false }: { dark?: boolean }) {
   )
 }
 
-// Journey dots — each dot is a moment (question or answer), connected by lines
-// Shows that every answer opens a new question — an ongoing journey
-function JourneyDots() {
-  const nodes = [
-    { label: 'Q', note: 'How do I recover faster?' },
-    { label: 'A', note: 'Elijah answers' },
-    { label: 'Q', note: 'What about nutrition?' },
-    { label: 'A', note: 'Elijah answers' },
-    { label: 'Q', note: 'Night before games?' },
-    { label: 'A', note: 'Elijah answers' },
-    { label: '...', note: 'Your journey continues' },
-  ]
-
-  return (
-    <div className="w-full overflow-x-auto pb-2 -mx-2 px-2">
-      <div className="flex items-center gap-0 min-w-max mx-auto" style={{ width: 'fit-content' }}>
-        {nodes.map((node, i) => (
-          <div key={i} className="flex items-center">
-            {/* Node */}
-            <div className="flex flex-col items-center gap-1.5">
-              <div
-                className={`flex items-center justify-center rounded-full text-xs font-bold transition-all
-                  ${node.label === 'Q'
-                    ? 'w-8 h-8 bg-white text-black'
-                    : node.label === 'A'
-                    ? 'w-8 h-8 border border-gray-600 text-gray-400'
-                    : 'w-8 h-8 text-gray-600 text-base'}
-                `}
-                style={{
-                  animationDelay: `${i * 0.15}s`,
-                }}
-              >
-                {node.label}
-              </div>
-              <span className="text-gray-700 text-xs whitespace-nowrap max-w-[80px] text-center leading-tight hidden md:block">
-                {node.note}
-              </span>
-            </div>
-            {/* Connector line */}
-            {i < nodes.length - 1 && (
-              <div className="w-8 md:w-12 h-px bg-gray-800 mx-1 flex-shrink-0" />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 const SUGGESTIONS = [
+  "I freeze up in real games but ball out in practice",
+  "How do I get my confidence back after a bad game?",
+  "My coach keeps benching me and won't tell me why",
+  "Is it too late for me to go D1?",
+  "How do I stop overthinking on the court?",
   "Night before a big game",
-  "When I lose confidence mid-game",
-  "Recovery after back-to-backs",
+  "How do I get out of a shooting slump?",
+  "I'm scared to take shots when it matters",
 ]
 
 export default function HomePage() {
@@ -89,58 +45,49 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-black">
 
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-5 bg-black">
-        <Link href="/"><Logo dark /></Link>
+      <nav className="flex items-center justify-between px-6 py-5">
+        <Logo dark />
         <div className="flex items-center gap-6">
-          <Link href="/sign-in" className="text-sm text-gray-400 hover:text-white transition-colors">Sign in</Link>
-          <Link href="/ask" className="text-sm font-semibold px-4 py-2 bg-white text-black hover:opacity-80 transition-opacity">
-            Try free
-          </Link>
+          <Link href="/sign-in" className="text-sm text-gray-500 hover:text-white transition-colors">Sign in</Link>
+          <Link href="/history" className="text-sm text-gray-500 hover:text-white transition-colors">My questions</Link>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="bg-black text-white flex flex-col items-center px-6 pt-16 pb-28 text-center">
-        {/* Identity — who is The Pro */}
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 rounded-full bg-gray-800 overflow-hidden flex items-center justify-center flex-shrink-0">
-            {/* Placeholder avatar — replace with Elijah's photo */}
-            <span className="text-white font-bold text-sm">EB</span>
-          </div>
-          <div className="text-left">
-            <p className="text-white text-sm font-semibold leading-tight">Elijah Bryant</p>
-            <p className="text-gray-500 text-xs leading-tight">NBA Champion · EuroLeague Champion</p>
-          </div>
-        </div>
+      {/* Hero — everything above the fold */}
+      <section className="flex-1 flex flex-col items-center justify-center px-6 pb-16 text-center min-h-[calc(100vh-72px)]">
 
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-none mb-6">
-          <span className="font-normal text-gray-400">Get answers from</span>
-          <br />
-          an NBA Champion.
-        </h1>
-        <p className="text-gray-400 text-lg md:text-xl mb-12 max-w-xl leading-relaxed">
-          Elijah Bryant — NBA champion, EuroLeague champion — has spent 8+ years figuring out what actually works. Ask him anything about your game.
+        {/* Credibility */}
+        <p className="text-xs text-gray-600 tracking-widest uppercase mb-8 font-medium">
+          20 years of pro experience · Euroleague · NBA
         </p>
 
-        {/* Journey dots — the visual metaphor */}
-        <div className="w-full max-w-2xl mb-12">
-          <JourneyDots />
-          <p className="text-xs text-gray-700 mt-4 text-center tracking-wide">Every answer opens a new question. That&apos;s how growth works.</p>
-        </div>
+        {/* Headline */}
+        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight mb-4 max-w-3xl text-white">
+          You know how to train
+          <br />your body.
+        </h1>
+        <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight mb-10 max-w-3xl text-gray-500">
+          Nobody taught you
+          <br />how to train your mind.
+        </h2>
+
+        <p className="text-gray-600 text-base md:text-lg max-w-md leading-relaxed mb-10">
+          Elijah Bryant did both. Ask him anything.
+        </p>
 
         {/* Ask box */}
         <div className="w-full max-w-xl">
-          <div className="border border-gray-700 focus-within:border-white transition-colors">
+          <div className="border border-gray-700 focus-within:border-white transition-all bg-black">
             <textarea
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={handleKey}
-              placeholder="What do you want to know about your game?"
+              placeholder="What's going on in your head?"
               rows={3}
-              className="w-full px-4 pt-4 pb-2 text-white placeholder-gray-600 text-lg leading-relaxed resize-none outline-none bg-transparent"
+              className="w-full px-4 pt-4 pb-2 text-white placeholder-gray-600 text-base leading-relaxed resize-none outline-none bg-transparent"
               style={{ minHeight: '80px' }}
             />
             <div className="flex items-center justify-between px-4 pb-3">
@@ -152,77 +99,120 @@ export default function HomePage() {
                 disabled={!question.trim() || loading}
                 className="ml-auto bg-white text-black px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
               >
-                {loading ? 'Getting your answer...' : "Ask Elijah — It's Free"}
+                {loading ? 'Getting your answer...' : 'Ask Elijah →'}
               </button>
             </div>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-2 mt-4">
-            {SUGGESTIONS.map((s) => (
+          {/* Suggestions */}
+          <div className="flex flex-wrap gap-2 mt-4 justify-center">
+            {SUGGESTIONS.slice(0, 4).map((s) => (
               <button
                 key={s}
                 onClick={() => setQuestion(s)}
-                className="text-sm border border-gray-700 px-3 py-1.5 text-gray-400 hover:border-gray-400 hover:text-white transition-colors"
+                className="text-xs border border-gray-800 px-3 py-1.5 text-gray-500 hover:border-gray-400 hover:text-gray-200 transition-colors text-left"
               >
                 {s}
               </button>
             ))}
           </div>
-          <p className="text-xs text-gray-700 mt-5">No account needed · First answer is free</p>
+
+          <p className="text-xs text-gray-700 mt-5">No account needed. First answer is free.</p>
+        </div>
+      </section>
+
+      {/* Below fold — for the undecided */}
+      <section className="bg-white px-6 py-24">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-xs text-gray-400 tracking-widest uppercase mb-8">The real problem</p>
+
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-black leading-tight mb-10">
+            Every coach has trained
+            <br />your body.
+            <br />
+            <span className="text-gray-300">Nobody has trained your mind.</span>
+          </h2>
+
+          <div className="space-y-6 text-gray-500 text-lg leading-relaxed mb-12">
+            <p>
+              Every coach you&apos;ve ever had has focused on your shot, your footwork, your conditioning. That&apos;s what they know how to teach.
+            </p>
+            <p>
+              Nobody has sat down with you and talked about what is actually happening in your head. The doubt before a big game. Losing confidence mid-series. Performing under pressure when everything is on the line.
+            </p>
+            <p className="text-black font-semibold text-xl">
+              The game is 90% mental. Your training has been 90% physical. That is the gap.
+            </p>
+          </div>
+
+          <div className="border-l-2 border-black pl-6 mb-14">
+            <p className="text-gray-600 text-base leading-relaxed">
+              Elijah has been in Euroleague finals. NBA locker rooms. High pressure moments most coaches have only watched on TV. Ask him what is going on in your head and what to do about it.
+            </p>
+          </div>
+
+          {/* Second ask box for those who scrolled */}
+          <div className="border border-black focus-within:border-2 transition-all">
+            <textarea
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder="What's actually going on in your head?"
+              rows={3}
+              className="w-full px-4 pt-4 pb-2 text-black placeholder-gray-300 text-lg leading-relaxed resize-none outline-none bg-transparent"
+              style={{ minHeight: '80px' }}
+            />
+            <div className="flex items-center justify-between px-4 pb-3">
+              <button
+                onClick={handleSubmit}
+                disabled={!question.trim() || loading}
+                className="ml-auto bg-black text-white px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
+              >
+                {loading ? 'Getting your answer...' : 'Ask Elijah for Free →'}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-4">
+            {SUGGESTIONS.slice(4).map((s) => (
+              <button
+                key={s}
+                onClick={() => setQuestion(s)}
+                className="text-sm border border-gray-200 px-3 py-1.5 text-gray-400 hover:border-black hover:text-black transition-colors"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-300 mt-4">No account needed. First answer is free.</p>
         </div>
       </section>
 
       {/* Social proof */}
-      <section className="bg-white px-6 py-20">
-        {/* Who is Elijah */}
-        <div className="max-w-3xl mx-auto mb-16 text-center">
-          <p className="text-xs text-gray-400 tracking-widest uppercase mb-6">Who you&apos;re asking</p>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-black mb-4">
-            Elijah Bryant. NBA Champion. EuroLeague Champion.<br />Not a chatbot. Not a coach. A pro who&apos;s been there.
-          </h2>
-          <p className="text-gray-500 text-base leading-relaxed max-w-xl mx-auto">
-            8+ years as a professional basketball player. NBA champion. EuroLeague champion. Currently playing in Europe. Ask Elijah is his knowledge — what actually worked under real professional pressure.
-          </p>
-        </div>
-
-        <blockquote className="max-w-2xl mx-auto text-center mb-16">
-          <p className="text-2xl md:text-3xl font-semibold italic tracking-tight text-black leading-snug mb-4">
+      <section className="bg-black px-6 py-20 text-center">
+        <blockquote className="max-w-2xl mx-auto mb-16">
+          <p className="text-2xl md:text-3xl font-semibold italic tracking-tight text-white leading-snug mb-4">
             &ldquo;First time I felt like I was getting real advice, not just content.&rdquo;
           </p>
-          <cite className="text-sm text-gray-400 not-italic">— CC Newsletter subscriber, age 17</cite>
+          <cite className="text-sm text-gray-500 not-italic">— CC Newsletter subscriber, age 17</cite>
         </blockquote>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-px max-w-3xl mx-auto bg-gray-900">
           {[
-            { title: "From Elijah's vault", sub: "His real protocols — not the internet's average answer" },
-            { title: "Ask anything", sub: "Recovery, mental game, shooting, nutrition, explosiveness" },
-            { title: "Personal review", sub: "Elijah watches your film and responds directly" },
+            { title: "From Elijah's vault", sub: "His real protocols, not the internet's average answer" },
+            { title: "Mental game included", sub: "The 90% nobody else is training" },
+            { title: "Built on 20 years", sub: "Pro leagues across 3 continents" },
           ].map(({ title, sub }) => (
             <div key={title} className="bg-black text-white p-8">
               <p className="font-bold text-base tracking-tight mb-2">{title}</p>
-              <p className="text-sm text-gray-400">{sub}</p>
+              <p className="text-sm text-gray-500">{sub}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Objection destroyer */}
-      <section className="bg-black text-white px-6 py-20 text-center">
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-6">
-            &ldquo;You can use ChatGPT for free.&rdquo;
-          </h2>
-          <p className="text-gray-400 text-lg leading-relaxed mb-10">
-            Yes. ChatGPT gives you the internet&apos;s best average answer. Ask Elijah gives you Elijah&apos;s answer — what he actually did, under real professional stakes. That&apos;s the difference.
-          </p>
-          <Link href="/ask" className="text-white underline underline-offset-4 hover:text-gray-300 transition-colors text-sm">
-            Ask your first question →
-          </Link>
-        </div>
-      </section>
-
       {/* Footer */}
-      <footer className="bg-black border-t border-gray-900 px-6 py-10 mt-auto">
+      <footer className="bg-black border-t border-gray-900 px-6 py-10">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex flex-col gap-3">
             <Logo dark />
