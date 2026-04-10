@@ -400,44 +400,38 @@ export default function HomePage() {
         </h2>
 
         <div className="w-full max-w-xl mt-10">
-          <div className="border-b border-gray-700 focus-within:border-white transition-all bg-black">
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder="What's going on in your head?"
-              rows={3}
-              className="w-full px-0 pt-4 pb-2 text-white placeholder-gray-600 text-base leading-relaxed resize-none outline-none bg-transparent"
-              style={{ minHeight: '80px' }}
-            />
-            <div className="flex items-center justify-between px-4 pb-3">
-              {question.length >= 140 && (
-                <span className="text-xs text-gray-600">{question.length}</span>
-              )}
-              <button
-                onClick={handleSubmit}
-                disabled={!question.trim()}
-                className="ml-auto bg-white text-black px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
-              >
-                Ask Elijah →
-              </button>
+          <textarea
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="What's going on in your head?"
+            rows={3}
+            className="w-full text-white placeholder-gray-600 text-lg leading-relaxed resize-none outline-none bg-transparent border-b border-gray-800 focus:border-gray-500 transition-colors pb-3"
+            style={{ minHeight: '80px' }}
+          />
+
+          <div className="mt-5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {SUGGESTIONS.slice(0, 3).map((s, i) => (
+                <span key={s} className="flex items-center gap-4">
+                  <button
+                    onClick={() => setQuestion(s)}
+                    className="text-xs text-gray-600 hover:text-gray-300 transition-colors text-left"
+                  >
+                    {s}
+                  </button>
+                  {i < 2 && <span className="text-gray-800 text-xs">·</span>}
+                </span>
+              ))}
             </div>
+            <button
+              onClick={handleSubmit}
+              disabled={!question.trim()}
+              className="text-sm font-semibold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all flex-shrink-0 ml-4"
+            >
+              Ask →
+            </button>
           </div>
-
-          <div className="flex flex-wrap gap-x-3 gap-y-2 mt-4 justify-center items-center">
-            {SUGGESTIONS.slice(0, 4).map((s, i) => (
-              <span key={s} className="flex items-center gap-3">
-                <button
-                  onClick={() => setQuestion(s)}
-                  className="text-xs text-gray-600 hover:text-gray-200 transition-colors"
-                >
-                  {s}
-                </button>
-                {i < 3 && <span className="text-gray-800 text-xs">·</span>}
-              </span>
-            ))}
-          </div>
-
         </div>
       </section>
 
