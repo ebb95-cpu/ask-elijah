@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic'
-
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 
@@ -7,15 +5,15 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const token = new URL(req.url).searchParams.get('token')
+  const token = req.nextUrl.searchParams.get('token')
   if (!token || token !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const supabase = getSupabase()
   const { data, error } = await supabase
     .from('questions')
-    .select('id, question, answer, email, created_at')
+    .select('id, question, answer, email, created_at, status')
     .eq('id', params.id)
     .single()
 
