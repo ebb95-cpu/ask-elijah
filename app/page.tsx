@@ -406,7 +406,8 @@ export default function HomePage() {
             onKeyDown={handleKey}
             placeholder="What's going on in your head?"
             rows={3}
-            className="w-full text-white placeholder-gray-600 text-lg leading-relaxed resize-none outline-none bg-transparent border-b border-gray-800 focus:border-gray-500 transition-colors pb-3"
+            autoFocus
+            className="w-full text-white placeholder-gray-500 text-lg leading-relaxed resize-none outline-none bg-transparent border-b border-gray-700 focus:border-gray-400 transition-colors pb-3"
             style={{ minHeight: '80px' }}
           />
 
