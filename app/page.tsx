@@ -62,19 +62,17 @@ function shuffled<T>(arr: T[]): T[] {
   return a
 }
 
-const COUNT_SEED = 847
-
 function LiveTicker() {
   const locations = useState(() => shuffled(ACTIVITY_LOCATIONS))[0]
   const [index, setIndex] = useState(0)
-  const [count, setCount] = useState(COUNT_SEED)
+  const [count, setCount] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
     fetch('/api/stats')
       .then(r => r.json())
-      .then(d => setCount(COUNT_SEED + (d.count ?? 0)))
-      .catch(() => {})
+      .then(d => setCount(d.count ?? 0))
+      .catch(() => setCount(0))
   }, [])
 
   useEffect(() => {
@@ -84,7 +82,6 @@ function LiveTicker() {
       setVisible(false)
       setTimeout(() => {
         setIndex(i => (i + 1) % locations.length)
-        setCount(c => c + Math.floor(Math.random() * 2 + 1)) // increment by 1–2
         setVisible(true)
         timeout = setTimeout(cycle, 4000 + Math.random() * 5000)
       }, 500)
@@ -98,6 +95,8 @@ function LiveTicker() {
 
     return () => clearTimeout(timeout)
   }, [locations])
+
+  if (count === null) return null
 
   return (
     <>
