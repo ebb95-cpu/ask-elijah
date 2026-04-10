@@ -400,14 +400,14 @@ export default function HomePage() {
         </h2>
 
         <div className="w-full max-w-xl mt-10">
-          <div className="border border-gray-700 focus-within:border-white transition-all bg-black">
+          <div className="border-b border-gray-700 focus-within:border-white transition-all bg-black">
             <textarea
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={handleKey}
               placeholder="What's going on in your head?"
               rows={3}
-              className="w-full px-4 pt-4 pb-2 text-white placeholder-gray-600 text-base leading-relaxed resize-none outline-none bg-transparent"
+              className="w-full px-0 pt-4 pb-2 text-white placeholder-gray-600 text-base leading-relaxed resize-none outline-none bg-transparent"
               style={{ minHeight: '80px' }}
             />
             <div className="flex items-center justify-between px-4 pb-3">
