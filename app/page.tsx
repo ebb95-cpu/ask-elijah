@@ -133,7 +133,7 @@ const SUGGESTIONS = [
   "I'm scared to take shots when it matters",
 ]
 
-type Mode = 'idle' | 'loading' | 'preview' | 'email_gate' | 'submitted'
+type Mode = 'idle' | 'returning' | 'loading' | 'preview' | 'email_gate' | 'submitted'
 
 const PREVIEW_CHARS = 300 // how many chars to show before blur
 
@@ -145,9 +145,11 @@ export default function HomePage() {
   const [emailLoading, setEmailLoading] = useState(false)
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const fullAnswerRef = useRef('')
+  const prevQuestionRef = useRef('')
+  const prevAnswerRef = useRef('')
 
   const handleSubmit = async () => {
-    if (!question.trim() || mode !== 'idle') return
+    if (!question.trim() || (mode !== 'idle' && mode !== 'returning')) return
     setMode('loading')
     setStreamedText('')
     fullAnswerRef.current = ''
@@ -203,6 +205,8 @@ export default function HomePage() {
           previewAnswer: fullAnswerRef.current,
         }),
       })
+      prevQuestionRef.current = question.trim()
+      prevAnswerRef.current = fullAnswerRef.current
       setMode('submitted')
     } catch {
       // still show submitted — question was received
@@ -217,6 +221,21 @@ export default function HomePage() {
   }
 
   const reset = () => {
+    if (prevQuestionRef.current) {
+      setMode('returning')
+    } else {
+      setMode('idle')
+    }
+    setQuestion('')
+    setStreamedText('')
+    setEmail('')
+    setAgeConfirmed(false)
+    fullAnswerRef.current = ''
+  }
+
+  const resetToHome = () => {
+    prevQuestionRef.current = ''
+    prevAnswerRef.current = ''
     setMode('idle')
     setQuestion('')
     setStreamedText('')
@@ -368,6 +387,53 @@ export default function HomePage() {
           >
             Ask another question
           </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Returning (ask again, show previous Q&A) ──────────────────────────────
+  if (mode === 'returning') {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-6 py-5">
+          <Logo dark />
+          <button onClick={resetToHome} className="text-xs text-gray-700 hover:text-gray-400 transition-colors">Home</button>
+        </nav>
+
+        <div className="flex-1 flex flex-col px-6 py-10 max-w-xl mx-auto w-full justify-center gap-10">
+          {/* Previous Q&A */}
+          <div>
+            <p className="text-xs text-gray-700 uppercase tracking-widest mb-4">Previous answer</p>
+            <p className="text-gray-500 text-sm italic mb-4">&ldquo;{prevQuestionRef.current}&rdquo;</p>
+            <p className="text-gray-400 text-sm leading-relaxed">{prevAnswerRef.current}</p>
+          </div>
+
+          <div className="border-t border-gray-900" />
+
+          {/* New question input */}
+          <div>
+            <p className="text-xs text-gray-700 uppercase tracking-widest mb-4">Ask another</p>
+            <textarea
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder="What else is on your mind?"
+              rows={3}
+              autoFocus
+              className="w-full text-white placeholder-gray-600 text-lg leading-relaxed resize-none outline-none bg-transparent border-b border-gray-800 focus:border-gray-500 transition-colors pb-3"
+              style={{ minHeight: '80px' }}
+            />
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={handleSubmit}
+                disabled={!question.trim()}
+                className="text-sm font-semibold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all"
+              >
+                Ask →
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     )
