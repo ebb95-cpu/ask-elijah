@@ -10,10 +10,9 @@
  *   node scripts/ingest.mjs            — full run
  *   node scripts/ingest.mjs --youtube  — YouTube only
  *   node scripts/ingest.mjs --newsletter — newsletters only
- *   node scripts/ingest.mjs --clean    — delete shorts already in Pinecone, then rerun
  */
 
-import YoutubeTranscript from 'youtube-transcript'
+import { Innertube } from 'youtubei.js'
 import { config } from 'dotenv'
 config({ path: '.env.local' })
 
@@ -28,19 +27,21 @@ const YOUTUBE_CHANNELS = [
   { handle: 'ConsistencyClubFilm', label: 'Consistency Club Film' },
 ]
 
-const MIN_TRANSCRIPT_CHARS = 400   // skip anything shorter than this
-const SHORT_DURATION_SECS = 90     // skip videos under 90 seconds
+const MIN_TRANSCRIPT_CHARS = 400
+const HEADERS = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function isShortForm(title = '', description = '') {
-  const text = (title + ' ' + description).toLowerCase()
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+
+function isShortForm(title = '') {
+  const t = title.toLowerCase()
   return (
-    text.includes('#shorts') ||
-    text.includes('#short ') ||
-    text.endsWith('#short') ||
-    text.includes('shorts |') ||
-    text.includes('| shorts')
+    t.includes('#shorts') ||
+    t.includes('#short') ||
+    t.includes('shorts |') ||
+    t.includes('| shorts') ||
+    t.startsWith('#')
   )
 }
 
@@ -52,16 +53,111 @@ function chunkText(text, chunkSize = 600, overlap = 100) {
     chunks.push(words.slice(i, i + chunkSize).join(' '))
     i += chunkSize - overlap
   }
-  return chunks.filter((c) => c.length > 100)
+  return chunks.filter(c => c.length > 100)
 }
+
+// ── YouTube Transcript via youtubei.js ────────────────────────────────────
+
+let _yt = null
+async function getYT() {
+  if (!_yt) {
+    _yt = await Innertube.create({
+      generate_session_locally: true,
+      on_behalf_of_user: undefined,
+    })
+    // Suppress youtubei.js debug logs
+    _yt.session.on('auth-pending', () => {})
+  }
+  return _yt
+}
+
+// Suppress verbose youtubei.js warnings
+const _warn = console.warn
+console.warn = (...args) => {
+  const msg = String(args[0] || '')
+  if (msg.includes('YOUTUBEJS') || msg.includes('Unable to find')) return
+  _warn(...args)
+}
+
+async function fetchTranscript(videoId) {
+  const yt = await getYT()
+  const info = await yt.getInfo(videoId)
+  const tracks = info.captions?.caption_tracks || []
+  if (!tracks.length) throw new Error('No caption tracks available')
+
+  // Prefer English manual, then auto-generated, then first available
+  const track =
+    tracks.find(t => t.language_code === 'en' && t.kind !== 'asr') ||
+    tracks.find(t => t.language_code === 'en') ||
+    tracks[0]
+
+  if (!track?.base_url) throw new Error('No usable caption track')
+
+  // Fetch using the signed URL with native fetch
+  const res = await fetch(track.base_url + '&fmt=json3', { headers: HEADERS })
+  if (!res.ok) throw new Error(`Caption fetch failed: ${res.status}`)
+  const data = await res.json()
+
+  const text = (data.events || [])
+    .filter(e => e.segs)
+    .map(e => e.segs.map(s => s.utf8 || '').join(''))
+    .join(' ')
+    .replace(/\[.*?\]/g, '') // remove [Music], [Applause] etc
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!text) throw new Error('Empty transcript')
+  return text
+}
+
+// ── YouTube Channel Videos ─────────────────────────────────────────────────
+
+async function getChannelVideos(handle) {
+  // Scrape the channel videos page
+  const pageRes = await fetch(`https://www.youtube.com/@${handle}/videos`, { headers: HEADERS })
+  if (!pageRes.ok) throw new Error(`Channel fetch failed: ${pageRes.status}`)
+  const html = await pageRes.text()
+
+  // Try to extract from ytInitialData for titles
+  const match = html.match(/var ytInitialData\s*=\s*(\{.+?\});\s*<\/script>/)
+  if (match) {
+    try {
+      const data = JSON.parse(match[1])
+      const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || []
+      const videosTab = tabs.find(t => t?.tabRenderer?.title === 'Videos')
+      const items = videosTab?.tabRenderer?.content?.richGridRenderer?.contents || []
+      const videos = items
+        .map(item => {
+          const video = item?.richItemRenderer?.content?.videoRenderer
+          if (!video?.videoId) return null
+          return {
+            videoId: video.videoId,
+            title: video.title?.runs?.[0]?.text || '',
+          }
+        })
+        .filter(Boolean)
+      if (videos.length > 0) return videos
+    } catch { /* fall through */ }
+  }
+
+  // Fallback: extract all unique video IDs from page HTML
+  const ids = [...new Set([...html.matchAll(/"videoId":"([^"]{11})"/g)].map(m => m[1]))]
+
+  // Try to get titles from videoRenderer snippets
+  const titleMap = {}
+  for (const m of html.matchAll(/"videoId":"([^"]{11})"[^}]*?"text":"([^"]+)"/g)) {
+    if (!titleMap[m[1]]) titleMap[m[1]] = m[2]
+  }
+
+  return ids.map(id => ({ videoId: id, title: titleMap[id] || '' }))
+}
+
+// ── Embed + Upsert ─────────────────────────────────────────────────────────
 
 async function embed(text) {
   const res = await fetch('https://api.voyageai.com/v1/embeddings', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${VOYAGE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { Authorization: `Bearer ${VOYAGE_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ input: [text], model: 'voyage-3-lite' }),
   })
   if (!res.ok) throw new Error(`Voyage error ${res.status}`)
@@ -78,106 +174,7 @@ async function upsertVectors(vectors) {
   if (!res.ok) throw new Error(`Pinecone upsert error ${res.status}: ${await res.text()}`)
 }
 
-async function deleteByPrefix(prefix) {
-  const res = await fetch(`${PINECONE_HOST}/vectors/delete`, {
-    method: 'POST',
-    headers: { 'Api-Key': PINECONE_API_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deleteAll: false, filter: { id: { $gte: prefix, $lt: prefix + '~' } } }),
-  })
-  return res.ok
-}
-
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms))
-}
-
-// ── YouTube ────────────────────────────────────────────────────────────────
-
-async function getChannelVideos(handle) {
-  // Use YouTube RSS feed — no API key needed
-  const res = await fetch(
-    `https://www.youtube.com/feeds/videos.xml?user=${handle}`,
-    { headers: { 'User-Agent': 'Mozilla/5.0' } }
-  )
-  if (!res.ok) {
-    // Try channel ID approach
-    const res2 = await fetch(
-      `https://www.youtube.com/c/${handle}/videos`,
-      { headers: { 'User-Agent': 'Mozilla/5.0' } }
-    )
-    const html = await res2.text()
-    const matches = [...html.matchAll(/"videoId":"([^"]+)"/g)]
-    const ids = [...new Set(matches.map((m) => m[1]))]
-    return ids.map((id) => ({ videoId: id, title: '', description: '' }))
-  }
-  const xml = await res.text()
-  const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)]
-  return entries.map((e) => {
-    const id = (e[1].match(/<yt:videoId>([^<]+)/) || [])[1] || ''
-    const title = (e[1].match(/<title>([^<]+)/) || [])[1] || ''
-    return { videoId: id, title, description: '' }
-  })
-}
-
-async function ingestVideo(video, channelLabel) {
-  const { videoId, title, description } = video
-
-  // Skip short-form content
-  if (isShortForm(title, description)) {
-    return { status: 'skipped', reason: 'short-form' }
-  }
-
-  // Fetch transcript
-  let transcript
-  try {
-    const segments = await YoutubeTranscript.fetchTranscript(videoId)
-    transcript = segments.map((s) => s.text).join(' ').replace(/\s+/g, ' ').trim()
-  } catch {
-    return { status: 'skipped', reason: 'no-transcript' }
-  }
-
-  if (transcript.length < MIN_TRANSCRIPT_CHARS) {
-    return { status: 'skipped', reason: 'transcript-too-short' }
-  }
-
-  const chunks = chunkText(transcript)
-  const vectors = []
-
-  for (let i = 0; i < chunks.length; i++) {
-    try {
-      const embedding = await embed(chunks[i])
-      vectors.push({
-        id: `yt_${videoId}_${i}`,
-        values: embedding,
-        metadata: {
-          text: chunks[i],
-          source_type: 'youtube',
-          source_title: title || `Video ${videoId}`,
-          source_url: `https://youtube.com/watch?v=${videoId}`,
-          channel: channelLabel,
-          chunk_index: i,
-        },
-      })
-      await sleep(120) // respect rate limits
-    } catch {
-      // skip individual chunk on embed error
-    }
-  }
-
-  if (vectors.length === 0) {
-    return { status: 'skipped', reason: 'embed-failed' }
-  }
-
-  try {
-    // Upsert in batches of 50
-    for (let i = 0; i < vectors.length; i += 50) {
-      await upsertVectors(vectors.slice(i, i + 50))
-    }
-    return { status: 'ok', chunks: vectors.length }
-  } catch (err) {
-    return { status: 'error', reason: err.message }
-  }
-}
+// ── Ingest YouTube ─────────────────────────────────────────────────────────
 
 async function ingestYouTube() {
   console.log('\n📺 Ingesting YouTube videos...\n')
@@ -195,53 +192,102 @@ async function ingestYouTube() {
     console.log(`  Found ${videos.length} videos`)
 
     for (let i = 0; i < videos.length; i++) {
-      const v = videos[i]
-      const label = (v.title || v.videoId).slice(0, 50).padEnd(52, '.')
-      const result = await ingestVideo(v, channel.label)
+      const { videoId, title } = videos[i]
+      const label = (title || videoId).slice(0, 50).padEnd(52, '.')
 
-      if (result.status === 'ok') {
-        process.stdout.write(`  [${i + 1}/${videos.length}] ${label} ✅ ${result.chunks} chunks\n`)
-        totalOk++
-      } else if (result.status === 'skipped') {
-        process.stdout.write(`  [${i + 1}/${videos.length}] ${label} ⏭️  ${result.reason}\n`)
+      // Skip short-form
+      if (isShortForm(title)) {
+        process.stdout.write(`  [${i + 1}/${videos.length}] ${label} ⏭️  short-form\n`)
         totalSkipped++
-      } else {
-        process.stdout.write(`  [${i + 1}/${videos.length}] ${label} ❌ ${result.reason}\n`)
+        continue
+      }
+
+      // Fetch transcript
+      let transcript
+      try {
+        transcript = await fetchTranscript(videoId)
+      } catch {
+        process.stdout.write(`  [${i + 1}/${videos.length}] ${label} ⏭️  no-transcript\n`)
+        totalSkipped++
+        await sleep(500)
+        continue
+      }
+
+      if (transcript.length < MIN_TRANSCRIPT_CHARS) {
+        process.stdout.write(`  [${i + 1}/${videos.length}] ${label} ⏭️  too-short (${transcript.length})\n`)
+        totalSkipped++
+        continue
+      }
+
+      const chunks = chunkText(transcript)
+      const vectors = []
+
+      for (let j = 0; j < chunks.length; j++) {
+        try {
+          const values = await embed(chunks[j])
+          vectors.push({
+            id: `yt_${videoId}_${j}`,
+            values,
+            metadata: {
+              text: chunks[j],
+              source_type: 'youtube',
+              source_title: title || `Video ${videoId}`,
+              source_url: `https://youtube.com/watch?v=${videoId}`,
+              channel: channel.label,
+              chunk_index: j,
+            },
+          })
+          await sleep(120)
+        } catch {
+          // skip chunk
+        }
+      }
+
+      if (vectors.length === 0) {
+        process.stdout.write(`  [${i + 1}/${videos.length}] ${label} ❌ embed failed\n`)
+        totalErrors++
+        continue
+      }
+
+      try {
+        for (let j = 0; j < vectors.length; j += 50) {
+          await upsertVectors(vectors.slice(j, j + 50))
+        }
+        process.stdout.write(`  [${i + 1}/${videos.length}] ${label} ✅ ${vectors.length} chunks\n`)
+        totalOk++
+      } catch (err) {
+        process.stdout.write(`  [${i + 1}/${videos.length}] ${label} ❌ ${err.message}\n`)
         totalErrors++
       }
 
-      await sleep(300)
+      await sleep(400)
     }
   }
 
   console.log(`\n  ✅ Ingested: ${totalOk} videos`)
-  console.log(`  ⏭️  Skipped: ${totalSkipped} (shorts + no transcript)`)
-  console.log(`  ❌ Errors: ${totalErrors}`)
+  console.log(`  ⏭️  Skipped:  ${totalSkipped}`)
+  console.log(`  ❌ Errors:   ${totalErrors}`)
 }
 
-// ── Newsletters ────────────────────────────────────────────────────────────
+// ── Ingest Newsletters ─────────────────────────────────────────────────────
 
 async function ingestNewsletters() {
   console.log('\n📧 Ingesting Beehiiv newsletters...\n')
 
-  let page = 1
-  let allIssues = []
-
+  let page = 1, allIssues = []
   while (true) {
     const res = await fetch(
       `https://api.beehiiv.com/v2/publications/${BEEHIIV_PUB_ID}/posts?status=confirmed&expand[]=free_web_content&limit=50&page=${page}`,
       { headers: { Authorization: `Bearer ${BEEHIIV_API_KEY}` } }
     )
-    if (!res.ok) {
-      console.log(`  ❌ Beehiiv API error: ${res.status}`)
-      break
-    }
+    if (!res.ok) { console.log(`  ❌ Beehiiv API error: ${res.status}`); break }
     const data = await res.json()
     const issues = data.data || []
     if (issues.length === 0) break
     allIssues = allIssues.concat(issues)
-    if (!data.nextPage) break
+    if (!data.next_page) break
     page++
+    await sleep(500)
   }
 
   console.log(`  Found ${allIssues.length} issues\n`)
@@ -251,21 +297,16 @@ async function ingestNewsletters() {
     const issue = allIssues[i]
     const title = issue.title || `Issue ${i + 1}`
     const label = title.slice(0, 50).padEnd(52, '.')
+    const url = issue.web_url || ''
 
-    // Get content — try free_web_content, then content
-    const rawContent =
-      issue.free_web_content ||
-      issue.content?.free?.web ||
-      issue.content?.premium?.web ||
-      ''
-
-    // Strip HTML tags
+    const rawContent = issue.free_web_content || issue.content?.free?.web || ''
     const text = rawContent
       .replace(/<[^>]+>/g, ' ')
       .replace(/&nbsp;/g, ' ')
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
       .replace(/\s+/g, ' ')
       .trim()
 
@@ -275,16 +316,15 @@ async function ingestNewsletters() {
       continue
     }
 
-    const chunks = chunkText(text)
+    const chunks = chunkText(text, 500, 80)
     const vectors = []
-    const url = issue.web_url || issue.url || ''
 
     for (let j = 0; j < chunks.length; j++) {
       try {
-        const embedding = await embed(chunks[j])
+        const values = await embed(chunks[j])
         vectors.push({
           id: `nl_${issue.id}_${j}`,
-          values: embedding,
+          values,
           metadata: {
             text: chunks[j],
             source_type: 'newsletter',
@@ -294,9 +334,7 @@ async function ingestNewsletters() {
           },
         })
         await sleep(120)
-      } catch {
-        // skip chunk
-      }
+      } catch { /* skip chunk */ }
     }
 
     if (vectors.length === 0) {
@@ -305,9 +343,7 @@ async function ingestNewsletters() {
     }
 
     try {
-      for (let j = 0; j < vectors.length; j += 50) {
-        await upsertVectors(vectors.slice(j, j + 50))
-      }
+      for (let j = 0; j < vectors.length; j += 50) await upsertVectors(vectors.slice(j, j + 50))
       process.stdout.write(`  [${i + 1}/${allIssues.length}] ${label} ✅ ${vectors.length} chunks\n`)
       totalOk++
     } catch (err) {
@@ -318,7 +354,7 @@ async function ingestNewsletters() {
   }
 
   console.log(`\n  ✅ Ingested: ${totalOk} newsletters`)
-  console.log(`  ⏭️  Skipped: ${totalSkipped}`)
+  console.log(`  ⏭️  Skipped:  ${totalSkipped}`)
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
@@ -328,7 +364,6 @@ const youtubeOnly = args.includes('--youtube')
 const newsletterOnly = args.includes('--newsletter')
 
 console.log('\n🚀 Ask Elijah — Knowledge Base Ingestion')
-console.log('   Skipping: YouTube Shorts, videos < 90s, transcripts < 400 chars\n')
 
 if (!newsletterOnly) await ingestYouTube()
 if (!youtubeOnly) await ingestNewsletters()
