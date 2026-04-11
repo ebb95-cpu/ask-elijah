@@ -165,14 +165,14 @@ function ReturningView({
 
       {/* Previous Q&A — slides in when toggled */}
       {showPrev && (
-        <div className="px-6 py-8 max-w-xl mx-auto w-full border-b border-gray-900">
+        <div className="px-5 py-6 max-w-xl mx-auto w-full border-b border-gray-900 overflow-y-auto max-h-[50vh]">
           <p className="text-gray-600 text-xs italic mb-3">&ldquo;{prevQuestion}&rdquo;</p>
           <p className="text-gray-500 text-sm leading-relaxed">{prevAnswer}</p>
         </div>
       )}
 
       {/* Ask input — centered, no distractions */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 max-w-xl mx-auto w-full">
+      <div className="flex-1 flex flex-col items-center justify-center px-5 max-w-xl mx-auto w-full">
         <textarea
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
@@ -180,7 +180,7 @@ function ReturningView({
           placeholder="I'm here when you're ready."
           rows={3}
           autoFocus
-          className="w-full text-white placeholder-gray-700 text-xl leading-relaxed resize-none outline-none bg-transparent border-b border-gray-800 focus:border-gray-600 transition-colors pb-3"
+          className="w-full text-white placeholder-gray-700 text-lg sm:text-xl leading-relaxed resize-none outline-none bg-transparent border-b border-gray-800 focus:border-gray-600 transition-colors pb-3"
           style={{ minHeight: '80px' }}
         />
         <div className="flex justify-end w-full mt-4">
@@ -325,7 +325,7 @@ export default function HomePage() {
             <p className="text-white text-lg font-semibold mb-1">Elijah is thinking...</p>
             <p className="text-gray-600 text-sm">Pulling from 20 years of pro experience</p>
           </div>
-          <div className="border border-gray-800 px-6 py-4 max-w-sm w-full text-left">
+          <div className="border border-gray-800 px-5 py-4 max-w-sm w-full text-left mx-4">
             <p className="text-gray-600 text-xs uppercase tracking-widest mb-2">Your question</p>
             <p className="text-gray-400 text-sm italic">&ldquo;{question}&rdquo;</p>
           </div>
@@ -348,7 +348,7 @@ export default function HomePage() {
           <div className="w-16" />
         </nav>
 
-        <div className="flex-1 flex flex-col items-center px-6 py-10 max-w-xl mx-auto w-full">
+        <div className="flex-1 flex flex-col items-center px-5 py-8 max-w-xl mx-auto w-full">
           {/* Question */}
           <div className="w-full mb-8">
             <p className="text-gray-600 text-xs uppercase tracking-widest mb-2">Your question</p>
@@ -424,7 +424,7 @@ export default function HomePage() {
           <Logo dark />
           <div className="w-16" />
         </nav>
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-8 max-w-sm mx-auto">
+        <div className="flex-1 flex flex-col items-center justify-center px-5 text-center gap-6 max-w-sm mx-auto">
           <div>
             <h2 className="text-3xl font-bold mb-3">Elijah got your question.</h2>
             <p className="text-gray-500 text-base leading-relaxed">
@@ -485,21 +485,21 @@ export default function HomePage() {
       </nav>
 
       {/* Hero */}
-      <section className="flex-1 flex flex-col items-center justify-center px-6 pb-16 text-center min-h-[calc(100vh-72px)]">
-        <p className="text-xs text-gray-600 tracking-widest uppercase mb-8 font-medium">
+      <section className="flex-1 flex flex-col items-center justify-center px-5 pb-24 text-center min-h-[calc(100vh-72px)]">
+        <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 font-medium">
           20 years of pro experience · Euroleague · NBA
         </p>
 
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight mb-4 max-w-3xl text-white">
+        <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight mb-3 max-w-3xl text-white">
           You know how to train
           <br />your body.
         </h1>
-        <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight mb-10 max-w-3xl text-gray-500">
+        <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight mb-10 max-w-3xl text-gray-500">
           Nobody taught you
           <br />how to train your mind.
         </h2>
 
-        <div className="w-full max-w-xl mt-10">
+        <div className="w-full max-w-xl mt-6">
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -507,28 +507,28 @@ export default function HomePage() {
             placeholder="What's going on in your head?"
             rows={3}
             autoFocus
-            className="w-full text-white placeholder-gray-500 text-lg leading-relaxed resize-none outline-none bg-transparent border-b border-gray-700 focus:border-gray-400 transition-colors pb-3"
+            className="w-full text-white placeholder-gray-500 text-base sm:text-lg leading-relaxed resize-none outline-none bg-transparent border-b border-gray-700 focus:border-gray-400 transition-colors pb-3"
             style={{ minHeight: '80px' }}
           />
 
-          <div className="mt-5 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="mt-5 flex items-start justify-between gap-4">
+            <div className="flex flex-wrap gap-x-3 gap-y-2">
               {SUGGESTIONS.slice(0, 3).map((s, i) => (
-                <span key={s} className="flex items-center gap-4">
+                <span key={s} className="flex items-center gap-3">
                   <button
                     onClick={() => setQuestion(s)}
                     className="text-xs text-gray-600 hover:text-gray-300 transition-colors text-left"
                   >
                     {s}
                   </button>
-                  {i < 2 && <span className="text-gray-800 text-xs">·</span>}
+                  {i < 2 && <span className="text-gray-800 text-xs hidden sm:inline">·</span>}
                 </span>
               ))}
             </div>
             <button
               onClick={handleSubmit}
               disabled={!question.trim()}
-              className="text-sm font-semibold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all flex-shrink-0 ml-4"
+              className="text-sm font-semibold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all flex-shrink-0"
             >
               Ask →
             </button>
@@ -536,24 +536,24 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Fixed live ticker — bottom left */}
-      <div className="fixed bottom-6 left-6 z-50">
+      {/* Fixed live ticker — bottom left, smaller on mobile */}
+      <div className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)]">
         <LiveTicker />
       </div>
 
       {/* Below fold */}
-      <section className="bg-white px-6 py-24">
+      <section className="bg-white px-5 py-16 md:py-24">
         <div className="max-w-2xl mx-auto">
           <p className="text-xs text-gray-400 tracking-widest uppercase mb-8">The real problem</p>
 
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-black leading-tight mb-10">
+          <h2 className="text-2xl md:text-5xl font-bold tracking-tight text-black leading-tight mb-8">
             Every coach has trained
             <br />your body.
             <br />
             <span className="text-gray-300">Nobody has trained your mind.</span>
           </h2>
 
-          <div className="space-y-6 text-gray-500 text-lg leading-relaxed mb-12">
+          <div className="space-y-5 text-gray-500 text-base md:text-lg leading-relaxed mb-10">
             <p>
               Every coach you&apos;ve ever had has focused on your shot, your footwork, your conditioning. That&apos;s what they know how to teach.
             </p>
