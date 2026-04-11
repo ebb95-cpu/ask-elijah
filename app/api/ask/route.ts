@@ -26,6 +26,67 @@ function highlightVerifyMarkers(text: string): string {
   )
 }
 
+// Extract memorable facts from a question using Claude
+async function extractMemories(question: string): Promise<{ fact_type: string; fact_text: string; expires_days: number | null }[]> {
+  try {
+    const anthropic = getAnthropic()
+    const res = await anthropic.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 256,
+      messages: [{
+        role: 'user',
+        content: `Extract memorable facts about this basketball player from their question. Return a JSON array of objects with keys: fact_type (one of: event, context, goal, setback), fact_text (one short sentence), expires_days (null for permanent facts, or number of days for time-sensitive things like upcoming games — use 14 for events).
+
+Return [] if nothing notable to remember.
+
+Question: "${question}"
+
+Return only valid JSON array, nothing else.`
+      }]
+    })
+    const text = res.content[0].type === 'text' ? res.content[0].text.trim() : '[]'
+    const parsed = JSON.parse(text)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+// Fetch player context for admin email
+async function getPlayerContext(email: string): Promise<string> {
+  const supabase = getSupabase()
+  const clean = email.toLowerCase()
+  const now = new Date().toISOString()
+
+  const [profileRes, memoriesRes, historyRes] = await Promise.all([
+    supabase.from('profiles').select('position, level, country, challenge').eq('email', clean).single(),
+    supabase.from('player_memories').select('fact_type, fact_text').eq('email', clean).or(`expires_at.is.null,expires_at.gt.${now}`).order('created_at', { ascending: false }).limit(10),
+    supabase.from('questions').select('question, answer').eq('email', clean).eq('status', 'approved').order('updated_at', { ascending: false }).limit(3),
+  ])
+
+  const lines: string[] = []
+
+  const p = profileRes.data
+  if (p) {
+    const parts = [p.position, p.level, p.country, p.challenge ? `struggles with ${p.challenge}` : null].filter(Boolean)
+    if (parts.length) lines.push(`Profile: ${parts.join(', ')}`)
+  }
+
+  const memories = memoriesRes.data || []
+  if (memories.length) {
+    lines.push('What I remember about this player:')
+    memories.forEach(m => lines.push(`  • [${m.fact_type}] ${m.fact_text}`))
+  }
+
+  const history = historyRes.data || []
+  if (history.length) {
+    lines.push('Previous questions they asked:')
+    history.forEach((q, i) => lines.push(`  ${i + 1}. "${q.question}"`))
+  }
+
+  return lines.length ? lines.join('\n') : ''
+}
+
 const BLOCKED = [
   /why (do you|don'?t you|dont you) suck/i,
   /you suck/i,
@@ -99,7 +160,8 @@ async function notifyElijah(
   questionId: string,
   question: string,
   draft: string,
-  userEmail: string
+  userEmail: string,
+  playerContext: string
 ) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'
@@ -118,7 +180,12 @@ async function notifyElijah(
           <p style="font-size: 18px; font-weight: 600; margin: 0;">${question}</p>
         </div>
 
-        <!-- Big CTA at the top so it's impossible to miss -->
+        ${playerContext ? `
+        <div style="background: #f0f7ff; border-left: 3px solid #3b82f6; padding: 16px 20px; margin-bottom: 24px;">
+          <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #3b82f6; margin: 0 0 10px;">What you know about this player</p>
+          <pre style="font-size: 13px; color: #1e3a5f; line-height: 1.7; margin: 0; white-space: pre-wrap; font-family: -apple-system, sans-serif;">${playerContext}</pre>
+        </div>` : ''}
+
         <a href="${approveUrl}" style="display: block; background: #ffffff; color: #000000; text-decoration: none; padding: 18px 28px; font-size: 16px; font-weight: 800; text-align: center; margin-bottom: 32px; border: 3px solid #000000;">
           ✏️ Review, Edit &amp; Send to ${userEmail} →
         </a>
@@ -268,18 +335,31 @@ export async function POST(req: NextRequest) {
       console.warn('RAG lookup failed:', ragErr)
     }
 
+    // Fetch player context + extract memories in parallel (non-blocking for fallback path)
+    const playerContextPromise = getPlayerContext(email).catch(() => '')
+
     // If no relevant chunks and no preview answer, use fallback
     const FALLBACK = "I want to make sure I give you something real on this one. Try asking me again with a bit more detail about your situation and I'll find the right angle."
     if (!hasChunks && !previewAnswer?.trim()) {
-      // Save fallback to Supabase and notify
       const supabase = getSupabase()
       const { data: record } = await supabase
         .from('questions')
         .insert({ question, answer: FALLBACK, sources: [], ip, email: email.trim().toLowerCase(), status: 'pending' })
         .select('id').single()
-      if (record?.id) await notifyElijah(record.id, question, FALLBACK, email).catch(console.error)
+      const playerContext = await playerContextPromise
+      if (record?.id) await notifyElijah(record.id, question, FALLBACK, email, playerContext).catch(console.error)
       await sendConfirmation(question, email, !!newsletterOptIn).catch(console.error)
       if (newsletterOptIn) await addToBeehiiv(email.trim().toLowerCase()).catch(console.error)
+      // Fire-and-forget memory extraction
+      extractMemories(question).then(memories => {
+        if (memories.length && record?.id) {
+          fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'}/api/memories`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim().toLowerCase(), memories, source_question_id: record.id }),
+          }).catch(() => {})
+        }
+      }).catch(() => {})
       return NextResponse.json({ success: true, questionId: record?.id })
     }
 
@@ -335,9 +415,10 @@ export async function POST(req: NextRequest) {
       .select('id')
       .single()
 
+    const playerContext = await playerContextPromise
+
     if (insertError) {
       console.error('Supabase insert error:', insertError)
-      // Try without status column in case it doesn't exist yet
       const { data: fallback } = await supabase
         .from('questions')
         .insert({ question, answer: draft, sources, ip, email: email.trim().toLowerCase() })
@@ -346,7 +427,7 @@ export async function POST(req: NextRequest) {
 
       const questionId = fallback?.id ?? null
       if (questionId) {
-        await notifyElijah(questionId, question, draft, email).catch(console.error)
+        await notifyElijah(questionId, question, draft, email, playerContext).catch(console.error)
       }
       await sendConfirmation(question, email, !!newsletterOptIn).catch(console.error)
       if (newsletterOptIn) await addToBeehiiv(email.trim().toLowerCase()).catch(console.error)
@@ -357,10 +438,23 @@ export async function POST(req: NextRequest) {
 
     // Notify Elijah + confirm to user
     if (questionId) {
-      await notifyElijah(questionId, question, draft, email).catch(console.error)
+      await notifyElijah(questionId, question, draft, email, playerContext).catch(console.error)
     }
     await sendConfirmation(question, email, !!newsletterOptIn).catch(console.error)
     if (newsletterOptIn) await addToBeehiiv(email.trim().toLowerCase()).catch(console.error)
+
+    // Fire-and-forget memory extraction
+    if (questionId) {
+      extractMemories(question).then(memories => {
+        if (memories.length) {
+          fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'}/api/memories`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim().toLowerCase(), memories, source_question_id: questionId }),
+          }).catch(() => {})
+        }
+      }).catch(() => {})
+    }
 
     return NextResponse.json({ success: true, questionId })
   } catch (err) {

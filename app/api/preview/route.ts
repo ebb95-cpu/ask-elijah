@@ -42,12 +42,21 @@ async function searchPinecone(embedding: number[], topK = 5) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { question, profile } = await req.json()
+    const { question, profile, memories } = await req.json()
     if (!question?.trim()) return new Response('Question required', { status: 400 })
 
-    const profileContext = profile
-      ? `\n\nContext about this player: Position: ${profile.position || 'unknown'}, Level: ${profile.level || 'unknown'}, Country: ${profile.country || 'unknown'}, Biggest challenge: ${profile.challenge || 'unknown'}.`
-      : ''
+    const profileParts: string[] = []
+    if (profile?.position) profileParts.push(`Position: ${profile.position}`)
+    if (profile?.level) profileParts.push(`Level: ${profile.level}`)
+    if (profile?.country) profileParts.push(`Country: ${profile.country}`)
+    if (profile?.challenge) profileParts.push(`Biggest challenge: ${profile.challenge}`)
+
+    const memoryParts: string[] = (memories || []).map((m: { fact_type: string; fact_text: string }) => `- [${m.fact_type}] ${m.fact_text}`)
+
+    const profileContext = [
+      profileParts.length ? `\n\nContext about this player: ${profileParts.join(', ')}.` : '',
+      memoryParts.length ? `\n\nWhat I remember about this player:\n${memoryParts.join('\n')}` : '',
+    ].join('')
 
     let ragContext = ''
     let hasChunks = false

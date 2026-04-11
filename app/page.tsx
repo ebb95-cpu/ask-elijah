@@ -149,7 +149,7 @@ function getRotatingSuggestions() {
 const SUGGESTIONS = getRotatingSuggestions()
 
 function ReturningView({
-  question, setQuestion, handleKey, handleSubmit, resetToHome, prevQuestion, prevAnswer, userEmail
+  question, setQuestion, handleKey, handleSubmit, resetToHome, prevQuestion, prevAnswer, userEmail, memories
 }: {
   question: string
   setQuestion: (v: string) => void
@@ -159,10 +159,14 @@ function ReturningView({
   prevQuestion: string
   prevAnswer: string
   userEmail: string
+  memories: { fact_type: string; fact_text: string; expires_at: string | null }[]
 }) {
   const [showPrev, setShowPrev] = useState(false)
   const [reflection, setReflection] = useState('')
   const [reflectionDone, setReflectionDone] = useState(false)
+
+  // Find the most recent event memory to personalize the reflection prompt
+  const eventMemory = memories.find(m => m.fact_type === 'event')
 
   const submitReflection = async (text: string) => {
     setReflectionDone(true)
@@ -207,7 +211,10 @@ function ReturningView({
           <div className="w-full">
             <p className="text-gray-600 text-xs uppercase tracking-widest mb-3">How did it go?</p>
             <p className="text-gray-500 text-sm mb-4">
-              Last time you asked about &ldquo;{prevQuestion.slice(0, 60)}{prevQuestion.length > 60 ? '...' : ''}&rdquo;. What happened when you tried it?
+              {eventMemory
+                ? `${eventMemory.fact_text} — how did it go?`
+                : `Last time you asked about "${prevQuestion.slice(0, 60)}${prevQuestion.length > 60 ? '...' : ''}". What happened when you tried it?`
+              }
             </p>
             <input
               type="text"
@@ -280,15 +287,19 @@ export default function HomePage() {
   const prevAnswerRef = useRef('')
   const userEmailRef = useRef('')
   const profileRef = useRef<Record<string, string> | null>(null)
+  const memoriesRef = useRef<{ fact_type: string; fact_text: string; expires_at: string | null }[]>([])
 
   useEffect(() => {
     const stored = localStorage.getItem('ask_elijah_email')
     if (stored) {
       userEmailRef.current = stored
-      fetch(`/api/profile?email=${encodeURIComponent(stored)}`)
-        .then(r => r.json())
-        .then(d => { if (d?.position || d?.level) profileRef.current = d })
-        .catch(() => {})
+      Promise.all([
+        fetch(`/api/profile?email=${encodeURIComponent(stored)}`).then(r => r.json()).catch(() => null),
+        fetch(`/api/memories?email=${encodeURIComponent(stored)}`).then(r => r.json()).catch(() => null),
+      ]).then(([profile, mem]) => {
+        if (profile?.position || profile?.level) profileRef.current = profile
+        if (mem?.memories?.length) memoriesRef.current = mem.memories
+      })
     }
   }, [])
 
@@ -302,7 +313,7 @@ export default function HomePage() {
       const res = await fetch('/api/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: question.trim(), profile: profileRef.current }),
+        body: JSON.stringify({ question: question.trim(), profile: profileRef.current, memories: memoriesRef.current }),
       })
 
       if (!res.ok || !res.body) {
@@ -563,6 +574,7 @@ export default function HomePage() {
         prevQuestion={prevQuestionRef.current}
         prevAnswer={prevAnswerRef.current}
         userEmail={userEmailRef.current}
+        memories={memoriesRef.current}
       />
     )
   }
