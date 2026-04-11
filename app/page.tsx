@@ -256,6 +256,7 @@ export default function HomePage() {
   const [email, setEmail] = useState('')
   const [emailLoading, setEmailLoading] = useState(false)
   const [ageConfirmed, setAgeConfirmed] = useState(false)
+  const [newsletterOptIn, setNewsletterOptIn] = useState(false)
   const fullAnswerRef = useRef('')
   const prevQuestionRef = useRef('')
   const prevAnswerRef = useRef('')
@@ -328,6 +329,7 @@ export default function HomePage() {
           question: question.trim(),
           email: email.trim(),
           previewAnswer: fullAnswerRef.current,
+          newsletterOptIn,
         }),
       })
       prevQuestionRef.current = question.trim()
@@ -465,6 +467,15 @@ export default function HomePage() {
                     className="mt-0.5 accent-white"
                   />
                   I confirm I am 13 years of age or older
+                </label>
+                <label className="flex items-start gap-2 text-xs text-gray-400 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newsletterOptIn}
+                    onChange={e => setNewsletterOptIn(e.target.checked)}
+                    className="mt-0.5 accent-white"
+                  />
+                  Join the Consistency Club — 4,000 players getting better every week through faith + consistency, on and off the court.
                 </label>
                 <button
                   onClick={handleEmailSubmit}

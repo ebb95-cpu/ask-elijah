@@ -145,7 +145,28 @@ async function notifyElijah(
   })
 }
 
-async function sendConfirmation(question: string, userEmail: string) {
+async function addToBeehiiv(email: string) {
+  const apiKey = process.env.BEEHIIV_API_KEY
+  const pubId = process.env.BEEHIIV_PUBLICATION_ID
+  if (!apiKey || !pubId) return
+
+  await fetch(`https://api.beehiiv.com/v2/publications/${pubId}/subscriptions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      email,
+      reactivate_existing: false,
+      send_welcome_email: true,
+      utm_source: 'ask-elijah',
+      utm_medium: 'email-gate',
+    }),
+  })
+}
+
+async function sendConfirmation(question: string, userEmail: string, newsletterOptIn: boolean) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'
 
@@ -196,7 +217,9 @@ async function sendConfirmation(question: string, userEmail: string) {
         <hr style="border: none; border-top: 1px solid #eee; margin-bottom: 24px;" />
 
         <p style="font-size: 12px; color: #bbb; line-height: 1.6; margin: 0;">
-          You'll only hear from us when Elijah has answered. No newsletters. No spam.
+          ${newsletterOptIn
+            ? "You're getting Elijah's answer + the Consistency Club newsletter. Unsubscribe anytime."
+            : "You'll only hear from us when Elijah has answered."}
         </p>
 
       </div>
@@ -206,7 +229,7 @@ async function sendConfirmation(question: string, userEmail: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { question, email, language, previewAnswer } = await req.json()
+    const { question, email, language, previewAnswer, newsletterOptIn } = await req.json()
 
     if (!question?.trim()) {
       return NextResponse.json({ error: 'Question required' }, { status: 400 })
@@ -255,7 +278,8 @@ export async function POST(req: NextRequest) {
         .insert({ question, answer: FALLBACK, sources: [], ip, email: email.trim().toLowerCase(), status: 'pending' })
         .select('id').single()
       if (record?.id) await notifyElijah(record.id, question, FALLBACK, email).catch(console.error)
-      await sendConfirmation(question, email).catch(console.error)
+      await sendConfirmation(question, email, !!newsletterOptIn).catch(console.error)
+      if (newsletterOptIn) await addToBeehiiv(email.trim().toLowerCase()).catch(console.error)
       return NextResponse.json({ success: true, questionId: record?.id })
     }
 
@@ -324,7 +348,8 @@ export async function POST(req: NextRequest) {
       if (questionId) {
         await notifyElijah(questionId, question, draft, email).catch(console.error)
       }
-      await sendConfirmation(question, email).catch(console.error)
+      await sendConfirmation(question, email, !!newsletterOptIn).catch(console.error)
+      if (newsletterOptIn) await addToBeehiiv(email.trim().toLowerCase()).catch(console.error)
       return NextResponse.json({ success: true, questionId })
     }
 
@@ -334,7 +359,8 @@ export async function POST(req: NextRequest) {
     if (questionId) {
       await notifyElijah(questionId, question, draft, email).catch(console.error)
     }
-    await sendConfirmation(question, email).catch(console.error)
+    await sendConfirmation(question, email, !!newsletterOptIn).catch(console.error)
+    if (newsletterOptIn) await addToBeehiiv(email.trim().toLowerCase()).catch(console.error)
 
     return NextResponse.json({ success: true, questionId })
   } catch (err) {
