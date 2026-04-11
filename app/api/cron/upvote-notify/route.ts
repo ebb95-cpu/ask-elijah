@@ -63,25 +63,25 @@ export async function GET(req: NextRequest) {
               </div>
 
               <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #000;">
-                You're not the only one dealing with this.
+                You're not the only one.
               </p>
 
               <div style="background: #f7f7f7; border-left: 3px solid #000; padding: 16px 20px; margin-bottom: 28px;">
-                <p style="font-size: 13px; color: #999; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.06em;">Your question</p>
+                <p style="font-size: 13px; color: #999; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.06em;">You asked</p>
                 <p style="font-size: 17px; font-weight: 600; margin: 0; color: #000; line-height: 1.4;">${q.question}</p>
               </div>
 
               <p style="font-size: 32px; font-weight: 900; color: #000; margin: 0 0 8px;">${count} players</p>
               <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 24px;">
-                just said they have the exact same problem. That number keeps climbing.
+                said they've got the same thing going on. That number keeps climbing.
               </p>
 
               <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-                Most players think this is just them. It's not. This is one of the most common things holding players back at every level — and almost nobody talks about it.
+                Most players think it's just them. It's not. This is one of the most common things holding players back. Almost nobody talks about it out loud.
               </p>
 
               <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 32px;">
-                You asked the right question. Now make sure you're applying the answer.
+                You asked the right question. Now go make sure you're actually using the answer.
               </p>
 
               <a href="${siteUrl}" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">
@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
 
               <hr style="border: none; border-top: 1px solid #eee; margin-bottom: 24px;" />
               <p style="font-size: 12px; color: #bbb; line-height: 1.6; margin: 0;">
-                You're receiving this because your question is resonating with other players.
+                Your question is spreading. Other players are finding it helpful too.
               </p>
             </div>
           `,
@@ -145,11 +145,11 @@ export async function GET(req: NextRequest) {
                   </div>
 
                   <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #000;">
-                    ${count} players just said this is the thing holding them back.
+                    ${count} players are dealing with the same thing right now.
                   </p>
 
                   <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 28px;">
-                    One player asked a question. Then another player said "I have that too." Then another. Then another.
+                    One player asked. Then another said "I've got that too." Then another. Then another. It kept going.
                   </p>
 
                   <div style="background: #f7f7f7; border-left: 3px solid #000; padding: 20px 24px; margin-bottom: 28px;">
@@ -159,11 +159,11 @@ export async function GET(req: NextRequest) {
                   </div>
 
                   <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-                    If this sounds like something you've been sitting on — you're not alone. And there's an answer waiting for you.
+                    If that sounds familiar, you're not the only one sitting on it. There's an answer for it. Elijah wrote it personally.
                   </p>
 
                   <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 32px;">
-                    The players who get better aren't the ones who have fewer problems. They're the ones who ask about them.
+                    Players who get better aren't the ones with fewer problems. They're the ones who actually ask about them.
                   </p>
 
                   <a href="${siteUrl}" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">
@@ -172,7 +172,7 @@ export async function GET(req: NextRequest) {
 
                   <hr style="border: none; border-top: 1px solid #eee; margin-bottom: 24px;" />
                   <p style="font-size: 12px; color: #bbb; line-height: 1.6; margin: 0;">
-                    You're receiving this because this question is spreading through the community. We thought it might be relevant to you.
+                    This question is spreading through the community. Thought it might hit home for you too.
                   </p>
                 </div>
               `,

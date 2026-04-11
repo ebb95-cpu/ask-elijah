@@ -173,7 +173,7 @@ async function notifyElijah(
     subject: `New question: "${question.slice(0, 60)}${question.length > 60 ? '...' : ''}"`,
     html: `
       <div style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; color: #111;">
-        <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #999; margin-bottom: 24px;">Ask Elijah — New Question</p>
+        <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #999; margin-bottom: 24px;">Ask Elijah / New Question</p>
 
         <div style="background: #f9f9f9; border-left: 3px solid #000; padding: 16px 20px; margin-bottom: 24px;">
           <p style="font-size: 13px; color: #666; margin: 0 0 4px;">From: ${userEmail}</p>
@@ -192,7 +192,7 @@ async function notifyElijah(
 
         ${hasVerifyFlags(draft) ? `
         <div style="background: #fff8e1; border-left: 4px solid #f59e0b; padding: 14px 18px; margin-bottom: 20px; font-size: 13px; color: #78350f;">
-          ⚠️ <strong>Flagged claims below need your review</strong> — highlighted in yellow. Edit or confirm before sending.
+          ⚠️ <strong>Flagged claims below need your review.</strong> Highlighted in yellow. Edit or confirm before sending.
         </div>` : ''}
 
         <p style="font-size: 13px; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">AI Draft — click above to edit before sending</p>
@@ -253,28 +253,28 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
         </div>
 
         <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #000;">
-          You just got access to something most players spend their whole career wishing they had.
+          Got it. Elijah's on it.
         </p>
 
         <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-          A real answer. From someone who's actually been there. About your actual situation.
+          Most players never ask. They just keep hoping it gets better. You didn't do that.
         </p>
 
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 32px;">
-          Not a YouTube video made for everyone. Not a coach who's guessing. Elijah has been in NBA locker rooms and Euroleague finals. He's seen exactly what separates the players who make it from the ones who don't. And he's answering your question personally.
-        </p>
-
-        <div style="background: #f7f7f7; border-left: 3px solid #000; padding: 16px 20px; margin-bottom: 32px;">
-          <p style="font-size: 13px; color: #999; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.06em;">Your question</p>
+        <div style="background: #f7f7f7; border-left: 3px solid #000; padding: 16px 20px; margin-bottom: 28px;">
+          <p style="font-size: 13px; color: #999; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.06em;">You asked</p>
           <p style="font-size: 17px; font-weight: 600; margin: 0; color: #000; line-height: 1.4;">${question}</p>
         </div>
 
         <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-          His answer is coming within 48 hours. When it lands, read it twice. Then go do it.
+          Elijah reads every question personally. Not a template. Not a bot. He's been in NBA locker rooms and Euroleague finals. He's going to answer your situation specifically.
+        </p>
+
+        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
+          His answer lands within 48 hours. Read it twice when it does. Then go do it.
         </p>
 
         <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 32px;">
-          Because while you're waiting, someone else on your team is already working on the same problem. One answer, applied, can change a season.
+          While you wait, someone else on your team is already working on the same problem. One answer, actually applied, can change a whole season.
         </p>
 
         <a href="${siteUrl}/browse" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">
@@ -285,8 +285,8 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
 
         <p style="font-size: 12px; color: #bbb; line-height: 1.6; margin: 0;">
           ${newsletterOptIn
-            ? "You're getting Elijah's answer + the Consistency Club newsletter. Unsubscribe anytime."
-            : "You'll only hear from us when Elijah has answered."}
+            ? "You'll get Elijah's answer plus the Consistency Club newsletter. Unsubscribe anytime."
+            : "You'll only hear from us when Elijah has answered. That's it."}
         </p>
 
       </div>
