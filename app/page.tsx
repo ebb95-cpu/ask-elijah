@@ -122,16 +122,31 @@ function LiveTicker() {
   )
 }
 
-const SUGGESTIONS = [
+const ALL_SUGGESTIONS = [
   "I freeze up in real games but ball out in practice",
-  "How do I get my confidence back after a bad game?",
+  "How do I get my confidence back after a bad streak?",
   "My coach keeps benching me and won't tell me why",
   "Is it too late for me to go D1?",
   "How do I stop overthinking on the court?",
-  "Night before a big game",
+  "I can't sleep the night before a big game",
   "How do I get out of a shooting slump?",
-  "I'm scared to take shots when it matters",
+  "I'm scared to take big shots when it matters",
+  "I work harder than everyone but I'm still not starting",
+  "I lost my passion for the game",
+  "How do I handle being moved to a new position?",
+  "My teammates don't believe in me",
 ]
+
+function getRotatingSuggestions() {
+  const day = new Date().getDate()
+  const offset = day % ALL_SUGGESTIONS.length
+  return [
+    ...ALL_SUGGESTIONS.slice(offset),
+    ...ALL_SUGGESTIONS.slice(0, offset),
+  ]
+}
+
+const SUGGESTIONS = getRotatingSuggestions()
 
 function ReturningView({
   question, setQuestion, handleKey, handleSubmit, resetToHome, prevQuestion, prevAnswer, userEmail
@@ -219,11 +234,14 @@ function ReturningView({
         {/* Ask input */}
         {(reflectionDone || !prevQuestion) && (
           <div className="w-full">
+            {reflectionDone && (
+              <p className="text-gray-600 text-xs uppercase tracking-widest mb-4">Good. Now go deeper.</p>
+            )}
             <textarea
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={handleKey}
-              placeholder="I'm here when you're ready."
+              placeholder={reflectionDone ? "What's the next thing holding you back?" : "I'm here when you're ready."}
               rows={3}
               autoFocus
               className="w-full text-white placeholder-gray-700 text-lg sm:text-xl leading-relaxed resize-none outline-none bg-transparent border-b border-gray-800 focus:border-gray-600 transition-colors pb-3"

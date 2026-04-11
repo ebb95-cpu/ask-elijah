@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
 
   // Send email to user
   const resend = new Resend(process.env.RESEND_API_KEY)
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'
   await resend.emails.send({
     from: 'Elijah Bryant <onboarding@resend.dev>',
     to: record.email,
@@ -88,6 +89,19 @@ export async function POST(req: NextRequest) {
         </div>
 
         <div style="font-size: 16px; line-height: 1.75; color: #222; white-space: pre-wrap;">${finalAnswer}</div>
+
+        <div style="margin-top: 48px; border-top: 2px solid #000; padding-top: 28px;">
+          <p style="font-size: 17px; font-weight: 800; color: #000; margin: 0 0 10px;">Now go use it.</p>
+          <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 24px;">
+            Read it twice. Then go do it. When you do — hit reply and tell me what happened. That's how this works.
+          </p>
+          <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 24px;">
+            And if this opened up a new question, don't sit on it.
+          </p>
+          <a href="${siteUrl}" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700;">
+            Ask your next question →
+          </a>
+        </div>
 
         <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #f0f0f0;">
           <p style="font-size: 13px; color: #999; margin: 0;">— Elijah Bryant</p>
