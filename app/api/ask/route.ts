@@ -152,7 +152,7 @@ async function sendConfirmation(question: string, userEmail: string) {
   await resend.emails.send({
     from: 'Elijah Bryant <onboarding@resend.dev>',
     to: userEmail,
-    subject: 'Got it. Be ready.',
+    subject: 'Something most players never get.',
     html: `
       <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 48px 24px; color: #111; background: #fff;">
 
@@ -165,24 +165,28 @@ async function sendConfirmation(question: string, userEmail: string) {
         </div>
 
         <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #000;">
-          You just asked a real question.
+          You just got access to something most players spend their whole career wishing they had.
+        </p>
+
+        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
+          A real answer. From someone who's actually been there. About your actual situation.
+        </p>
+
+        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 32px;">
+          Not a YouTube video made for everyone. Not a coach who's guessing. Elijah has been in NBA locker rooms and Euroleague finals. He's seen exactly what separates the players who make it from the ones who don't. And he's answering your question personally.
         </p>
 
         <div style="background: #f7f7f7; border-left: 3px solid #000; padding: 16px 20px; margin-bottom: 32px;">
-          <p style="font-size: 13px; color: #999; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.06em;">You asked</p>
+          <p style="font-size: 13px; color: #999; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.06em;">Your question</p>
           <p style="font-size: 17px; font-weight: 600; margin: 0; color: #000; line-height: 1.4;">${question}</p>
         </div>
 
         <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-          Most players never do. They just keep hoping it gets better on its own. You didn't do that. You asked.
-        </p>
-
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-          But here's the thing. If Elijah answers and you don't apply it, you're wasting his time. And while you're sitting on his answer, some other player on your team already ran it 50 times in practice.
+          His answer is coming within 48 hours. When it lands, read it twice. Then go do it.
         </p>
 
         <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 32px;">
-          His answer is coming within 48 hours. Be ready to use it.
+          Because while you're waiting, someone else on your team is already working on the same problem. One answer, applied, can change a season.
         </p>
 
         <a href="${siteUrl}/browse" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">
