@@ -152,7 +152,7 @@ async function sendConfirmation(question: string, userEmail: string) {
   await resend.emails.send({
     from: 'Elijah Bryant <onboarding@resend.dev>',
     to: userEmail,
-    subject: 'Elijah got your question.',
+    subject: 'Got it. Be ready.',
     html: `
       <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 48px 24px; color: #111; background: #fff;">
 
@@ -164,11 +164,8 @@ async function sendConfirmation(question: string, userEmail: string) {
           <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
         </div>
 
-        <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 8px; color: #000;">
-          Your question is with Elijah.
-        </p>
-        <p style="font-size: 15px; color: #666; margin: 0 0 32px; line-height: 1.5;">
-          He reads every single one personally.
+        <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #000;">
+          You just asked a real question.
         </p>
 
         <div style="background: #f7f7f7; border-left: 3px solid #000; padding: 16px 20px; margin-bottom: 32px;">
@@ -176,14 +173,16 @@ async function sendConfirmation(question: string, userEmail: string) {
           <p style="font-size: 17px; font-weight: 600; margin: 0; color: #000; line-height: 1.4;">${question}</p>
         </div>
 
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 12px;">
-          Most players spend years searching YouTube for answers that were never made for their situation.
+        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
+          Most players never do. They just keep hoping it gets better on its own. You didn't do that. You asked.
         </p>
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 12px;">
-          What you just did is different. Elijah has been in NBA locker rooms, Euroleague finals, and high-pressure moments most coaches have only watched on TV. He's going to answer your specific question with what he actually knows.
+
+        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
+          But here's the thing. If Elijah answers and you don't apply it, you're wasting his time. And while you're sitting on his answer, some other player on your team already ran it 50 times in practice.
         </p>
+
         <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 32px;">
-          Expect his answer in your inbox within 48 hours.
+          His answer is coming within 48 hours. Be ready to use it.
         </p>
 
         <a href="${siteUrl}/browse" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">
