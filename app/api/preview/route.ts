@@ -42,23 +42,42 @@ async function searchPinecone(embedding: number[], topK = 5) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { question } = await req.json()
+    const { question, profile } = await req.json()
     if (!question?.trim()) return new Response('Question required', { status: 400 })
 
+    const profileContext = profile
+      ? `\n\nContext about this player: Position: ${profile.position || 'unknown'}, Level: ${profile.level || 'unknown'}, Country: ${profile.country || 'unknown'}, Biggest challenge: ${profile.challenge || 'unknown'}.`
+      : ''
+
     let ragContext = ''
+    let hasChunks = false
     try {
       const embedding = await embedQuestion(question)
       const chunks = await searchPinecone(embedding)
       if (chunks.length > 0) {
+        hasChunks = true
         ragContext = `Here is relevant content from Elijah's YouTube videos and newsletters:\n\n${chunks.join('\n\n---\n\n')}\n\n`
       }
     } catch {
-      // RAG optional — continue without it
+      // RAG failed — treat as no chunks
     }
 
-    const userMessage = ragContext
-      ? `${ragContext}Now answer this question using the above context where relevant:\n\n${question}`
-      : question
+    // If no relevant content found in Elijah's knowledge base, stream a fallback
+    if (!hasChunks) {
+      const encoder = new TextEncoder()
+      const fallback = "I want to make sure I give you something real on this one. Try asking me again with a bit more detail about your situation and I'll find the right angle."
+      const readable = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(fallback))
+          controller.close()
+        }
+      })
+      return new Response(readable, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' }
+      })
+    }
+
+    const userMessage = `${ragContext}Now answer this question using the above context where relevant:\n\n${question}${profileContext}`
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const stream = await anthropic.messages.create({

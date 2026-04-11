@@ -172,16 +172,31 @@ export async function POST(req: NextRequest) {
 
     // RAG lookup
     let ragContext = ''
+    let hasChunks = false
     let sources: { title: string; url: string; type: string }[] = []
     try {
       const embedding = await embedQuestion(question)
       const result = await searchPinecone(embedding)
       sources = result.sources
       if (result.chunks.length > 0) {
+        hasChunks = true
         ragContext = `Here is relevant content from Elijah's YouTube videos and newsletters:\n\n${result.chunks.join('\n\n---\n\n')}\n\n`
       }
     } catch (ragErr) {
       console.warn('RAG lookup failed:', ragErr)
+    }
+
+    // If no relevant chunks and no preview answer, use fallback
+    const FALLBACK = "I want to make sure I give you something real on this one. Try asking me again with a bit more detail about your situation and I'll find the right angle."
+    if (!hasChunks && !previewAnswer?.trim()) {
+      // Save fallback to Supabase and notify
+      const supabase = getSupabase()
+      const { data: record } = await supabase
+        .from('questions')
+        .insert({ question, answer: FALLBACK, sources: [], ip, email: email.trim().toLowerCase(), status: 'pending' })
+        .select('id').single()
+      if (record?.id) await notifyElijah(record.id, question, FALLBACK, email).catch(console.error)
+      return NextResponse.json({ success: true, questionId: record?.id })
     }
 
     // Language instruction
@@ -195,9 +210,7 @@ export async function POST(req: NextRequest) {
       ? `\n\nIMPORTANT: The user's language is ${langName}. Respond entirely in ${langName}.`
       : ''
 
-    const userMessage = ragContext
-      ? `${ragContext}Now answer this question using the above context where relevant:\n\n${question}`
-      : question
+    const userMessage = `${ragContext}Now answer this question using the above context where relevant:\n\n${question}`
 
     // Use preview answer if already generated on the frontend, otherwise generate fresh
     let draft = ''

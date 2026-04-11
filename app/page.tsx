@@ -134,7 +134,7 @@ const SUGGESTIONS = [
 ]
 
 function ReturningView({
-  question, setQuestion, handleKey, handleSubmit, resetToHome, prevQuestion, prevAnswer
+  question, setQuestion, handleKey, handleSubmit, resetToHome, prevQuestion, prevAnswer, userEmail
 }: {
   question: string
   setQuestion: (v: string) => void
@@ -143,14 +143,28 @@ function ReturningView({
   resetToHome: () => void
   prevQuestion: string
   prevAnswer: string
+  userEmail: string
 }) {
   const [showPrev, setShowPrev] = useState(false)
+  const [reflection, setReflection] = useState('')
+  const [reflectionDone, setReflectionDone] = useState(false)
+
+  const submitReflection = async (text: string) => {
+    setReflectionDone(true)
+    if (text.trim()) {
+      fetch('/api/reflection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail, text }),
+      }).catch(() => {})
+    }
+  }
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-      <nav className="flex items-center justify-between px-6 py-5">
+      <nav className="flex items-center justify-between px-5 py-5">
         <Logo dark />
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-5">
           {prevQuestion && (
             <button
               onClick={() => setShowPrev(v => !v)}
@@ -165,33 +179,67 @@ function ReturningView({
 
       {/* Previous Q&A — slides in when toggled */}
       {showPrev && (
-        <div className="px-5 py-6 max-w-xl mx-auto w-full border-b border-gray-900 overflow-y-auto max-h-[50vh]">
+        <div className="px-5 py-6 max-w-xl mx-auto w-full border-b border-gray-900 overflow-y-auto max-h-[45vh]">
           <p className="text-gray-600 text-xs italic mb-3">&ldquo;{prevQuestion}&rdquo;</p>
           <p className="text-gray-500 text-sm leading-relaxed">{prevAnswer}</p>
         </div>
       )}
 
-      {/* Ask input — centered, no distractions */}
-      <div className="flex-1 flex flex-col items-center justify-center px-5 max-w-xl mx-auto w-full">
-        <textarea
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={handleKey}
-          placeholder="I'm here when you're ready."
-          rows={3}
-          autoFocus
-          className="w-full text-white placeholder-gray-700 text-lg sm:text-xl leading-relaxed resize-none outline-none bg-transparent border-b border-gray-800 focus:border-gray-600 transition-colors pb-3"
-          style={{ minHeight: '80px' }}
-        />
-        <div className="flex justify-end w-full mt-4">
-          <button
-            onClick={handleSubmit}
-            disabled={!question.trim()}
-            className="text-sm font-semibold text-white disabled:text-gray-800 disabled:cursor-not-allowed hover:opacity-70 transition-all"
-          >
-            Ask →
-          </button>
-        </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-5 max-w-xl mx-auto w-full gap-10">
+
+        {/* Reflection prompt — show once, before ask box */}
+        {!reflectionDone && prevQuestion && (
+          <div className="w-full">
+            <p className="text-gray-600 text-xs uppercase tracking-widest mb-3">How did it go?</p>
+            <p className="text-gray-500 text-sm mb-4">
+              Last time you asked about &ldquo;{prevQuestion.slice(0, 60)}{prevQuestion.length > 60 ? '...' : ''}&rdquo;. What happened when you tried it?
+            </p>
+            <input
+              type="text"
+              value={reflection}
+              onChange={e => setReflection(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') submitReflection(reflection) }}
+              placeholder="What worked, what didn't..."
+              autoFocus
+              className="w-full bg-transparent border-b border-gray-800 focus:border-gray-600 text-white placeholder-gray-700 text-sm outline-none pb-2 transition-colors"
+            />
+            <div className="flex items-center justify-between mt-3">
+              <button onClick={() => submitReflection('')} className="text-xs text-gray-700 hover:text-gray-500 transition-colors">Skip</button>
+              <button
+                onClick={() => submitReflection(reflection)}
+                disabled={!reflection.trim()}
+                className="text-xs text-white disabled:text-gray-700 hover:opacity-70 transition-all font-medium"
+              >
+                Save & continue →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Ask input */}
+        {(reflectionDone || !prevQuestion) && (
+          <div className="w-full">
+            <textarea
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder="I'm here when you're ready."
+              rows={3}
+              autoFocus
+              className="w-full text-white placeholder-gray-700 text-lg sm:text-xl leading-relaxed resize-none outline-none bg-transparent border-b border-gray-800 focus:border-gray-600 transition-colors pb-3"
+              style={{ minHeight: '80px' }}
+            />
+            <div className="flex justify-end w-full mt-4">
+              <button
+                onClick={handleSubmit}
+                disabled={!question.trim()}
+                className="text-sm font-semibold text-white disabled:text-gray-800 disabled:cursor-not-allowed hover:opacity-70 transition-all"
+              >
+                Ask →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -211,6 +259,19 @@ export default function HomePage() {
   const fullAnswerRef = useRef('')
   const prevQuestionRef = useRef('')
   const prevAnswerRef = useRef('')
+  const userEmailRef = useRef('')
+  const profileRef = useRef<Record<string, string> | null>(null)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('ask_elijah_email')
+    if (stored) {
+      userEmailRef.current = stored
+      fetch(`/api/profile?email=${encodeURIComponent(stored)}`)
+        .then(r => r.json())
+        .then(d => { if (d?.position || d?.level) profileRef.current = d })
+        .catch(() => {})
+    }
+  }, [])
 
   const handleSubmit = async () => {
     if (!question.trim() || (mode !== 'idle' && mode !== 'returning')) return
@@ -222,7 +283,7 @@ export default function HomePage() {
       const res = await fetch('/api/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: question.trim() }),
+        body: JSON.stringify({ question: question.trim(), profile: profileRef.current }),
       })
 
       if (!res.ok || !res.body) {
@@ -271,6 +332,8 @@ export default function HomePage() {
       })
       prevQuestionRef.current = question.trim()
       prevAnswerRef.current = fullAnswerRef.current
+      userEmailRef.current = email.trim()
+      localStorage.setItem('ask_elijah_email', email.trim())
       setMode('submitted')
     } catch {
       // still show submitted — question was received
@@ -467,6 +530,7 @@ export default function HomePage() {
         resetToHome={resetToHome}
         prevQuestion={prevQuestionRef.current}
         prevAnswer={prevAnswerRef.current}
+        userEmail={userEmailRef.current}
       />
     )
   }
@@ -479,8 +543,8 @@ export default function HomePage() {
       <nav className="flex items-center justify-between px-6 py-5">
         <Logo dark />
         <div className="flex items-center gap-6">
-          <Link href="/sign-in" className="text-sm text-gray-500 hover:text-white transition-colors">Sign in</Link>
-          <Link href="/history" className="text-sm text-gray-500 hover:text-white transition-colors">My questions</Link>
+          <Link href="/browse" className="text-sm text-gray-500 hover:text-white transition-colors">Browse</Link>
+          <Link href="/profile" className="text-sm text-gray-500 hover:text-white transition-colors">Profile</Link>
         </div>
       </nav>
 

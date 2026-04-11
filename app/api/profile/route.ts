@@ -1,36 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 
+export async function GET(req: NextRequest) {
+  const email = req.nextUrl.searchParams.get('email')
+  if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
+  const supabase = getSupabase()
+  const { data } = await supabase.from('profiles').select('*').eq('email', email.toLowerCase()).single()
+  return NextResponse.json(data || {})
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { email, name, age, position, level, struggle, goals, customGoal, language } = await req.json()
-
-    if (!email?.trim()) {
-      return NextResponse.json({ error: 'Email required' }, { status: 400 })
-    }
-
+    const { email, position, level, country, challenge } = await req.json()
+    if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
     const supabase = getSupabase()
-
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({
-        email: email.trim().toLowerCase(),
-        name: name?.trim() || null,
-        age: age ? parseInt(age) : null,
-        position: position || null,
-        level: level || null,
-        struggle: struggle || null,
-        goals: goals || [],
-        custom_goal: customGoal?.trim() || null,
-        language: language || 'en',
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'email' })
-
-    if (error) throw error
-
-    return NextResponse.json({ ok: true })
+    await supabase.from('profiles').upsert({
+      email: email.trim().toLowerCase(),
+      position, level, country, challenge,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'email' })
+    return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Profile save error:', err)
-    return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed' }, { status: 500 })
   }
 }

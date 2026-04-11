@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -16,132 +16,113 @@ function Logo() {
   )
 }
 
-const TOPICS = [
-  {
-    title: "Mental game",
-    sub: "Confidence, pressure, focus, mindset under fire",
-    questions: [
-      "How do I stay confident after a bad shooting night?",
-      "What do you do when you lose confidence mid-game?",
-      "How do you handle crowd pressure in a hostile arena?",
-    ],
-  },
-  {
-    title: "Recovery",
-    sub: "Sleep, soreness, back-to-backs, in-season maintenance",
-    questions: [
-      "How do you recover after a back-to-back in Euroleague?",
-      "What's your night-before-game recovery routine?",
-      "How do you manage soreness during a long season?",
-    ],
-  },
-  {
-    title: "Shooting",
-    sub: "Form, rhythm, free throws, shot creation",
-    questions: [
-      "How do I fix my form when I'm in a shooting slump?",
-      "What do you do to warm up your shot before a game?",
-      "How do I shoot better under real game pressure?",
-    ],
-  },
-  {
-    title: "Nutrition",
-    sub: "Fueling, hydration, game-day eating, travel diet",
-    questions: [
-      "What do you eat on game day?",
-      "How do you stay disciplined with food while traveling?",
-      "What's the one thing you cut out of your diet that made a difference?",
-    ],
-  },
-  {
-    title: "Explosiveness",
-    sub: "Jumping, speed, agility, in-season athleticism",
-    questions: [
-      "How do I maintain my athleticism during a long season?",
-      "What's the best way to improve my first step?",
-      "How do pro players train for explosiveness without burning out?",
-    ],
-  },
-  {
-    title: "Pre-game prep",
-    sub: "Routines, warm-up, focus rituals, game-day mindset",
-    questions: [
-      "What's your full pre-game routine on game day?",
-      "How early do you start preparing mentally before a game?",
-      "What do you do the night before a big game?",
-    ],
-  },
-]
+type Question = {
+  id: string
+  question: string
+  answer: string
+  upvote_count: number
+  user_upvoted: boolean
+}
+
+const TEASER_CHARS = 160
 
 export default function BrowsePage() {
-  const [selected, setSelected] = useState<string | null>(null)
   const router = useRouter()
+  const [questions, setQuestions] = useState<Question[]>([])
+  const [loading, setLoading] = useState(true)
+  const [userEmail, setUserEmail] = useState('')
 
-  const topic = TOPICS.find(t => t.title === selected)
+  useEffect(() => {
+    const stored = localStorage.getItem('ask_elijah_email') || ''
+    setUserEmail(stored)
+    fetch(`/api/browse${stored ? `?email=${encodeURIComponent(stored)}` : ''}`)
+      .then(r => r.json())
+      .then(d => setQuestions(d.questions || []))
+      .finally(() => setLoading(false))
+  }, [])
 
-  const handleQuestion = (q: string) => {
-    sessionStorage.setItem('pending_question', q)
-    router.push('/ask')
+  const handleUpvote = async (questionId: string) => {
+    if (!userEmail) {
+      router.push('/')
+      return
+    }
+    const res = await fetch('/api/upvote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question_id: questionId, email: userEmail }),
+    })
+    const data = await res.json()
+    setQuestions(prev => prev.map(q => {
+      if (q.id !== questionId) return q
+      return {
+        ...q,
+        user_upvoted: data.action === 'added',
+        upvote_count: data.action === 'added' ? q.upvote_count + 1 : q.upvote_count - 1,
+      }
+    }))
   }
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-      <nav className="flex items-center justify-between px-6 py-5">
+      <nav className="flex items-center justify-between px-5 py-5 border-b border-gray-900">
         <Link href="/"><Logo /></Link>
-        <Link href="/ask" className="text-sm font-semibold bg-white text-black px-4 py-2 hover:opacity-80 transition-opacity">
-          Ask now
-        </Link>
+        <p className="text-xs text-gray-600 tracking-widest uppercase">Questions</p>
+        <button
+          onClick={() => router.push('/')}
+          className="text-xs text-white font-semibold hover:opacity-70 transition-opacity"
+        >
+          Ask →
+        </button>
       </nav>
 
-      <main className="flex-1 px-6 py-12 max-w-5xl mx-auto w-full">
-        {!selected ? (
-          <>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-12">Topics.</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {TOPICS.map((t) => (
-                <button
-                  key={t.title}
-                  onClick={() => setSelected(t.title)}
-                  className="border border-gray-800 p-8 text-left hover:bg-white hover:text-black hover:border-white group transition-all"
-                >
-                  <p className="font-bold text-lg tracking-tight mb-2 group-hover:text-black">{t.title}</p>
-                  <p className="text-sm text-gray-400 group-hover:text-gray-600">{t.sub}</p>
-                </button>
-              ))}
-            </div>
-          </>
+      <main className="flex-1 px-5 py-10 max-w-2xl mx-auto w-full">
+        {loading ? (
+          <div className="text-gray-700 text-sm">Loading...</div>
+        ) : questions.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-gray-600 text-sm mb-4">No questions yet. Be the first.</p>
+            <button onClick={() => router.push('/')} className="text-white text-sm underline">Ask Elijah →</button>
+          </div>
         ) : (
-          <>
-            <button
-              onClick={() => setSelected(null)}
-              className="text-gray-400 hover:text-white transition-colors text-sm mb-8 block"
-            >
-              ← All topics
-            </button>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">{topic?.title}.</h1>
-            <p className="text-gray-400 mb-10">{topic?.sub}</p>
-            <div className="space-y-3">
-              {topic?.questions.map((q) => (
-                <button
-                  key={q}
-                  onClick={() => handleQuestion(q)}
-                  className="w-full border border-gray-800 p-6 text-left hover:border-white hover:bg-white hover:text-black group transition-all"
-                >
-                  <p className="font-semibold tracking-tight group-hover:text-black">{q}</p>
-                  <p className="text-xs text-gray-600 mt-2 group-hover:text-gray-500">Tap to ask →</p>
-                </button>
-              ))}
-            </div>
-            <div className="mt-10">
-              <p className="text-gray-600 text-sm mb-3">Don&apos;t see your question?</p>
-              <button
-                onClick={() => router.push('/ask')}
-                className="bg-white text-black px-6 py-3 text-sm font-semibold hover:opacity-80 transition-opacity"
-              >
-                Ask your own →
-              </button>
-            </div>
-          </>
+          <div className="space-y-0">
+            {questions.map((q, i) => {
+              const teaser = q.answer.slice(0, TEASER_CHARS)
+              const hasMore = q.answer.length > TEASER_CHARS
+
+              return (
+                <div key={q.id} className={`py-8 ${i < questions.length - 1 ? 'border-b border-gray-900' : ''}`}>
+                  <p className="text-white font-semibold text-base leading-snug mb-4">{q.question}</p>
+
+                  <div className="relative">
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      {teaser}{hasMore ? '...' : ''}
+                    </p>
+
+                    {hasMore && (
+                      <div className="mt-3">
+                        <button
+                          onClick={() => router.push('/')}
+                          className="text-xs text-gray-600 hover:text-white transition-colors border border-gray-800 hover:border-gray-600 px-3 py-1.5"
+                        >
+                          Get the full answer — ask Elijah →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-4 mt-5">
+                    <button
+                      onClick={() => handleUpvote(q.id)}
+                      className={`flex items-center gap-1.5 text-xs transition-colors ${q.user_upvoted ? 'text-white' : 'text-gray-600 hover:text-gray-300'}`}
+                    >
+                      <span>{q.user_upvoted ? '▲' : '△'}</span>
+                      <span>{q.upvote_count} had this too</span>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         )}
       </main>
     </div>
