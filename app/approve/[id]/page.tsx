@@ -22,6 +22,7 @@ function ApprovePageInner() {
   const [draft, setDraft] = useState('')
   const [context, setContext] = useState('')
   const [finalAnswer, setFinalAnswer] = useState('')
+  const [actionSteps, setActionSteps] = useState('')
   const [stage, setStage] = useState<Stage>('review')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -70,7 +71,7 @@ function ApprovePageInner() {
       const res = await fetch('/api/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-token': token },
-        body: JSON.stringify({ questionId: id, finalAnswer }),
+        body: JSON.stringify({ questionId: id, finalAnswer, actionSteps }),
       })
       if (!res.ok) throw new Error('Failed to send')
       setStage('sent')
@@ -168,7 +169,7 @@ function ApprovePageInner() {
         {(stage === 'approve' || stage === 'sending') && (
           <>
             <div className="mb-6">
-              <p className="text-xs text-gray-600 tracking-widest uppercase mb-3">Regenerated Answer — review before sending</p>
+              <p className="text-xs text-gray-600 tracking-widest uppercase mb-3">Answer — review before sending</p>
               <textarea
                 value={finalAnswer}
                 onChange={(e) => setFinalAnswer(e.target.value)}
@@ -177,10 +178,22 @@ function ApprovePageInner() {
               />
             </div>
 
+            <div className="mb-8">
+              <p className="text-xs text-gray-600 tracking-widest uppercase mb-1">Action Steps</p>
+              <p className="text-xs text-gray-700 mb-3">Write 2–3 specific things they must do. These get sent in the answer email and used to hold them accountable 48 hours later.</p>
+              <textarea
+                value={actionSteps}
+                onChange={(e) => setActionSteps(e.target.value)}
+                rows={4}
+                placeholder={"1. Do 100 free throws tomorrow before practice — no music, full focus.\n2. Before your next game, write down one thing you're going to control.\n3. After the game, voice memo yourself for 60 seconds. What did you actually control?"}
+                className="w-full bg-gray-950 border border-gray-700 focus:border-white text-white text-sm leading-relaxed p-4 outline-none resize-none transition-colors placeholder-gray-800"
+              />
+            </div>
+
             <div className="flex gap-4 items-center mb-4">
               <button
                 onClick={handleApproveAndSend}
-                disabled={!finalAnswer.trim() || stage === 'sending'}
+                disabled={!finalAnswer.trim() || !actionSteps.trim() || stage === 'sending'}
                 className="bg-white text-black px-8 py-3 text-sm font-bold disabled:opacity-30 hover:opacity-80 transition-opacity"
               >
                 {stage === 'sending' ? 'Sending...' : `Approve & Send to ${record?.email} →`}
@@ -194,7 +207,7 @@ function ApprovePageInner() {
             </div>
 
             <p className="text-xs text-gray-700">
-              This will send the answer to the user and train Pinecone automatically.
+              Action steps are required. They'll be included in the email and used for the 48hr accountability follow-up.
             </p>
           </>
         )}

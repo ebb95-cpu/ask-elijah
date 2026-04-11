@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { questionId, finalAnswer } = await req.json()
+  const { questionId, finalAnswer, actionSteps } = await req.json()
   if (!questionId || !finalAnswer) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   // Update in Supabase
   await supabase
     .from('questions')
-    .update({ answer: finalAnswer, status: 'approved' })
+    .update({ answer: finalAnswer, status: 'approved', action_steps: actionSteps || null })
     .eq('id', questionId)
 
   // Send email to user
@@ -90,13 +90,16 @@ export async function POST(req: NextRequest) {
 
         <div style="font-size: 16px; line-height: 1.75; color: #222; white-space: pre-wrap;">${finalAnswer}</div>
 
-        <div style="margin-top: 48px; border-top: 2px solid #000; padding-top: 28px;">
+        ${actionSteps ? `
+        <div style="margin-top: 40px; background: #f7f7f7; border-left: 3px solid #000; padding: 20px 24px;">
+          <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #999; margin: 0 0 12px;">Your action steps</p>
+          <div style="font-size: 15px; line-height: 1.8; color: #111; white-space: pre-wrap;">${actionSteps}</div>
+        </div>` : ''}
+
+        <div style="margin-top: 40px; border-top: 2px solid #000; padding-top: 28px;">
           <p style="font-size: 17px; font-weight: 800; color: #000; margin: 0 0 10px;">Now go use it.</p>
           <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 24px;">
-            Read it twice. Then go do it. When you do — hit reply and tell me what happened. That's how this works.
-          </p>
-          <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 24px;">
-            And if this opened up a new question, don't sit on it.
+            Read it twice. Then go do the steps. In 48 hours I'm going to ask you how it went.
           </p>
           <a href="${siteUrl}" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700;">
             Ask your next question →
