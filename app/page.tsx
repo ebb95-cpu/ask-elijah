@@ -419,57 +419,60 @@ export default function HomePage() {
           </div>
 
           {/* Answer */}
-          <div className="w-full relative">
+          <div className="w-full">
             <p className="text-gray-500 text-xs uppercase tracking-widest mb-4">Elijah says</p>
 
             {/* Visible part */}
-            <div className="text-white text-base leading-relaxed">
+            <div className="text-white text-base leading-relaxed mb-2">
               {visibleText}
               {!isDone && <span className="inline-block w-1 h-4 bg-white ml-1 animate-pulse" />}
             </div>
 
-            {/* Blurred part + gate */}
+            {/* Blurred fade — no overlay, just visual hint there's more */}
             {hiddenText && (
-              <div className="relative mt-0">
-                <div
-                  className="text-white text-base leading-relaxed select-none pointer-events-none"
-                  style={{ filter: 'blur(6px)', opacity: 0.6, userSelect: 'none' }}
+              <div
+                className="text-white text-base leading-relaxed select-none pointer-events-none mb-6"
+                style={{
+                  maskImage: 'linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, transparent 80%)',
+                  WebkitMaskImage: 'linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, transparent 80%)',
+                  filter: 'blur(5px)',
+                  maxHeight: '80px',
+                  overflow: 'hidden',
+                }}
+              >
+                {hiddenText}
+              </div>
+            )}
+
+            {/* Email gate — stacked below, not overlaid */}
+            {hiddenText && (
+              <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
+                <p className="text-white font-semibold text-base">Get the full answer</p>
+                <p className="text-gray-500 text-sm">Elijah will send it to you personally.</p>
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleEmailSubmit() }}
+                  className="w-full px-4 py-3 bg-transparent border border-gray-700 text-white placeholder-gray-600 outline-none focus:border-white transition-colors text-sm"
+                />
+                <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={ageConfirmed}
+                    onChange={e => setAgeConfirmed(e.target.checked)}
+                    className="mt-0.5 accent-white"
+                  />
+                  I confirm I am 13 years of age or older
+                </label>
+                <button
+                  onClick={handleEmailSubmit}
+                  disabled={!email.trim() || !ageConfirmed || emailLoading}
+                  className="w-full bg-white text-black py-3 text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
                 >
-                  {hiddenText}
-                </div>
-
-                {/* Email gate overlay */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-black via-black/90 to-transparent pt-8">
-                  <p className="text-white font-semibold text-lg mb-1 text-center">Get the full answer</p>
-                  <p className="text-gray-500 text-sm mb-6 text-center">Enter your email and Elijah will send it to you</p>
-
-                  <div className="w-full max-w-xs flex flex-col gap-3">
-                    <input
-                      type="email"
-                      placeholder="your@email.com"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') handleEmailSubmit() }}
-                      className="w-full px-4 py-3 bg-transparent border border-gray-700 text-white placeholder-gray-600 outline-none focus:border-white transition-colors text-sm"
-                    />
-                    <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={ageConfirmed}
-                        onChange={e => setAgeConfirmed(e.target.checked)}
-                        className="mt-0.5 accent-white"
-                      />
-                      I confirm I am 13 years of age or older
-                    </label>
-                    <button
-                      onClick={handleEmailSubmit}
-                      disabled={!email.trim() || !ageConfirmed || emailLoading}
-                      className="w-full bg-white text-black py-3 text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
-                    >
-                      {emailLoading ? 'Sending...' : 'Send me the full answer →'}
-                    </button>
-                  </div>
-                </div>
+                  {emailLoading ? 'Sending...' : 'Send me the full answer →'}
+                </button>
               </div>
             )}
           </div>
