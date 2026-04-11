@@ -550,10 +550,6 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="flex-1 flex flex-col items-center justify-center px-5 pb-24 text-center min-h-[calc(100vh-72px)]">
-        <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 font-medium">
-          20 years of pro experience · Euroleague · NBA
-        </p>
-
         <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight mb-3 max-w-3xl text-white">
           You know how to train
           <br />your body.

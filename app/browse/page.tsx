@@ -20,24 +20,28 @@ type Question = {
   id: string
   question: string
   answer: string
+  truncated: boolean
   upvote_count: number
   user_upvoted: boolean
 }
-
-const TEASER_CHARS = 160
 
 export default function BrowsePage() {
   const router = useRouter()
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
   const [userEmail, setUserEmail] = useState('')
+  const [subscribed, setSubscribed] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem('ask_elijah_email') || ''
     setUserEmail(stored)
     fetch(`/api/browse${stored ? `?email=${encodeURIComponent(stored)}` : ''}`)
       .then(r => r.json())
-      .then(d => setQuestions(d.questions || []))
+      .then(d => {
+        setQuestions(d.questions || [])
+        setSubscribed(d.subscribed || false)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -85,46 +89,81 @@ export default function BrowsePage() {
           </div>
         ) : (
           <div className="space-y-0">
-            {questions.map((q, i) => {
-              const teaser = q.answer.slice(0, TEASER_CHARS)
-              const hasMore = q.answer.length > TEASER_CHARS
+            {questions.map((q, i) => (
+              <div key={q.id} className={`py-8 ${i < questions.length - 1 ? 'border-b border-gray-900' : ''}`}>
+                <p className="text-white font-semibold text-base leading-snug mb-4">{q.question}</p>
 
-              return (
-                <div key={q.id} className={`py-8 ${i < questions.length - 1 ? 'border-b border-gray-900' : ''}`}>
-                  <p className="text-white font-semibold text-base leading-snug mb-4">{q.question}</p>
+                <div className="relative">
+                  <p className="text-gray-400 text-sm leading-relaxed">
+                    {q.answer}{q.truncated ? '...' : ''}
+                  </p>
 
-                  <div className="relative">
-                    <p className="text-gray-400 text-sm leading-relaxed">
-                      {teaser}{hasMore ? '...' : ''}
-                    </p>
-
-                    {hasMore && (
-                      <div className="mt-3">
-                        <button
-                          onClick={() => router.push('/')}
-                          className="text-xs text-gray-600 hover:text-white transition-colors border border-gray-800 hover:border-gray-600 px-3 py-1.5"
-                        >
-                          Get the full answer — ask Elijah →
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-4 mt-5">
-                    <button
-                      onClick={() => handleUpvote(q.id)}
-                      className={`flex items-center gap-1.5 text-xs transition-colors ${q.user_upvoted ? 'text-white' : 'text-gray-600 hover:text-gray-300'}`}
-                    >
-                      <span>{q.user_upvoted ? '▲' : '△'}</span>
-                      <span>{q.upvote_count} had this too</span>
-                    </button>
-                  </div>
+                  {q.truncated && (
+                    <div className="mt-3">
+                      <button
+                        onClick={() => setModalOpen(true)}
+                        className="text-xs text-gray-600 hover:text-white transition-colors border border-gray-800 hover:border-gray-600 px-3 py-1.5"
+                      >
+                        Get the full answer →
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )
-            })}
+
+                <div className="flex items-center gap-4 mt-5">
+                  <button
+                    onClick={() => handleUpvote(q.id)}
+                    className={`flex items-center gap-1.5 text-xs transition-colors ${q.user_upvoted ? 'text-white' : 'text-gray-600 hover:text-gray-300'}`}
+                  >
+                    <span>{q.user_upvoted ? '▲' : '△'}</span>
+                    <span>{q.upvote_count} had this too</span>
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </main>
+
+      {/* Paywall modal */}
+      {modalOpen && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center px-5 z-50"
+          onClick={() => setModalOpen(false)}
+        >
+          <div
+            className="bg-black border border-gray-800 max-w-sm w-full p-8 relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-600 hover:text-white text-xs"
+            >
+              ✕
+            </button>
+
+            <p className="text-white font-bold text-xl mb-3">Full answers are for subscribers.</p>
+            <p className="text-gray-500 text-sm leading-relaxed mb-8">
+              Subscribers get every answer in full, plus priority access to ask Elijah directly.
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <Link
+                href="/pricing"
+                className="block bg-white text-black text-sm font-bold text-center py-3 px-6 hover:opacity-80 transition-opacity"
+              >
+                Subscribe →
+              </Link>
+              <button
+                onClick={() => router.push('/')}
+                className="text-xs text-gray-600 hover:text-white transition-colors text-center py-2"
+              >
+                Ask Elijah your own question →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

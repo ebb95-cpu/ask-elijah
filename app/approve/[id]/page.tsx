@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 
 type QuestionRecord = {
@@ -13,7 +13,7 @@ type QuestionRecord = {
 
 type Stage = 'review' | 'regenerating' | 'approve' | 'sending' | 'sent'
 
-export default function ApprovePage() {
+function ApprovePageInner() {
   const { id } = useParams<{ id: string }>()
   const searchParams = useSearchParams()
   const token = searchParams.get('token') || ''
@@ -201,5 +201,17 @@ export default function ApprovePage() {
 
       </div>
     </div>
+  )
+}
+
+export default function ApprovePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <p className="text-gray-600 text-sm">Loading...</p>
+      </div>
+    }>
+      <ApprovePageInner />
+    </Suspense>
   )
 }
