@@ -133,6 +133,70 @@ const SUGGESTIONS = [
   "I'm scared to take shots when it matters",
 ]
 
+function ReturningView({
+  question, setQuestion, handleKey, handleSubmit, resetToHome, prevQuestion, prevAnswer
+}: {
+  question: string
+  setQuestion: (v: string) => void
+  handleKey: (e: React.KeyboardEvent) => void
+  handleSubmit: () => void
+  resetToHome: () => void
+  prevQuestion: string
+  prevAnswer: string
+}) {
+  const [showPrev, setShowPrev] = useState(false)
+
+  return (
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      <nav className="flex items-center justify-between px-6 py-5">
+        <Logo dark />
+        <div className="flex items-center gap-6">
+          {prevQuestion && (
+            <button
+              onClick={() => setShowPrev(v => !v)}
+              className="text-xs text-gray-600 hover:text-gray-300 transition-colors"
+            >
+              {showPrev ? 'Hide previous' : 'See previous answer'}
+            </button>
+          )}
+          <button onClick={resetToHome} className="text-xs text-gray-700 hover:text-gray-400 transition-colors">Home</button>
+        </div>
+      </nav>
+
+      {/* Previous Q&A — slides in when toggled */}
+      {showPrev && (
+        <div className="px-6 py-8 max-w-xl mx-auto w-full border-b border-gray-900">
+          <p className="text-gray-600 text-xs italic mb-3">&ldquo;{prevQuestion}&rdquo;</p>
+          <p className="text-gray-500 text-sm leading-relaxed">{prevAnswer}</p>
+        </div>
+      )}
+
+      {/* Ask input — centered, no distractions */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 max-w-xl mx-auto w-full">
+        <textarea
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={handleKey}
+          placeholder="I'm here when you're ready."
+          rows={3}
+          autoFocus
+          className="w-full text-white placeholder-gray-700 text-xl leading-relaxed resize-none outline-none bg-transparent border-b border-gray-800 focus:border-gray-600 transition-colors pb-3"
+          style={{ minHeight: '80px' }}
+        />
+        <div className="flex justify-end w-full mt-4">
+          <button
+            onClick={handleSubmit}
+            disabled={!question.trim()}
+            className="text-sm font-semibold text-white disabled:text-gray-800 disabled:cursor-not-allowed hover:opacity-70 transition-all"
+          >
+            Ask →
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 type Mode = 'idle' | 'returning' | 'loading' | 'preview' | 'email_gate' | 'submitted'
 
 const PREVIEW_CHARS = 300 // how many chars to show before blur
@@ -392,50 +456,18 @@ export default function HomePage() {
     )
   }
 
-  // ── Returning (ask again, show previous Q&A) ──────────────────────────────
+  // ── Returning (ask again — clean, no distractions) ────────────────────────
   if (mode === 'returning') {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col">
-        <nav className="flex items-center justify-between px-6 py-5">
-          <Logo dark />
-          <button onClick={resetToHome} className="text-xs text-gray-700 hover:text-gray-400 transition-colors">Home</button>
-        </nav>
-
-        <div className="flex-1 flex flex-col px-6 py-10 max-w-xl mx-auto w-full justify-center gap-10">
-          {/* Previous Q&A */}
-          <div>
-            <p className="text-xs text-gray-700 uppercase tracking-widest mb-4">Previous answer</p>
-            <p className="text-gray-500 text-sm italic mb-4">&ldquo;{prevQuestionRef.current}&rdquo;</p>
-            <p className="text-gray-400 text-sm leading-relaxed">{prevAnswerRef.current}</p>
-          </div>
-
-          <div className="border-t border-gray-900" />
-
-          {/* New question input */}
-          <div>
-            <p className="text-xs text-gray-700 uppercase tracking-widest mb-4">Ask another</p>
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder="What else is on your mind?"
-              rows={3}
-              autoFocus
-              className="w-full text-white placeholder-gray-600 text-lg leading-relaxed resize-none outline-none bg-transparent border-b border-gray-800 focus:border-gray-500 transition-colors pb-3"
-              style={{ minHeight: '80px' }}
-            />
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={handleSubmit}
-                disabled={!question.trim()}
-                className="text-sm font-semibold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all"
-              >
-                Ask →
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ReturningView
+        question={question}
+        setQuestion={setQuestion}
+        handleKey={handleKey}
+        handleSubmit={handleSubmit}
+        resetToHome={resetToHome}
+        prevQuestion={prevQuestionRef.current}
+        prevAnswer={prevAnswerRef.current}
+      />
     )
   }
 
