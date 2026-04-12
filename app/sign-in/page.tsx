@@ -17,53 +17,14 @@ function Logo() {
   )
 }
 
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-      <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-    </svg>
-  )
-}
-
-function AppleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M14.974 9.552c-.016-1.93 1.578-2.868 1.65-2.914-1.8-2.63-4.593-2.99-5.583-3.024-2.37-.243-4.644 1.397-5.846 1.397-1.196 0-3.022-1.367-4.974-1.329C-1.87 3.728-4.09 5.7-5.297 8.46c-2.453 5.602-.625 13.882 1.762 18.424 1.18 1.738 2.584 3.68 4.425 3.613 1.783-.073 2.454-1.15 4.606-1.15 2.151 0 2.763 1.15 4.642 1.115 1.914-.031 3.124-1.77 4.294-3.513 1.358-2.005 1.914-3.956 1.942-4.057-.043-.016-3.718-1.423-3.752-5.647l-.648.307z" fill="currentColor"/>
-      <path d="M10.671 2.45C11.647 1.27 12.297-.31 12.115-1.9c-1.358.057-3.003.906-3.979 2.086-.873 1.015-1.638 2.64-1.432 4.193 1.516.116 3.062-.77 3.967-1.929z" fill="currentColor"/>
-    </svg>
-  )
-}
-
 type Step = 'email' | 'sent'
 
 export default function SignInPage() {
   const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
-  const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null)
   const [error, setError] = useState('')
   const [ageConfirmed, setAgeConfirmed] = useState(false)
-
-  const handleOAuth = async (provider: 'google' | 'apple') => {
-    setOauthLoading(provider)
-    setError('')
-    try {
-      const supabase = getSupabaseClient()
-      const { error: authError } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/ask`,
-        },
-      })
-      if (authError) throw authError
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Try again.')
-      setOauthLoading(null)
-    }
-  }
 
   const handleSendLink = async () => {
     if (!email.trim()) return
@@ -108,38 +69,9 @@ export default function SignInPage() {
               <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 text-center">Connect the dots</p>
               <h1 className="text-3xl font-bold text-center mb-4 leading-tight">Something&apos;s been on your mind.</h1>
               <p className="text-gray-500 text-sm text-center mb-10 leading-relaxed">
-                That&apos;s why you came back. Sign in and Elijah will pick up where you left off.
+                That&apos;s why you came back. Enter your email and Elijah will pick up where you left off.
               </p>
 
-              {/* OAuth buttons */}
-              <div className="flex flex-col gap-3 mb-8">
-                <button
-                  onClick={() => handleOAuth('google')}
-                  disabled={!!oauthLoading || loading}
-                  className="w-full flex items-center justify-center gap-3 bg-white text-black py-3 text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
-                >
-                  <GoogleIcon />
-                  {oauthLoading === 'google' ? 'Redirecting...' : 'Continue with Google'}
-                </button>
-
-                <button
-                  onClick={() => handleOAuth('apple')}
-                  disabled={!!oauthLoading || loading}
-                  className="w-full flex items-center justify-center gap-3 bg-white text-black py-3 text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
-                >
-                  <AppleIcon />
-                  {oauthLoading === 'apple' ? 'Redirecting...' : 'Continue with Apple'}
-                </button>
-              </div>
-
-              {/* Divider */}
-              <div className="flex items-center gap-4 mb-8">
-                <div className="flex-1 h-px bg-gray-800" />
-                <span className="text-xs text-gray-600 uppercase tracking-widest">or</span>
-                <div className="flex-1 h-px bg-gray-800" />
-              </div>
-
-              {/* Magic link */}
               <input
                 type="email"
                 autoFocus
