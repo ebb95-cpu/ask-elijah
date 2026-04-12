@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
   for (const q of questions) {
     try {
       await resend.emails.send({
-        from: 'Elijah Bryant <onboarding@resend.dev>',
+        from: 'Elijah Bryant <elijah@elijahbryant.pro>',
         to: q.email,
         subject: '48 hours ago I gave you steps. Did you do them?',
         html: `

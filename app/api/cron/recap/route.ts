@@ -158,7 +158,7 @@ export async function GET(req: NextRequest) {
       const toAddress = process.env.RESEND_TO_OVERRIDE || email // sandbox: always send to yourself
 
       await resend.emails.send({
-        from: process.env.RESEND_FROM || 'onboarding@resend.dev',
+        from: process.env.RESEND_FROM || 'elijah@elijahbryant.pro',
         to: toAddress,
         subject: `Your question to Elijah — and what to think about today`,
         html,

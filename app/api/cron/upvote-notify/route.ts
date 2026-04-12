@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     if (count >= ASKER_THRESHOLD && !q.asker_notified_at) {
       try {
         await resend.emails.send({
-          from: 'Elijah Bryant <onboarding@resend.dev>',
+          from: 'Elijah Bryant <elijah@elijahbryant.pro>',
           to: q.email,
           subject: `${count} players have the exact same question as you.`,
           html: `
@@ -130,7 +130,7 @@ export async function GET(req: NextRequest) {
           const batch = recipients.slice(i, i + BATCH)
           await Promise.allSettled(batch.map(email =>
             resend.emails.send({
-              from: 'Elijah Bryant <onboarding@resend.dev>',
+              from: 'Elijah Bryant <elijah@elijahbryant.pro>',
               to: email,
               subject: `${count} players are dealing with the same thing right now.`,
               html: `

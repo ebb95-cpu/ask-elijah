@@ -168,7 +168,7 @@ async function notifyElijah(
   const approveUrl = `${siteUrl}/approve/${questionId}?token=${process.env.CRON_SECRET}`
 
   await resend.emails.send({
-    from: 'Ask Elijah <onboarding@resend.dev>',
+    from: 'Ask Elijah <elijah@elijahbryant.pro>',
     to: process.env.ADMIN_EMAIL!,
     subject: `New question: "${question.slice(0, 60)}${question.length > 60 ? '...' : ''}"`,
     html: `
@@ -238,7 +238,7 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'
 
   await resend.emails.send({
-    from: 'Elijah Bryant <onboarding@resend.dev>',
+    from: 'Elijah Bryant <elijah@elijahbryant.pro>',
     to: userEmail,
     subject: 'Something most players never get.',
     html: `
