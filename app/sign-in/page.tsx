@@ -66,10 +66,10 @@ export default function SignInPage() {
 
           {step === 'email' && (
             <>
-              <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 text-center">Sign in</p>
-              <h1 className="text-3xl font-bold text-center mb-2">Enter your email.</h1>
-              <p className="text-gray-600 text-sm text-center mb-10">
-                We will send you a link. Click it and you are in. No password needed.
+              <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 text-center">Welcome back</p>
+              <h1 className="text-3xl font-bold text-center mb-4 leading-tight">Something&apos;s been on your mind.</h1>
+              <p className="text-gray-500 text-sm text-center mb-10 leading-relaxed">
+                That&apos;s why you came back. Enter your email and Elijah will pick up where you left off.
               </p>
 
               <input
@@ -108,7 +108,7 @@ export default function SignInPage() {
               </button>
 
               <p className="text-xs text-gray-700 text-center mt-6">
-                New here? No account needed. We create one automatically.
+                No password. Just your email.
               </p>
             </>
           )}
@@ -116,11 +116,11 @@ export default function SignInPage() {
           {step === 'sent' && (
             <div className="text-center">
               <div className="mb-4">
-                <h1 className="text-3xl font-bold mb-4">Check your inbox.</h1>
-                <p className="text-gray-500 text-sm leading-relaxed mb-2">We sent a link to</p>
+                <h1 className="text-3xl font-bold mb-4">Your link is on the way.</h1>
+                <p className="text-gray-500 text-sm leading-relaxed mb-2">We sent it to</p>
                 <p className="text-white font-semibold mb-6">{email}</p>
                 <p className="text-gray-600 text-sm leading-relaxed mb-10">
-                  Click it and you will be taken straight to Ask Elijah. The link expires in 1 hour.
+                  Click it and you&apos;re straight back in. The question you&apos;ve been sitting on — ask it.
                 </p>
               </div>
               <button
