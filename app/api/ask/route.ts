@@ -296,7 +296,7 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
   await resend.emails.send({
     from: 'Elijah Bryant <elijah@elijahbryant.pro>',
     to: userEmail,
-    subject: 'Something most players never get.',
+    subject: 'Elijah got your question.',
     html: `
       <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 48px 24px; color: #111; background: #fff;">
 
@@ -309,11 +309,7 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
         </div>
 
         <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #000;">
-          Got it. Elijah's on it.
-        </p>
-
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-          Most players never ask. They just keep hoping it gets better. You didn't do that.
+          Your question is with him.
         </p>
 
         <div style="background: #f7f7f7; border-left: 3px solid #000; padding: 16px 20px; margin-bottom: 28px;">
@@ -321,16 +317,8 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
           <p style="font-size: 17px; font-weight: 600; margin: 0; color: #000; line-height: 1.4;">${question}</p>
         </div>
 
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-          Elijah reads every question personally. Not a template. Not a bot. He's been in NBA locker rooms and Euroleague finals. He's going to answer your situation specifically.
-        </p>
-
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-          His answer lands within 48 hours. Read it twice when it does. Then go do it.
-        </p>
-
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 32px;">
-          While you wait, someone else on your team is already working on the same problem. One answer, actually applied, can change a whole season.
+        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 28px;">
+          He reads every one personally. Not a template. Your situation, specifically. His answer will come straight to this inbox. When it lands, read it twice. Then go do it.
         </p>
 
         <a href="${siteUrl}/browse" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">

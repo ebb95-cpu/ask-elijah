@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
             </p>
 
             <a href="${siteUrl}" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">
-              Ask your next question →
+              Tell me what happened →
             </a>
 
             <hr style="border: none; border-top: 1px solid #eee; margin-bottom: 24px;" />
