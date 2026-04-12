@@ -101,10 +101,10 @@ export default function ProfilePage() {
         {/* Copy — fades in on reveal */}
         <div className={`transition-all duration-700 ${savePhase === 'reveal' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-6">
-            Now you&apos;re ready to<br />train your mind.
+            The gap between where you are<br />and where you want to be<br />is mental.
           </h1>
           <p className="text-gray-500 text-base mb-12 max-w-sm mx-auto leading-relaxed">
-            Elijah knows who you are. Ask him anything — he reads every question personally.
+            Ask Elijah the question that&apos;s been holding you back.
           </p>
           <button
             onClick={() => router.push('/ask')}
