@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 const POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C', 'Coach']
 const LEVELS = ['Youth', 'High School', 'College', 'Pro']
@@ -16,21 +17,25 @@ type JournalEntry = {
   reflection: { text: string; created_at: string } | null
 }
 
+type SavePhase = 'idle' | 'saving' | 'dots' | 'reveal'
+
 export default function ProfilePage() {
   const [email, setEmail] = useState('')
   const [position, setPosition] = useState('')
   const [level, setLevel] = useState('')
   const [country, setCountry] = useState('')
   const [challenge, setChallenge] = useState('')
-  const [saved, setSaved] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [savePhase, setSavePhase] = useState<SavePhase>('idle')
   const [journal, setJournal] = useState<JournalEntry[]>([])
   const [journalLoading, setJournalLoading] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const isFirstSave = useRef(!localStorage.getItem('ask_elijah_email'))
+  const router = useRouter()
 
   useEffect(() => {
     const stored = localStorage.getItem('ask_elijah_email')
     if (stored) {
+      isFirstSave.current = false
       setEmail(stored)
       fetch(`/api/profile?email=${encodeURIComponent(stored)}`)
         .then(r => r.json())
@@ -51,22 +56,66 @@ export default function ProfilePage() {
 
   const save = async () => {
     if (!email.trim()) return
-    setLoading(true)
+    const firstTime = isFirstSave.current
+    setSavePhase('saving')
     await fetch('/api/profile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, position, level, country, challenge }),
     })
     localStorage.setItem('ask_elijah_email', email)
-    setSaved(true)
-    setLoading(false)
-    setTimeout(() => setSaved(false), 2000)
+    isFirstSave.current = false
+
+    if (firstTime) {
+      // Show the ceremony
+      setSavePhase('dots')
+      setTimeout(() => setSavePhase('reveal'), 2000)
+    } else {
+      setSavePhase('idle')
+    }
   }
 
   const filled = [position, level, country, challenge].filter(Boolean).length
   const pct = Math.round((filled / 4) * 100)
 
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+  // Full-screen ceremony after first save
+  if (savePhase === 'dots' || savePhase === 'reveal') {
+    return (
+      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center px-8 text-center">
+        {/* Three dots animation */}
+        <div className="flex items-center gap-0 mb-16">
+          <div className={`w-4 h-4 rounded-full bg-white transition-opacity duration-500 ${savePhase === 'reveal' ? 'opacity-100' : 'opacity-0 dot-1'}`}
+            style={savePhase === 'dots' ? { animation: 'dotPulse 1.2s ease-in-out infinite 0s', opacity: 1 } : {}} />
+          <div className={`w-8 h-0.5 bg-white mx-1 transition-opacity duration-500 ${savePhase === 'reveal' ? 'opacity-100' : 'opacity-0'}`}
+            style={savePhase === 'dots' ? { animation: 'dotPulse 1.2s ease-in-out infinite 0.2s', opacity: 1 } : {}} />
+          <div className={`w-4 h-4 rounded-full bg-white transition-opacity duration-500 ${savePhase === 'reveal' ? 'opacity-100' : 'opacity-0 dot-2'}`}
+            style={savePhase === 'dots' ? { animation: 'dotPulse 1.2s ease-in-out infinite 0.4s', opacity: 1 } : {}} />
+          <div className={`w-8 h-0.5 bg-white mx-1 transition-opacity duration-500 ${savePhase === 'reveal' ? 'opacity-100' : 'opacity-0'}`}
+            style={savePhase === 'dots' ? { animation: 'dotPulse 1.2s ease-in-out infinite 0.6s', opacity: 1 } : {}} />
+          <div className={`w-4 h-4 rounded-full bg-white transition-opacity duration-500 ${savePhase === 'reveal' ? 'opacity-100' : 'opacity-0 dot-3'}`}
+            style={savePhase === 'dots' ? { animation: 'dotPulse 1.2s ease-in-out infinite 0.8s', opacity: 1 } : {}} />
+        </div>
+
+        {/* Copy — fades in on reveal */}
+        <div className={`transition-all duration-700 ${savePhase === 'reveal' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-6">
+            Now you&apos;re ready to<br />train your mind.
+          </h1>
+          <p className="text-gray-500 text-base mb-12 max-w-sm mx-auto leading-relaxed">
+            Elijah knows who you are. Ask him anything — he reads every question personally.
+          </p>
+          <button
+            onClick={() => router.push('/ask')}
+            className="bg-white text-black px-10 py-4 text-sm font-semibold tracking-tight hover:opacity-80 transition-opacity"
+          >
+            Ask your first question →
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -152,10 +201,10 @@ export default function ProfilePage() {
 
           <button
             onClick={save}
-            disabled={!email.trim() || loading}
+            disabled={!email.trim() || savePhase === 'saving'}
             className="w-full py-3 bg-white text-black text-sm font-semibold disabled:opacity-30 hover:opacity-80 transition-opacity"
           >
-            {saved ? 'Saved ✓' : loading ? 'Saving...' : 'Save profile'}
+            {savePhase === 'saving' ? 'Saving...' : 'Save profile'}
           </button>
         </div>
 
@@ -218,7 +267,7 @@ export default function ProfilePage() {
                       ) : entry.action_steps ? (
                         <div className="border border-gray-800 p-4">
                           <p className="text-xs text-gray-600 mb-2">No reflection yet.</p>
-                          <Link href="/" className="text-xs text-white underline">Come back after you try the steps →</Link>
+                          <Link href="/ask" className="text-xs text-white underline">Come back after you try the steps →</Link>
                         </div>
                       ) : null}
 
