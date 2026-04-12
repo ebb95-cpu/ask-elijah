@@ -50,9 +50,22 @@ export default async function Image() {
             color: '#888888',
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
+            marginBottom: 16,
           }}
         >
           NBA · EuroLeague Champion
+        </div>
+
+        {/* Product name */}
+        <div
+          style={{
+            fontSize: 22,
+            color: '#555555',
+            letterSpacing: '0.2em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Ask Elijah
         </div>
       </div>
     ),
