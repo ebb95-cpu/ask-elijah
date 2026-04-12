@@ -564,7 +564,6 @@ export default function HomePage() {
       <nav className="flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-3">
           <Logo dark />
-          <span className="text-xs font-semibold tracking-[0.2em] uppercase text-white">Ask Elijah</span>
         </div>
         <div className="flex items-center gap-6">
           <Link href="/browse" className="text-sm text-gray-500 hover:text-white transition-colors">Browse</Link>
