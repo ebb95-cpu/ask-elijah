@@ -115,8 +115,7 @@ export default function SignInPage() {
 
           {step === 'sent' && (
             <div className="text-center">
-              <Logo />
-              <div className="mt-10 mb-4">
+              <div className="mb-4">
                 <h1 className="text-3xl font-bold mb-4">Check your inbox.</h1>
                 <p className="text-gray-500 text-sm leading-relaxed mb-2">We sent a link to</p>
                 <p className="text-white font-semibold mb-6">{email}</p>
