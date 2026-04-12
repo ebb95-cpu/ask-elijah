@@ -39,7 +39,7 @@ export default async function Image() {
             marginBottom: 20,
           }}
         >
-          ASK ELIJAH
+          Your body is trained. Your mind isn't.
         </div>
 
         {/* Subtitle */}
