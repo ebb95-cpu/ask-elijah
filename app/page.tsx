@@ -594,7 +594,7 @@ export default function HomePage() {
 
         <div className="w-full max-w-xl mt-6">
           <p className="text-xs text-gray-600 uppercase tracking-widest mb-4">
-            Elijah personally reads and answers every question.
+            Ask the question that&apos;s been holding you back.
           </p>
           <textarea
             value={question}
@@ -630,7 +630,7 @@ export default function HomePage() {
             </button>
           </div>
           <p className="text-xs text-gray-600 mt-4 text-center">
-            Elijah reads every question. You&apos;ll hear back within 48 hours.
+            Not a bot. Not a template. Elijah writes back personally.
           </p>
         </div>
       </section>
