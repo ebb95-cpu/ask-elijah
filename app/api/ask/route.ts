@@ -285,7 +285,7 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
 
         <p style="font-size: 12px; color: #bbb; line-height: 1.6; margin: 0;">
           ${newsletterOptIn
-            ? "You'll get Elijah's answer plus the Consistency Club newsletter. Unsubscribe anytime."
+            ? "You'll get Elijah's answer plus his weekly breakdowns. Unsubscribe anytime."
             : "You'll only hear from us when Elijah has answered. That's it."}
         </p>
 

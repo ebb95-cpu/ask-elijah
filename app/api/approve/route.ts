@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
 
         <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #f0f0f0;">
           <p style="font-size: 13px; color: #999; margin: 0;">— Elijah Bryant</p>
-          <p style="font-size: 11px; color: #bbb; margin: 4px 0 0;">Consistency Club</p>
+          <p style="font-size: 11px; color: #bbb; margin: 4px 0 0;">Ask Elijah</p>
         </div>
       </div>
     `,

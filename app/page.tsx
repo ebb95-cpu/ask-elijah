@@ -481,7 +481,7 @@ export default function HomePage() {
                     onChange={e => setNewsletterOptIn(e.target.checked)}
                     className="mt-0.5 accent-white"
                   />
-                  Join the Consistency Club — 4,000 players getting better every week through faith + consistency, on and off the court.
+                  Get Elijah&apos;s weekly mental performance breakdowns — 4,000 players getting better every week.
                 </label>
                 <button
                   onClick={handleEmailSubmit}
@@ -768,7 +768,7 @@ export default function HomePage() {
             <Link href="/terms" className="text-xs text-gray-600 hover:text-white transition-colors">Terms</Link>
             <Link href="mailto:hello@consistencyclub.com" className="text-xs text-gray-600 hover:text-white transition-colors">Contact</Link>
           </div>
-          <p className="text-xs text-gray-700">© Consistency Club</p>
+          <p className="text-xs text-gray-700">© Ask Elijah</p>
         </div>
       </footer>
     </div>

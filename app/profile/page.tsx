@@ -171,7 +171,7 @@ export default function ProfilePage() {
           {!journalLoading && journal.length === 0 && (
             <div className="border border-gray-900 p-6 text-center">
               <p className="text-gray-600 text-sm mb-3">No entries yet.</p>
-              <Link href="/" className="text-xs text-white underline">Ask your first question →</Link>
+              <Link href="/ask" className="text-xs text-white underline">Ask your first question →</Link>
             </div>
           )}
 

@@ -96,7 +96,7 @@ function buildEmail(
 
     <!-- Footer -->
     <p style="font-size:12px;color:#ccc;margin:0;">
-      Ask Elijah · Consistency Club ·
+      Ask Elijah ·
       <a href="https://askelijah.com/unsubscribe?email=${encodeURIComponent(email)}" style="color:#ccc;">Unsubscribe</a>
     </p>
 
