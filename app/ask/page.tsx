@@ -345,6 +345,7 @@ export default function AskPage() {
   const [showProfile, setShowProfile] = useState(false)
   const [pendingQ, setPendingQ] = useState('')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [topQuestions, setTopQuestions] = useState<{ id: string; question: string; upvote_count: number }[]>([])
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
@@ -370,6 +371,13 @@ export default function AskPage() {
     } else {
       textareaRef.current?.focus()
     }
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/browse')
+      .then(r => r.json())
+      .then(d => setTopQuestions((d.questions || []).slice(0, 6)))
+      .catch(() => {})
   }, [])
 
   const getQuestionCount = () =>
@@ -477,6 +485,65 @@ export default function AskPage() {
 
   // Input mode
   if (mode === 'input') {
+    const askPanel = (
+      <div className="w-full">
+        <div className="border border-gray-700 focus-within:border-white transition-colors">
+          <textarea
+            ref={textareaRef}
+            value={question}
+            onChange={(e) => {
+              setQuestion(e.target.value)
+              e.target.style.height = 'auto'
+              e.target.style.height = e.target.scrollHeight + 'px'
+            }}
+            onKeyDown={handleKey}
+            placeholder="Ask anything."
+            rows={3}
+            className="w-full px-4 pt-4 pb-2 text-white placeholder-gray-600 text-xl leading-relaxed resize-none outline-none bg-transparent"
+            style={{ minHeight: '80px' }}
+          />
+          <div className="flex items-center justify-between px-4 pb-3">
+            {question.length >= 140 && (
+              <span className="text-xs text-gray-600">{question.length}</span>
+            )}
+            <button
+              onClick={handleQuestionSubmit}
+              disabled={!question.trim()}
+              className="ml-auto bg-white text-black px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
+            >
+              Ask Elijah →
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+
+    const communityPanel = topQuestions.length > 0 && (
+      <div className="w-full">
+        <p className="text-xs text-gray-700 uppercase tracking-widest mb-3 px-1">What others are asking</p>
+        <div>
+          {topQuestions.map((q) => (
+            <button
+              key={q.id}
+              onClick={() => {
+                setQuestion(q.question)
+                setShowSuggestions(false)
+                textareaRef.current?.focus()
+              }}
+              className="w-full text-left py-4 border-b border-gray-900 hover:bg-gray-950 transition-colors px-1 group flex items-start gap-3"
+            >
+              <span className="text-xs text-gray-700 group-hover:text-gray-500 transition-colors mt-0.5 shrink-0 tabular-nums">
+                ↑ {q.upvote_count}
+              </span>
+              <span className="text-gray-500 text-sm group-hover:text-gray-300 transition-colors leading-snug">
+                {q.question}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+
     return (
       <div className="min-h-screen bg-black text-white flex flex-col">
         <nav className="flex items-center justify-between px-6 py-5">
@@ -491,51 +558,24 @@ export default function AskPage() {
           )}
         </nav>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20">
-          <div className="w-full max-w-xl">
-            <div className="border border-gray-700 focus-within:border-white transition-colors">
-              <textarea
-                ref={textareaRef}
-                value={question}
-                onChange={(e) => {
-                  setQuestion(e.target.value)
-                  e.target.style.height = 'auto'
-                  e.target.style.height = e.target.scrollHeight + 'px'
-                }}
-                onKeyDown={handleKey}
-                placeholder="Ask anything."
-                rows={3}
-                className="w-full px-4 pt-4 pb-2 text-white placeholder-gray-600 text-xl leading-relaxed resize-none outline-none bg-transparent"
-                style={{ minHeight: '80px' }}
-              />
-              <div className="flex items-center justify-between px-4 pb-3">
-                {question.length >= 140 && (
-                  <span className="text-xs text-gray-600">{question.length}</span>
-                )}
-                <button
-                  onClick={handleQuestionSubmit}
-                  disabled={!question.trim()}
-                  className="ml-auto bg-white text-black px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
-                >
-                  Ask Elijah →
-                </button>
-              </div>
-            </div>
+        {/* Desktop: side by side. Mobile: stacked (ask first) */}
+        <div className="flex-1 flex flex-col md:flex-row">
 
-            {showSuggestions && question.length === 0 && (
-              <div className="flex flex-wrap gap-2 mt-4">
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => { setQuestion(s); setShowSuggestions(false) }}
-                    className="text-sm border border-gray-700 px-3 py-1.5 text-gray-400 hover:border-gray-400 hover:text-white transition-colors"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
+          {/* Mobile: ask on top */}
+          <div className="flex md:hidden flex-col px-6 pt-10 pb-6">
+            {askPanel}
           </div>
+
+          {/* Left — community questions (desktop only as left col, mobile below) */}
+          <div className="md:w-2/5 md:border-r border-gray-900 md:overflow-y-auto md:flex md:flex-col md:justify-center px-6 py-10 order-last md:order-first">
+            {communityPanel}
+          </div>
+
+          {/* Right — ask textarea (desktop only, hidden on mobile since it's above) */}
+          <div className="hidden md:flex md:w-3/5 flex-col items-center justify-center px-10 py-10">
+            {askPanel}
+          </div>
+
         </div>
       </div>
     )
