@@ -88,7 +88,16 @@ const STRUGGLES = [
   "Dealing with a tough coach",
 ]
 
-type Mode = 'input' | 'email_gate' | 'loading' | 'submitted'
+type Mode = 'input' | 'email_gate' | 'loading' | 'submitted' | 'returning' | 'upvote_prompt'
+
+type JournalEntry = {
+  id: string
+  question: string
+  answer: string
+  action_steps: string | null
+  answered_at: string
+  reflection: { text: string; created_at: string } | null
+}
 
 const TOTAL_CARDS = 7
 
@@ -346,6 +355,10 @@ export default function AskPage() {
   const [pendingQ, setPendingQ] = useState('')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [topQuestions, setTopQuestions] = useState<{ id: string; question: string; upvote_count: number }[]>([])
+  const [returnEntry, setReturnEntry] = useState<JournalEntry | null>(null)
+  const [reflectionText, setReflectionText] = useState('')
+  const [reflectionSubmitting, setReflectionSubmitting] = useState(false)
+  const [votedIds, setVotedIds] = useState<Set<string>>(new Set())
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
@@ -377,6 +390,28 @@ export default function AskPage() {
     fetch('/api/browse')
       .then(r => r.json())
       .then(d => setTopQuestions((d.questions || []).slice(0, 6)))
+      .catch(() => {})
+  }, [])
+
+  // Returning user: check if they have an answered question with no reflection
+  useEffect(() => {
+    const storedEmail = localStorage.getItem('ask_elijah_email')
+    const count = parseInt(localStorage.getItem('question_count') || '0', 10)
+    if (!storedEmail || count === 0) return
+    // Don't show return flow if they came with a pending question in session
+    if (sessionStorage.getItem('pending_question')) return
+
+    fetch(`/api/journal?email=${encodeURIComponent(storedEmail)}`)
+      .then(r => r.json())
+      .then(d => {
+        const entries: JournalEntry[] = d.entries || []
+        const needsReflection = entries.find(e => !e.reflection && e.action_steps)
+        if (needsReflection) {
+          setReturnEntry(needsReflection)
+          setEmail(storedEmail)
+          setMode('returning')
+        }
+      })
       .catch(() => {})
   }, [])
 
@@ -470,6 +505,144 @@ export default function AskPage() {
     setQuestion('')
     setShowSuggestions(true)
     setTimeout(() => textareaRef.current?.focus(), 50)
+  }
+
+  const handleReflectionSubmit = async () => {
+    if (!reflectionText.trim() || !returnEntry) return
+    setReflectionSubmitting(true)
+    try {
+      await fetch('/api/reflection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, question_id: returnEntry.id, text: reflectionText }),
+      })
+    } catch { /* fail silently */ }
+    setReflectionSubmitting(false)
+    setMode('upvote_prompt')
+  }
+
+  const handleUpvote = async (questionId: string) => {
+    const newVoted = new Set(votedIds)
+    if (newVoted.has(questionId)) {
+      newVoted.delete(questionId)
+    } else {
+      newVoted.add(questionId)
+    }
+    setVotedIds(newVoted)
+    try {
+      await fetch('/api/upvote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question_id: questionId, email }),
+      })
+    } catch { /* fail silently */ }
+  }
+
+  // Return visit — reflection prompt
+  if (mode === 'returning' && returnEntry) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-6 py-5">
+          <button onClick={() => setMode('input')} className="text-gray-500 hover:text-white transition-colors text-sm">Skip →</button>
+          <Logo dark />
+          <div className="w-16" />
+        </nav>
+
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20">
+          <div className="w-full max-w-lg">
+            <p className="text-xs text-gray-600 uppercase tracking-widest mb-8">You're back. Elijah wants to know.</p>
+
+            <div className="border-l-2 border-gray-800 pl-5 mb-8">
+              <p className="text-xs text-gray-700 mb-2">You asked</p>
+              <p className="text-gray-400 text-sm italic leading-relaxed">&ldquo;{returnEntry.question}&rdquo;</p>
+            </div>
+
+            {returnEntry.action_steps && (
+              <div className="bg-gray-950 border border-gray-900 px-6 py-5 mb-10">
+                <p className="text-xs text-gray-600 uppercase tracking-widest mb-3">Your steps from Elijah</p>
+                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{returnEntry.action_steps}</p>
+              </div>
+            )}
+
+            <p className="text-white font-semibold text-xl mb-2">Did you try the steps?</p>
+            <p className="text-gray-500 text-sm mb-6">Tell Elijah what happened. This goes into your journal — yours to keep.</p>
+
+            <textarea
+              autoFocus
+              value={reflectionText}
+              onChange={e => setReflectionText(e.target.value)}
+              placeholder="What happened when you tried it..."
+              rows={4}
+              className="w-full bg-transparent border border-gray-700 focus:border-white transition-colors px-4 py-3 text-white placeholder-gray-700 text-base leading-relaxed resize-none outline-none mb-4"
+            />
+
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleReflectionSubmit}
+                disabled={!reflectionText.trim() || reflectionSubmitting}
+                className="bg-white text-black px-8 py-3 text-sm font-semibold disabled:opacity-30 hover:opacity-80 transition-opacity"
+              >
+                {reflectionSubmitting ? 'Saving...' : 'Tell Elijah →'}
+              </button>
+              <button onClick={() => setMode('upvote_prompt')} className="text-xs text-gray-600 hover:text-white transition-colors">
+                Skip for now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Return visit — upvote prompt
+  if (mode === 'upvote_prompt') {
+    const upvoteCandidates = topQuestions.slice(0, 5)
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-6 py-5">
+          <div className="w-16" />
+          <Logo dark />
+          <div className="w-16" />
+        </nav>
+
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20">
+          <div className="w-full max-w-lg">
+            <p className="text-xs text-gray-600 uppercase tracking-widest mb-4">While you&apos;re here</p>
+            <h2 className="text-2xl font-bold mb-2">Which of these do you also deal with?</h2>
+            <p className="text-gray-600 text-sm mb-10">Tap everything that applies. It helps other players know they&apos;re not alone.</p>
+
+            <div className="space-y-2 mb-12">
+              {upvoteCandidates.map(q => {
+                const voted = votedIds.has(q.id)
+                return (
+                  <button
+                    key={q.id}
+                    onClick={() => handleUpvote(q.id)}
+                    className={`w-full text-left px-5 py-4 border transition-all duration-150 flex items-start gap-4 ${
+                      voted ? 'border-white bg-white/5' : 'border-gray-800 hover:border-gray-600'
+                    }`}
+                  >
+                    <span className={`text-sm mt-0.5 shrink-0 transition-colors ${voted ? 'text-white' : 'text-gray-700'}`}>
+                      {voted ? '✓' : '↑'}
+                    </span>
+                    <span className={`text-sm leading-snug transition-colors ${voted ? 'text-white' : 'text-gray-500'}`}>
+                      {q.question}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <button
+              onClick={() => setMode('input')}
+              className="w-full bg-white text-black py-3 text-sm font-semibold hover:opacity-80 transition-opacity"
+            >
+              Ask your next question →
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Profile modal

@@ -29,13 +29,14 @@ export default function ProfilePage() {
   const [journal, setJournal] = useState<JournalEntry[]>([])
   const [journalLoading, setJournalLoading] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const isFirstSave = useRef(!localStorage.getItem('ask_elijah_email'))
+  const isFirstSave = useRef(true)
   const router = useRouter()
 
   useEffect(() => {
     const stored = localStorage.getItem('ask_elijah_email')
     if (stored) {
       isFirstSave.current = false
+
       setEmail(stored)
       fetch(`/api/profile?email=${encodeURIComponent(stored)}`)
         .then(r => r.json())
