@@ -493,19 +493,17 @@ export async function POST(req: NextRequest) {
       if (questionId) {
         await notifyElijah(questionId, question, draft, email, playerContext).catch(console.error)
       }
-      if (isFirstQuestion) await sendWelcome(cleanEmail).catch(console.error)
-      await sendConfirmation(question, email, !!newsletterOptIn).catch(console.error)
+        await sendConfirmation(question, email, !!newsletterOptIn).catch(console.error)
       if (newsletterOptIn) await addToBeehiiv(cleanEmail).catch(console.error)
       return NextResponse.json({ success: true, questionId })
     }
 
     const questionId = record?.id ?? null
 
-    // Notify Elijah + welcome (first time) + confirm to user
+    // Notify Elijah + confirm to user
     if (questionId) {
       await notifyElijah(questionId, question, draft, email, playerContext).catch(console.error)
     }
-    if (isFirstQuestion) await sendWelcome(cleanEmail).catch(console.error)
     await sendConfirmation(question, email, !!newsletterOptIn).catch(console.error)
     if (newsletterOptIn) await addToBeehiiv(cleanEmail).catch(console.error)
 
