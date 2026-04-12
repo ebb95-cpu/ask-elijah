@@ -32,11 +32,12 @@ export default async function Image() {
         {/* Headline */}
         <div
           style={{
-            fontSize: 96,
+            fontSize: 64,
             fontWeight: 700,
             color: 'white',
             letterSpacing: '-0.02em',
             marginBottom: 20,
+            textAlign: 'center',
           }}
         >
           Your body is trained. Your mind isn't.
