@@ -579,7 +579,7 @@ export default function HomePage() {
         <div className="flex items-center gap-3 mb-8">
           <span className="w-1.5 h-1.5 rounded-full bg-gray-600 flex-shrink-0" />
           <p className="text-xs text-gray-500 tracking-widest uppercase">
-            Elijah Bryant &middot; NBA &middot; EuroLeague Championships
+            Elijah Bryant &middot; NBA &middot; EuroLeague Champion
           </p>
           <span className="w-1.5 h-1.5 rounded-full bg-gray-600 flex-shrink-0" />
         </div>
@@ -696,7 +696,7 @@ export default function HomePage() {
               Elijah has been in Euroleague finals. NBA locker rooms. High pressure moments most coaches have only watched on TV. Ask him what is going on in your head and what to do about it.
             </p>
             <p className="text-gray-400 text-xs font-semibold tracking-widest uppercase">
-              NBA · EuroLeague Championshipsships · 3 continents
+              NBA · EuroLeague Championships · 3 continents
             </p>
           </div>
 
@@ -761,7 +761,7 @@ export default function HomePage() {
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex flex-col gap-3">
             <Logo dark />
-            <p className="text-xs text-gray-600">Built by Elijah Bryant · NBA · EuroLeague Championships</p>
+            <p className="text-xs text-gray-600">Built by Elijah Bryant · NBA · EuroLeague Champion</p>
           </div>
           <div className="flex items-center gap-6">
             <Link href="/privacy" className="text-xs text-gray-600 hover:text-white transition-colors">Privacy</Link>

@@ -51,7 +51,7 @@ export default async function Image() {
             textTransform: 'uppercase',
           }}
         >
-          NBA · EuroLeague Championships
+          NBA · EuroLeague Champion
         </div>
       </div>
     ),
