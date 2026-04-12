@@ -663,25 +663,8 @@ export default function HomePage() {
       </section>
 
       {/* Below fold */}
-      <section className="bg-[#F7F5F0] px-5 py-16 md:py-24">
+      <section className="bg-[#F7F5F0] px-5 py-16 md:py-20">
         <div className="max-w-2xl mx-auto">
-          <p className="text-xs text-gray-400 tracking-widest uppercase mb-8">The Gap</p>
-
-          <h2 className="text-2xl md:text-5xl font-bold tracking-tight text-black leading-tight mb-8">
-            Every coach has trained
-            <br />your body.
-            <br />
-            <span className="text-gray-400">Nobody taught you how to train your mind.</span>
-          </h2>
-
-          <div className="space-y-5 text-gray-500 text-base md:text-lg leading-relaxed mb-4">
-            <p>
-              Every coach you&apos;ve ever had has focused on your shot, your footwork, your conditioning. That&apos;s what they know how to teach.
-            </p>
-            <p>
-              Not one of them has sat down with you and talked about what&apos;s actually happening in your head. The doubt before a big game. Losing confidence mid-series. Performing under pressure when everything is on the line.
-            </p>
-          </div>
 
           <div className="border-l-4 border-black pl-6 my-10">
             <p className="text-black font-bold text-2xl md:text-4xl leading-tight tracking-tight">
@@ -690,28 +673,15 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="bg-black text-white px-8 py-8 mb-14">
+          <div className="bg-black text-white px-8 py-8">
             <p className="text-white text-base md:text-lg leading-relaxed mb-4">
-              Elijah has been in Euroleague finals. NBA locker rooms. High pressure moments most coaches have only watched on TV. Ask him what is going on in your head and what to do about it.
+              Elijah has been in EuroLeague finals. NBA locker rooms. High-pressure moments most coaches have only watched on TV. Ask him what&apos;s going on in your head — and what to do about it.
             </p>
             <p className="text-gray-400 text-xs font-semibold tracking-widest uppercase">
-              NBA · EuroLeague Championships · 3 continents
+              NBA · EuroLeague Champion · 3 continents
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-x-3 gap-y-2 items-center">
-            {SUGGESTIONS.slice(4).map((s, i) => (
-              <span key={s} className="flex items-center gap-3">
-                <button
-                  onClick={() => { setQuestion(s); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                  className="text-sm text-gray-400 hover:text-black transition-colors"
-                >
-                  {s}
-                </button>
-                {i < SUGGESTIONS.slice(4).length - 1 && <span className="text-gray-300 text-xs">·</span>}
-              </span>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -726,8 +696,8 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-px max-w-3xl mx-auto bg-gray-900">
           {[
-            { title: "Not AI. Not a template.", sub: "A real answer, written for you." },
-            { title: "48 hours. Every time.", sub: "Elijah reads it. Elijah writes back." },
+            { title: "Not AI. Not a template.", sub: "Every answer written by him, for your situation." },
+            { title: "He reads every one.", sub: "Elijah reads it. Elijah writes back." },
             { title: "NBA. EuroLeague finals. 3 continents.", sub: "Advice from inside the arena, not from the stands." },
           ].map(({ title, sub }) => (
             <div key={title} className="bg-black text-white p-8">
@@ -765,7 +735,7 @@ export default function HomePage() {
           <div className="flex items-center gap-6">
             <Link href="/privacy" className="text-xs text-gray-600 hover:text-white transition-colors">Privacy</Link>
             <Link href="/terms" className="text-xs text-gray-600 hover:text-white transition-colors">Terms</Link>
-            <Link href="mailto:hello@consistencyclub.com" className="text-xs text-gray-600 hover:text-white transition-colors">Contact</Link>
+            <Link href="mailto:hello@elijahbryant.pro" className="text-xs text-gray-600 hover:text-white transition-colors">Contact</Link>
           </div>
           <p className="text-xs text-gray-700">© Ask Elijah</p>
         </div>
