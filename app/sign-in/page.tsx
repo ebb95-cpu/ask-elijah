@@ -66,7 +66,7 @@ export default function SignInPage() {
 
           {step === 'email' && (
             <>
-              <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 text-center">Welcome back</p>
+              <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 text-center">Connect the dots</p>
               <h1 className="text-3xl font-bold text-center mb-4 leading-tight">Something&apos;s been on your mind.</h1>
               <p className="text-gray-500 text-sm text-center mb-10 leading-relaxed">
                 That&apos;s why you came back. Enter your email and Elijah will pick up where you left off.
