@@ -1,0 +1,13 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='630'>
+  <rect width='1200' height='630' fill='black'/>
+  <!-- Three dot logo -->
+  <circle cx='550' cy='220' r='14' fill='white'/>
+  <line x1='564' y1='220' x2='586' y2='220' stroke='white' stroke-width='4'/>
+  <circle cx='600' cy='220' r='14' fill='white'/>
+  <line x1='614' y1='220' x2='636' y2='220' stroke='white' stroke-width='4'/>
+  <circle cx='650' cy='220' r='14' fill='white'/>
+  <!-- Headline -->
+  <text x='600' y='370' font-family='Helvetica,Arial,sans-serif' font-size='96' font-weight='bold' fill='white' text-anchor='middle'>ASK ELIJAH</text>
+  <!-- Subtitle -->
+  <text x='600' y='430' font-family='Helvetica,Arial,sans-serif' font-size='28' fill='#888888' text-anchor='middle'>NBA · EUROLEAGUE CHAMPION</text>
+</svg>

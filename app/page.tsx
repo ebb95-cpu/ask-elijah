@@ -19,21 +19,6 @@ function Logo({ dark = false }: { dark?: boolean }) {
 function LoadingLogo() {
   return (
     <>
-      <style>{`
-        @keyframes drawLeft {
-          0%   { stroke-dashoffset: 12; }
-          35%  { stroke-dashoffset: 0; }
-          100% { stroke-dashoffset: 0; }
-        }
-        @keyframes drawRight {
-          0%   { stroke-dashoffset: 12; }
-          35%  { stroke-dashoffset: 12; }
-          70%  { stroke-dashoffset: 0; }
-          100% { stroke-dashoffset: 0; }
-        }
-        .seg-left  { stroke-dasharray: 12; stroke-dashoffset: 12; animation: drawLeft  2s ease-in-out infinite; }
-        .seg-right { stroke-dasharray: 12; stroke-dashoffset: 12; animation: drawRight 2s ease-in-out infinite; }
-      `}</style>
       <svg width="130" height="20" viewBox="0 0 52 8" fill="none">
         {/* Dots always visible */}
         <circle cx="4"  cy="4" r="4" fill="white" />
@@ -104,18 +89,10 @@ function LiveTicker() {
 
   return (
     <>
-      <style>{`
-        @keyframes tickerSlide {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .ticker-in { animation: tickerSlide 0.4s ease forwards; }
-        .ticker-out { opacity: 0; transition: opacity 0.3s ease; }
-      `}</style>
       <div className={`flex items-center gap-2 text-xs bg-gray-900 border border-gray-700 px-3 py-2.5 rounded-full ${visible ? 'ticker-in' : 'ticker-out'}`}>
         <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
         <span className="text-white font-semibold">{count.toLocaleString()}</span>
-        <span className="text-gray-400">questions answered from</span>
+        <span className="text-gray-400">{count === 1 ? 'question' : 'questions'} answered from</span>
         <span className="text-white font-medium">{locations[index]}</span>
       </div>
     </>
@@ -585,7 +562,10 @@ export default function HomePage() {
 
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-5">
-        <Logo dark />
+        <div className="flex items-center gap-3">
+          <Logo dark />
+          <span className="text-xs font-semibold tracking-[0.2em] uppercase text-white">Ask Elijah</span>
+        </div>
         <div className="flex items-center gap-6">
           <Link href="/browse" className="text-sm text-gray-500 hover:text-white transition-colors">Browse</Link>
           <Link href="/profile" className="text-sm text-gray-500 hover:text-white transition-colors">Profile</Link>
@@ -614,6 +594,9 @@ export default function HomePage() {
         </h2>
 
         <div className="w-full max-w-xl mt-6">
+          <p className="text-xs text-gray-600 uppercase tracking-widest mb-4">
+            Elijah personally reads and answers every question.
+          </p>
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -647,6 +630,9 @@ export default function HomePage() {
               Ask →
             </button>
           </div>
+          <p className="text-xs text-gray-600 mt-4 text-center">
+            Elijah reads every question. You&apos;ll hear back within 48 hours.
+          </p>
         </div>
       </section>
 
@@ -655,33 +641,62 @@ export default function HomePage() {
         <LiveTicker />
       </div>
 
+      {/* Sample answer preview */}
+      <section className="bg-black px-5 py-14 border-t border-gray-900">
+        <div className="max-w-xl mx-auto">
+          <p className="text-xs text-gray-600 uppercase tracking-widest mb-4">Here&apos;s what I told a player last week →</p>
+          <div className="relative">
+            <p className="text-gray-300 text-base leading-relaxed">
+              &ldquo;The freeze-up in games but not practice is almost always one thing: your brain is trying to protect you from judgment. In practice there&apos;s no scoreboard. In games there is. So it switches into threat mode — cortisol spikes, your body tightens, your instincts shut down...&rdquo;
+            </p>
+            <div
+              className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none"
+              style={{ background: 'linear-gradient(to bottom, transparent, #000)' }}
+            />
+          </div>
+          <button
+            onClick={() => (document.querySelector('textarea') as HTMLTextAreaElement | null)?.focus()}
+            className="mt-6 text-xs text-gray-500 hover:text-white transition-colors"
+          >
+            Ask your version →
+          </button>
+        </div>
+      </section>
+
       {/* Below fold */}
-      <section className="bg-white px-5 py-16 md:py-24">
+      <section className="bg-[#F7F5F0] px-5 py-16 md:py-24">
         <div className="max-w-2xl mx-auto">
-          <p className="text-xs text-gray-400 tracking-widest uppercase mb-8">The real problem</p>
+          <p className="text-xs text-gray-400 tracking-widest uppercase mb-8">The Gap</p>
 
           <h2 className="text-2xl md:text-5xl font-bold tracking-tight text-black leading-tight mb-8">
             Every coach has trained
             <br />your body.
             <br />
-            <span className="text-gray-300">Nobody has trained your mind.</span>
+            <span className="text-gray-400">Nobody taught you how to train your mind.</span>
           </h2>
 
-          <div className="space-y-5 text-gray-500 text-base md:text-lg leading-relaxed mb-10">
+          <div className="space-y-5 text-gray-500 text-base md:text-lg leading-relaxed mb-4">
             <p>
               Every coach you&apos;ve ever had has focused on your shot, your footwork, your conditioning. That&apos;s what they know how to teach.
             </p>
             <p>
-              Nobody has sat down with you and talked about what is actually happening in your head. The doubt before a big game. Losing confidence mid-series. Performing under pressure when everything is on the line.
-            </p>
-            <p className="text-black font-semibold text-xl">
-              The game is 90% mental. Your training has been 90% physical. That is the gap.
+              Not one of them has sat down with you and talked about what&apos;s actually happening in your head. The doubt before a big game. Losing confidence mid-series. Performing under pressure when everything is on the line.
             </p>
           </div>
 
-          <div className="border-l-2 border-black pl-6 mb-14">
-            <p className="text-gray-600 text-base leading-relaxed">
+          <div className="border-l-4 border-black pl-6 my-10">
+            <p className="text-black font-bold text-2xl md:text-4xl leading-tight tracking-tight">
+              The game is 90% mental.<br />Your training has been 90% physical.<br />
+              <span className="text-gray-400">That is the gap.</span>
+            </p>
+          </div>
+
+          <div className="bg-black text-white px-8 py-8 mb-14">
+            <p className="text-white text-base md:text-lg leading-relaxed mb-4">
               Elijah has been in Euroleague finals. NBA locker rooms. High pressure moments most coaches have only watched on TV. Ask him what is going on in your head and what to do about it.
+            </p>
+            <p className="text-gray-400 text-xs font-semibold tracking-widest uppercase">
+              NBA · EuroLeague Champion · 3 continents
             </p>
           </div>
 
@@ -707,14 +722,14 @@ export default function HomePage() {
           <p className="text-2xl md:text-3xl font-semibold italic tracking-tight text-white leading-snug mb-4">
             &ldquo;First time I felt like I was getting real advice, not just content.&rdquo;
           </p>
-          <cite className="text-sm text-gray-500 not-italic">— CC Newsletter subscriber, age 17</cite>
+          <cite className="text-sm text-gray-500 not-italic">— Marcus, 17, Chicago</cite>
         </blockquote>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-px max-w-3xl mx-auto bg-gray-900">
           {[
-            { title: "From Elijah's vault", sub: "His real protocols, not the internet's average answer" },
-            { title: "Mental game included", sub: "The 90% nobody else is training" },
-            { title: "Built on 20 years", sub: "Pro leagues across 3 continents" },
+            { title: "Not AI. Not a template.", sub: "A real answer, written for you." },
+            { title: "48 hours. Every time.", sub: "Elijah reads it. Elijah writes back." },
+            { title: "NBA. EuroLeague finals. 3 continents.", sub: "Advice from inside the arena, not from the stands." },
           ].map(({ title, sub }) => (
             <div key={title} className="bg-black text-white p-8">
               <p className="font-bold text-base tracking-tight mb-2">{title}</p>
@@ -724,12 +739,29 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Browse feed teaser */}
+      <section className="bg-black border-t border-gray-900 px-6 py-16">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-xs text-gray-600 uppercase tracking-widest mb-8">Questions Elijah has answered →</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {SUGGESTIONS.slice(0, 3).map(s => (
+              <Link key={s} href="/browse" className="border border-gray-800 p-5 hover:border-gray-600 transition-colors block">
+                <p className="text-gray-400 text-sm italic">&ldquo;{s}&rdquo;</p>
+              </Link>
+            ))}
+          </div>
+          <Link href="/browse" className="mt-6 inline-block text-xs text-gray-600 hover:text-white transition-colors">
+            Browse all answers →
+          </Link>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-black border-t border-gray-900 px-6 py-10">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex flex-col gap-3">
             <Logo dark />
-            <p className="text-xs text-gray-600">Built by Elijah Bryant. Consistency Club.</p>
+            <p className="text-xs text-gray-600">Built by Elijah Bryant · NBA · EuroLeague Champion</p>
           </div>
           <div className="flex items-center gap-6">
             <Link href="/privacy" className="text-xs text-gray-600 hover:text-white transition-colors">Privacy</Link>

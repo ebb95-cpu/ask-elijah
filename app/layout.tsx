@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ask Elijah",
-  description: "Ask what no coach has time to answer.",
+  title: "Ask Elijah — Train Your Mind",
+  description: "Ask an NBA + EuroLeague champion what's happening in your head. Personal answers in 48 hours.",
   openGraph: {
-    title: "Ask Elijah",
-    description: "Ask what no coach has time to answer.",
+    title: "Ask Elijah — Train Your Mind",
+    description: "Ask an NBA + EuroLeague champion what's happening in your head. Personal answers in 48 hours.",
     type: "website",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
   },
 };
 

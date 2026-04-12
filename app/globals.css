@@ -61,3 +61,39 @@ body {
 
 /* Accordion */
 details summary::-webkit-details-marker { display: none; }
+
+/* Ticker animation (moved from inline JSX) */
+@keyframes tickerSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ticker-in  { animation: tickerSlide 0.4s ease forwards; }
+.ticker-out { opacity: 0; transition: opacity 0.3s ease; }
+
+/* Loading logo line animations (moved from inline JSX) */
+@keyframes drawLeft {
+  0%   { stroke-dashoffset: 12; }
+  35%  { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: 0; }
+}
+@keyframes drawRight {
+  0%   { stroke-dashoffset: 12; }
+  35%  { stroke-dashoffset: 12; }
+  70%  { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: 0; }
+}
+.seg-left  { stroke-dasharray: 12; stroke-dashoffset: 12; animation: drawLeft  2s ease-in-out infinite; }
+.seg-right { stroke-dasharray: 12; stroke-dashoffset: 12; animation: drawRight 2s ease-in-out infinite; }
+
+/* Prefers-reduced-motion: freeze all animations at final visible state */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .dot-1, .dot-2, .dot-3 { opacity: 1 !important; }
+  .slide-up { transform: translateY(0) !important; opacity: 1 !important; }
+  .ticker-in, .ticker-out { opacity: 1 !important; transform: none !important; }
+  .seg-left, .seg-right { stroke-dashoffset: 0 !important; }
+}
