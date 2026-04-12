@@ -120,7 +120,7 @@ export default function SignInPage() {
                 <p className="text-gray-500 text-sm leading-relaxed mb-2">We sent it to</p>
                 <p className="text-white font-semibold mb-6">{email}</p>
                 <p className="text-gray-600 text-sm leading-relaxed mb-10">
-                  Click it and you&apos;re straight back in. The question you&apos;ve been sitting on — ask it.
+                  Click it and you&apos;re straight back in. Ask the question you&apos;ve been sitting on.
                 </p>
               </div>
               <button
