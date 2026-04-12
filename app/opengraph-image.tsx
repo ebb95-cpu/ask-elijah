@@ -21,20 +21,7 @@ export default async function Image() {
           padding: '0 80px',
         }}
       >
-        {/* Brand label */}
-        <div
-          style={{
-            fontSize: 20,
-            color: '#555555',
-            letterSpacing: '0.25em',
-            textTransform: 'uppercase',
-            marginBottom: 40,
-          }}
-        >
-          Ask Elijah
-        </div>
-
-        {/* Headline */}
+        {/* Headline line 1 */}
         <div
           style={{
             fontSize: 72,
@@ -43,22 +30,37 @@ export default async function Image() {
             letterSpacing: '-0.02em',
             lineHeight: 1.1,
             textAlign: 'center',
-            marginBottom: 40,
           }}
         >
-          Your body is trained.<br />Your mind isn't.
+          Your body is trained.
         </div>
 
-        {/* What it does */}
+        {/* Headline line 2 */}
         <div
           style={{
-            fontSize: 24,
-            color: '#888888',
-            letterSpacing: '0.05em',
+            fontSize: 72,
+            fontWeight: 700,
+            color: 'white',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.1,
+            textAlign: 'center',
+            marginBottom: 48,
+          }}
+        >
+          Your mind isn't.
+        </div>
+
+        {/* Product name */}
+        <div
+          style={{
+            fontSize: 22,
+            color: '#666666',
+            letterSpacing: '0.2em',
+            textTransform: 'uppercase',
             textAlign: 'center',
           }}
         >
-          NBA Champion · Ask a question. Get a personal answer.
+          Ask Elijah
         </div>
       </div>
     ),
