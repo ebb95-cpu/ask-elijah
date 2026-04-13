@@ -96,17 +96,13 @@ export async function GET(req: NextRequest) {
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Your answer is with me.</p>
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">But I'm missing something.</p>
 
-          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-            I'm writing back without knowing your position, your level, or what you're actually dealing with. Tell me so I can give you something worth reading.
+          <p style="font-size:16px;color:#ffffff !important;line-height:1.7;margin:0 0 48px;font-family:-apple-system,sans-serif;">
+            I need your position and level before I write back. Two questions. Takes 30 seconds.
           </p>
 
-          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:40px;">
-            <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0;font-family:-apple-system,sans-serif;">
-              Takes less than a minute.
-            </p>
-          </div>
-
-          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;"><a href="${siteUrl}/profile" style="color:#555555;text-decoration:none;">Tell me who you are →</a></p>
+          <p style="font-size:18px;font-weight:700;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+            <a href="${siteUrl}/profile" style="color:#ffffff !important;text-decoration:none;">Tell me who you are →</a>
+          </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
           <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
