@@ -88,7 +88,7 @@ function buildEmail(
       <p style="font-size:18px;color:#fff;font-weight:600;margin:0 0 20px;line-height:1.4;">
         ${followUp}
       </p>
-      <a href="https://askelijah.com/ask"
+      <a href="https://elijahbryant.pro/ask"
          style="display:inline-block;background:#fff;color:#000;padding:12px 24px;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:0.05em;">
         Ask Elijah →
       </a>
@@ -97,7 +97,7 @@ function buildEmail(
     <!-- Footer -->
     <p style="font-size:12px;color:#ccc;margin:0;">
       Ask Elijah ·
-      <a href="https://askelijah.com/unsubscribe?email=${encodeURIComponent(email)}" style="color:#ccc;">Unsubscribe</a>
+      <a href="https://elijahbryant.pro/unsubscribe?email=${encodeURIComponent(email)}" style="color:#ccc;">Unsubscribe</a>
     </p>
 
   </div>
@@ -160,7 +160,7 @@ export async function GET(req: NextRequest) {
       await resend.emails.send({
         from: process.env.RESEND_FROM || 'elijah@elijahbryant.pro',
         to: toAddress,
-        subject: `Your question to Elijah — and what to think about today`,
+        subject: `You asked. Here's what came back.`,
         html,
       })
 
