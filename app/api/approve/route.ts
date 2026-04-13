@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
           ${actionSteps ? `
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:40px;">
             <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#ffffff !important;margin:0 0 12px;font-family:-apple-system,sans-serif;">Your action steps</p>
-            <div style="font-size:15px;line-height:1.8;color:#ffffff !important;white-space:pre-wrap;font-family:-apple-system,sans-serif;">${actionSteps}</div>
+            ${actionSteps.split('\n').filter((s: string) => s.trim()).map((step: string) => `<p style="font-size:15px;line-height:1.6;color:#ffffff !important;margin:0 0 12px;font-family:-apple-system,sans-serif;">${step.trim()}</p>`).join('')}
           </div>` : ''}
 
           <p style="font-size:17px;font-weight:800;color:#ffffff !important;margin:0 0 10px;font-family:-apple-system,sans-serif;">Now go use it.</p>
