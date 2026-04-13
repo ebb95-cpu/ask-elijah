@@ -77,10 +77,6 @@ export async function GET(req: NextRequest) {
             <p style="font-size:17px;font-weight:600;margin:0;color:#ffffff !important;line-height:1.4;font-family:-apple-system,sans-serif;">${q.question}</p>
           </div>
 
-          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 24px;font-family:-apple-system,sans-serif;">
-            said they're dealing with the same thing.
-          </p>
-
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
             You're not alone in this. Make sure you're actually using the answer.
           </p>
