@@ -20,17 +20,19 @@ export async function GET(req: NextRequest) {
     subscribed = profile?.subscribed === true
   }
 
-  const { data: questions, error: qErr } = await supabase
-    .from('questions')
-    .select('id, question, answer')
-    .eq('status', 'approved')
-    .order('created_at', { ascending: false })
-    .limit(50)
+  // Use direct REST fetch to avoid supabase-js quirks
+  const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const restRes = await fetch(
+    `${sbUrl}/rest/v1/questions?status=eq.approved&select=id,question,answer&order=created_at.desc&limit=50`,
+    { headers: { apikey: sbKey!, Authorization: `Bearer ${sbKey}`, 'Content-Type': 'application/json' }, cache: 'no-store' }
+  )
+  const questions: { id: string; question: string; answer: string }[] | null = restRes.ok ? await restRes.json() : null
 
-  if (qErr) console.error('Browse query error:', qErr)
-  console.log('Browse query returned:', questions?.length, 'questions')
+  if (!restRes.ok) console.error('Browse REST error:', restRes.status, await restRes.text().catch(() => ''))
+  console.log('Browse REST returned:', questions?.length, 'questions')
 
-  if (!questions?.length) return NextResponse.json({ questions: [], subscribed, _debug: { error: qErr, count: 0, url: process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 30) } })
+  if (!questions?.length) return NextResponse.json({ questions: [], subscribed, _debug: { status: restRes.status, count: 0, url: sbUrl?.slice(0, 40) } })
 
   // Get upvote counts
   const ids = questions.map(q => q.id)
