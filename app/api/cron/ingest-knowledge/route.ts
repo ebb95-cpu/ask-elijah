@@ -193,7 +193,8 @@ async function getChannelVideos(handle: string): Promise<{ videoId: string; titl
   }
 
   // Fallback: extract IDs from HTML
-  const ids = [...new Set([...html.matchAll(/"videoId":"([^"]{11})"/g)].map(m => m[1]))]
+  const rawIds = Array.from(html.matchAll(/"videoId":"([^"]{11})"/g)).map(m => m[1])
+  const ids = Array.from(new Set(rawIds))
   return ids.slice(0, 10).map(id => ({ videoId: id, title: '' }))
 }
 
