@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">48 hours.</p>
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Did you do the steps?</p>
 
-          <div style="border-left:3px solid #333333;padding-left:20px;margin-bottom:28px;">
+          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:28px;">
             <p style="font-size:12px;color:#ffffff !important;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">You asked</p>
             <p style="font-size:15px;font-weight:600;margin:0;color:#ffffff !important;font-family:-apple-system,sans-serif;">${q.question}</p>
           </div>
