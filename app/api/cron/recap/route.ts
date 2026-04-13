@@ -55,8 +55,8 @@ function buildEmail(
           <p style="text-align:center;margin:0 0 48px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:inline-block;border:0;width:52px;height:8px;" /></p>
 
           <!-- Big two-tone headline -->
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Yesterday you asked.</p>
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Here's what came back.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">You asked.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">I answered.</p>
 
           ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${firstName}.</p>` : ''}
 
@@ -159,7 +159,7 @@ export async function GET(req: NextRequest) {
         from: process.env.RESEND_FROM || 'Elijah Bryant <elijah@elijahbryant.pro>',
         replyTo: 'ebb95@mac.com',
         to: toAddress,
-        subject: `You asked. Here's what came back.`,
+        subject: `You asked. I answered.`,
         html,
       })
 
