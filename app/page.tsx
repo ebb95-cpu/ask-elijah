@@ -591,18 +591,14 @@ export default function HomePage() {
         </h2>
 
         <div className="w-full max-w-xl mt-6">
-          <p className="text-xs text-gray-600 uppercase tracking-widest mb-4">
-            Ask the question that&apos;s been holding you back.
-          </p>
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={handleKey}
             placeholder="What's the one thing costing you right now?"
-            rows={3}
+            rows={1}
             autoFocus
             className="w-full text-white placeholder-gray-500 text-base sm:text-lg leading-relaxed resize-none outline-none bg-transparent border-b border-gray-700 focus:border-gray-400 transition-colors pb-3"
-            style={{ minHeight: '80px' }}
           />
 
           <div className="mt-5 flex justify-end">
