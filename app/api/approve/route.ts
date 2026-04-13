@@ -94,14 +94,7 @@ export async function POST(req: NextRequest) {
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
 
-          <p style="text-align:center;margin:0 0 16px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:inline-block;border:0;width:52px;height:8px;" /></p>
-
-          <!-- Credential line -->
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
-            <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
-              <p style="font-size:10px;color:#555555;margin:0;text-transform:uppercase;letter-spacing:0.15em;font-family:-apple-system,sans-serif;">&#8226; Elijah Bryant &middot; NBA &middot; EuroLeague Champion &#8226;</p>
-            </td></tr>
-          </table>
+          <p style="text-align:center;margin:0 0 48px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:inline-block;border:0;width:52px;height:8px;" /></p>
 
           <!-- Big two-tone headline -->
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Elijah wrote back.</p>
@@ -125,13 +118,7 @@ export async function POST(req: NextRequest) {
             Read it twice. Do the steps. I'll check in with you soon.
           </p>
 
-          <table cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
-            <tr>
-              <td bgcolor="#ffffff" style="background-color:#ffffff !important;">
-                <a href="${siteUrl}/ask" style="display:inline-block;padding:14px 28px;font-size:14px;font-weight:700;color:#000000 !important;text-decoration:none;font-family:-apple-system,sans-serif;">Ask your next question →</a>
-              </td>
-            </tr>
-          </table>
+          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;"><a href="${siteUrl}/ask" style="color:#555555;text-decoration:none;">Ask your next question →</a></p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
           <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
