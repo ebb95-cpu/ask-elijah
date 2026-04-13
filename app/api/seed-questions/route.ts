@@ -116,6 +116,87 @@ The teammates who doubted me in my career were watching closely. I just never ga
 2. Identify one consistent thing you can do that makes your team better — a screen, a defensive assignment, a communication habit
 3. If it's one specific teammate, have one direct private conversation — not about respect, about the team`,
   },
+  {
+    question: "My coach yells at me in front of everyone and it completely shuts me down. How do I not let it get in my head?",
+    answer: `A coach who yells publicly is trying to send a message — sometimes to you, sometimes to the whole team. But what it does to you mentally is real, and ignoring it doesn't make it go away.
+
+Here's what I learned playing under high-pressure coaches at the highest levels: the yelling isn't the problem. Your relationship with the yelling is. When a coach yells and you shut down, you've handed them control of your nervous system. They don't even know they have it.
+
+The shift that changed everything for me: I started treating every correction — yelled or not — as information, not judgment. "Get back on defense" means get back on defense. It doesn't mean you're a bad player, or that he doesn't believe in you, or that your career is over. It means get back on defense.
+
+This takes practice. Start in low-stakes moments. When a coach corrects you in practice, say to yourself: "What's the adjustment?" Not "what does this mean about me?" Just the adjustment.
+
+The other piece: if the yelling is genuinely affecting your ability to play and it's crossed a line, that's a conversation worth having — privately, calmly, one-on-one. Not to complain. To communicate. "Coach, I play better when I understand what you need from me. Can we talk about that?" Most coaches respect that more than silence.`,
+    action_steps: `1. Next practice: when you get corrected, immediately ask yourself "what's the adjustment?" — not what it means about you
+2. For the next two weeks, separate every piece of coaching from your self-worth. It's information. Act on it.
+3. If it's beyond coaching and feels personal, request a private meeting — come with specific examples and a specific ask`,
+  },
+  {
+    question: "I had one bad game and I can't stop replaying it. I'm scared it's going to happen again.",
+    answer: `The replay loop is your brain trying to solve an unsolved problem. It keeps returning to the moment because it hasn't found resolution. The bad news: trying to stop thinking about it usually makes it worse. The good news: there's a way through it that actually works.
+
+First, give yourself 24 hours. One full day to feel it, talk about it if you need to, let it be bad. Don't suppress it. Don't pretend it didn't matter. It did. That's fine.
+
+After 24 hours, do this: write down exactly what happened, what you'd do differently, and one thing you did well in the same game. Not to torture yourself — to close the loop. Your brain keeps replaying because it hasn't filed the experience away. Writing it down tells your brain: I've processed this. We can move on.
+
+Then there's the fear it'll happen again. That fear is actually useful if you aim it correctly. It means you care. Use it to prepare specifically for the situation that broke down. If you turned it over late in the game, spend ten minutes in your next practice on late-game decision making. Make the fear specific. Then make the specific thing smaller.
+
+One bad game doesn't predict the next one. But how you handle it does.`,
+    action_steps: `1. Give yourself 24 hours to fully feel it — no suppression, no pretending it's fine
+2. After 24 hours: write down what happened, what you'd do differently, and one thing you did well
+3. Identify the specific moment that broke down and spend 10 minutes in your next practice on exactly that situation`,
+  },
+  {
+    question: "Am I actually good enough for the next level? I don't know if I'm just fooling myself.",
+    answer: `This question is the bravest one a player can ask — and most are too scared to ask it honestly.
+
+Here's what I've seen from the inside: almost every player who makes it to the next level asked this question. And almost every player who didn't make it never asked it seriously. The asking is a good sign.
+
+The honest answer: "good enough" isn't a fixed thing. It's a moving target that depends on your development rate, not your current ceiling. The players who make it aren't always the most talented ones in the gym right now. They're the ones who are still getting better when everyone else has plateaued.
+
+What I'd ask instead: are you getting better every month? Not every day — every month? Is the gap between you and the players ahead of you shrinking or growing? If it's shrinking, the answer might be yes. If it's growing, the question isn't about your ceiling — it's about your process.
+
+Get honest evaluation from people who have no emotional stake in your answer. Not your parents. Not your closest friends. A coach who's seen the next level. Put your film in front of people who will tell you the truth.
+
+The question "am I good enough" can either paralyze you or fuel you. The difference is whether you follow it with: "and what am I going to do about it today?"`,
+    action_steps: `1. Find one person who has seen the next level and ask them for an honest evaluation — be specific about what you want feedback on
+2. Track your progress monthly: pick three measurable things and track them for 90 days
+3. Spend 20 minutes writing the honest answer to this question: "What would I need to change to give myself the best shot?"`,
+  },
+  {
+    question: "Basketball is my whole identity. When I have a bad game, I feel like I'm nothing. How do I stop letting it define me?",
+    answer: `This is the most important mental performance question a player can ask, and almost none of them do — because admitting it out loud feels like weakness. It's not. It's the most honest thing you can say.
+
+When basketball is your entire identity, every game becomes an evaluation of your worth as a person. Not just your skills — your worth. That's an unbearable amount of pressure to put on a game.
+
+I've been there. Every player at the professional level has been there. The ones who last have learned — usually the hard way — that basketball is something they do, not who they are.
+
+Here's what helped me: I started building a version of myself that existed completely outside the game. One thing I was curious about, one relationship that had nothing to do with basketball, one skill I was developing that had zero to do with sports. Not as a backup plan. As proof that I existed beyond the sport.
+
+When you have that, a bad game hurts. But it doesn't erase you. Because you know who you are when you're not on the court.
+
+The pressure you feel isn't coming from the game. It's coming from the absence of yourself outside of it. Build that and everything else gets easier — including the game.`,
+    action_steps: `1. This week: identify one thing you're interested in that has nothing to do with basketball. Spend 30 minutes on it.
+2. Write down three things that are true about you that have nothing to do with how you play
+3. After your next bad game: wait two hours, then call or text someone you trust about something completely unrelated to basketball`,
+  },
+  {
+    question: "Everyone on my team is getting better faster than me. I feel like I'm getting left behind.",
+    answer: `Comparison to teammates is one of the most damaging things a player can do to their own development — and one of the hardest to stop, because it feels like useful information. It's not. It's noise.
+
+Here's what's actually happening when you compare: you're watching someone else's highlight reel and comparing it to your behind-the-scenes. You see their improvement. You don't see their struggle. You're measuring their outside against your inside. It's a rigged comparison.
+
+I've been on teams where I was clearly behind the curve. EuroLeague. NBA camps. Those environments exposed every gap in my game. And the players who improved fastest were the ones who stopped looking sideways and locked into their own process.
+
+The question that's worth asking isn't "why are they getting better faster?" It's "am I getting better?" Just you. Compared to last month. Last season.
+
+Pick three things you want to be measurably better at in 90 days. Track those three things. Nothing else. When you're focused on your own growth curve, theirs becomes irrelevant — not because you don't care, but because you've stopped giving it your attention.
+
+The race isn't against them. It's against who you were yesterday.`,
+    action_steps: `1. Stop tracking your teammates' improvement for 30 days — completely
+2. Pick three specific things to get better at in the next 90 days. Write them down.
+3. At the end of each week, ask yourself: am I better at these three things than I was last week? That's the only comparison that matters`,
+  },
 ]
 
 export async function GET(req: NextRequest) {
