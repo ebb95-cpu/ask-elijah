@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'
   await resend.emails.send({
     from: 'Elijah Bryant <elijah@elijahbryant.pro>',
+      reply_to: 'ebb95@mac.com',
     to: record.email,
     subject: 'Elijah wrote back.',
     html: `

@@ -248,6 +248,7 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
 
   await resend.emails.send({
     from: 'Elijah Bryant <elijah@elijahbryant.pro>',
+      reply_to: 'ebb95@mac.com',
     to: userEmail,
     subject: 'Got it. Reading it now.',
     html: `

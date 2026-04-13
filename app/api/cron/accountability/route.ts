@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
     try {
       await resend.emails.send({
         from: 'Elijah Bryant <elijah@elijahbryant.pro>',
+      reply_to: 'ebb95@mac.com',
         to: q.email,
         subject: '48 hours ago I gave you steps. Did you do them?',
         html: `
