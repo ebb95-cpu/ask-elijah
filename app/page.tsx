@@ -598,7 +598,7 @@ export default function HomePage() {
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="What's going on in your head?"
+            placeholder="What's the one thing costing you right now?"
             rows={3}
             autoFocus
             className="w-full text-white placeholder-gray-500 text-base sm:text-lg leading-relaxed resize-none outline-none bg-transparent border-b border-gray-700 focus:border-gray-400 transition-colors pb-3"
