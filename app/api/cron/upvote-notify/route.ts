@@ -91,11 +91,11 @@ export async function GET(req: NextRequest) {
 
           <p style="font-size:40px;font-weight:900;color:#ffffff !important;margin:0 0 8px;font-family:-apple-system,sans-serif;">${count} players</p>
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 24px;font-family:-apple-system,sans-serif;">
-            said they've got the same thing going on. That number keeps climbing.
+            said they're dealing with the same thing.
           </p>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
-            Most players think it's just them. It's not. You asked the right question. Now make sure you're actually using the answer.
+            You're not alone in this. Make sure you're actually using the answer.
           </p>
 
           <a href="${siteUrl}" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:48px;font-family:-apple-system,sans-serif;">
@@ -195,7 +195,7 @@ export async function GET(req: NextRequest) {
           </div>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
-            Players who get better aren't the ones with fewer problems. They're the ones who actually ask about them.
+            Read the answer if you haven't. Then go ask your version.
           </p>
 
           <a href="${siteUrl}" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:48px;font-family:-apple-system,sans-serif;">

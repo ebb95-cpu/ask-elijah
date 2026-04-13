@@ -77,22 +77,18 @@ export async function GET(req: NextRequest) {
             Welcome. I'm already in your corner.
           </p>
 
-          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">
-            Most players carry their questions alone. The doubt, the slumps, the stuff they can't talk to their coach about. They just push through and hope it gets better.
-          </p>
-
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-            You just did something different. You asked.
+            Most players never ask for help. You did.
           </p>
 
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
             <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0;font-family:-apple-system,sans-serif;">
-              Every question you send comes directly to me. I read it. I write back. Not a template. Your situation, specifically.
+              Every question goes straight to me. I read it. I write back. Not a template. Your situation.
             </p>
           </div>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
-            While you wait, take 2 minutes and tell me who you are. The more I know about your game, the sharper my answer.
+            Before I answer, tell me who you are. I want to know what you're working with.
           </p>
 
           <a href="${siteUrl}/profile" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:48px;font-family:-apple-system,sans-serif;">

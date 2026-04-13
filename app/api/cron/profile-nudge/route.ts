@@ -107,17 +107,13 @@ export async function GET(req: NextRequest) {
             Your answer is with me. But I'm missing something.
           </p>
 
-          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">
-            I'm reading your question without knowing much about you. Your position. Your level. What's been holding you back.
-          </p>
-
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-            That information changes everything. It's the difference between a general answer and one written specifically for your situation.
+            I'm writing back without knowing your position, your level, or what you're actually dealing with. Tell me so I can give you something worth reading.
           </p>
 
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:40px;">
             <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0;font-family:-apple-system,sans-serif;">
-              Two minutes. Three questions. Then I know exactly who I'm talking to.
+              Takes less than a minute.
             </p>
           </div>
 

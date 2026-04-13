@@ -88,10 +88,10 @@ export async function GET(req: NextRequest) {
           </div>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">
-            Most players read the answer and move on. The ones who get better actually do the steps.
+            Most players read the answer and move on. The ones who actually get better do the steps.
           </p>
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
-            Hit reply and tell me what happened — what you did, what you felt, what changed.
+            Hit reply. Tell me what happened.
           </p>
 
           <a href="${siteUrl}" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:48px;font-family:-apple-system,sans-serif;">

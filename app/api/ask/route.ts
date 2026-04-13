@@ -280,11 +280,11 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
           </div>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">
-            I'm thinking through your actual situation — not just giving you a generic answer. Give me a little time to write something worth reading.
+            Give me some time with it. I'll write back when I have something real to say.
           </p>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
-            When it's ready, it'll come straight to this inbox. Read it twice when it does.
+            Check your inbox.
           </p>
 
           <a href="${siteUrl}/browse" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:56px;font-family:-apple-system,sans-serif;">
