@@ -591,21 +591,20 @@ export default function HomePage() {
         </h2>
 
         <div className="w-full max-w-xl mt-6">
-          <textarea
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            onKeyDown={handleKey}
-            placeholder="What's the one thing costing you right now?"
-            rows={1}
-            autoFocus
-            className="w-full text-white placeholder-gray-500 text-base sm:text-lg leading-relaxed resize-none outline-none bg-transparent border-b border-gray-700 focus:border-gray-400 transition-colors pb-3"
-          />
-
-          <div className="mt-5 flex justify-end">
+          <div className="flex items-end gap-4 border-b border-gray-700 focus-within:border-gray-400 transition-colors pb-3">
+            <textarea
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder="What's the one thing costing you right now?"
+              rows={1}
+              autoFocus
+              className="flex-1 text-white placeholder-gray-500 text-base sm:text-lg leading-relaxed resize-none outline-none bg-transparent"
+            />
             <button
               onClick={handleSubmit}
               disabled={!question.trim()}
-              className="text-sm font-semibold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all"
+              className="text-sm font-semibold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all flex-shrink-0"
             >
               Ask →
             </button>
