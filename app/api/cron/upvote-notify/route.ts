@@ -38,10 +38,22 @@ export async function GET(req: NextRequest) {
 
   if (!questions?.length) return NextResponse.json({ askerSent: 0, broadcastSent: 0 })
 
+  // Batch-fetch names for personalization
+  const questionEmails = questions.map(q => q.email).filter(Boolean)
+  const { data: upvoteProfiles } = await supabase
+    .from('profiles')
+    .select('email, first_name')
+    .in('email', questionEmails)
+  const upvoteNameMap: Record<string, string> = {}
+  for (const p of upvoteProfiles || []) {
+    if (p.email && p.first_name) upvoteNameMap[p.email] = p.first_name
+  }
+
   let askerSent = 0
   let broadcastSent = 0
 
   for (const q of questions) {
+    const firstName = upvoteNameMap[q.email] || null
     const count = countMap[q.id] || 0
 
     // ── Personal notification to the asker ─────────────────────────────────
@@ -70,6 +82,8 @@ export async function GET(req: NextRequest) {
 
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Your question blew up.</p>
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">${count} players needed this.</p>
+
+          ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${firstName}.</p>` : ''}
 
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
             <p style="font-size:17px;font-style:italic;font-weight:600;margin:0;color:#ffffff !important;line-height:1.4;font-family:-apple-system,sans-serif;">"${q.question}"</p>

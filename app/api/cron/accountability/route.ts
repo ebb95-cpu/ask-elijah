@@ -36,9 +36,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ sent: 0, message: 'No accountability emails to send' })
   }
 
+  // Batch-fetch names for personalization
+  const emails = questions.map(q => q.email).filter(Boolean)
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('email, first_name')
+    .in('email', emails)
+  const nameMap: Record<string, string> = {}
+  for (const p of profiles || []) {
+    if (p.email && p.first_name) nameMap[p.email] = p.first_name
+  }
+
   let sent = 0
 
   for (const q of questions) {
+    const firstName = nameMap[q.email] || null
     try {
       await resend.emails.send({
         from: 'Elijah Bryant <elijah@elijahbryant.pro>',
@@ -64,6 +76,8 @@ export async function GET(req: NextRequest) {
           <!-- Big two-tone headline -->
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">48 hours.</p>
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Did you do the steps?</p>
+
+          ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${firstName}.</p>` : ''}
 
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:28px;">
             <p style="font-size:12px;color:#ffffff !important;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">You asked</p>

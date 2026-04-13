@@ -229,6 +229,7 @@ async function addToBeehiiv(email: string) {
       send_welcome_email: true,
       utm_source: 'ask-elijah',
       utm_medium: 'email-gate',
+      tags: ['acq:ask-elijah'],
     }),
   })
 }
@@ -236,6 +237,14 @@ async function addToBeehiiv(email: string) {
 async function sendConfirmation(question: string, userEmail: string, newsletterOptIn: boolean) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'
+  const supabase = getSupabase()
+
+  const { data: confirmProfile } = await supabase
+    .from('profiles')
+    .select('first_name')
+    .eq('email', userEmail.trim().toLowerCase())
+    .single()
+  const firstName = confirmProfile?.first_name || null
 
   await resend.emails.send({
     from: 'Elijah Bryant <elijah@elijahbryant.pro>',
@@ -259,6 +268,8 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
 
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Got it.</p>
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Reading it now.</p>
+
+          ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${firstName}.</p>` : ''}
 
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:48px;">
             <p style="font-size:18px;font-weight:600;color:#ffffff !important;line-height:1.5;font-style:italic;margin:0;font-family:-apple-system,sans-serif;">"${question}"</p>

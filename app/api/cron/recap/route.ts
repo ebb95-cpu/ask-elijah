@@ -20,7 +20,8 @@ const FOLLOW_UPS = [
 
 function buildEmail(
   email: string,
-  questions: { question: string; answer: string; sources: { title: string; url: string; type: string }[] }[]
+  questions: { question: string; answer: string; sources: { title: string; url: string; type: string }[] }[],
+  firstName?: string | null
 ): string {
   const followUp = FOLLOW_UPS[Math.floor(Math.random() * FOLLOW_UPS.length)]
 
@@ -71,6 +72,8 @@ function buildEmail(
           <!-- Big two-tone headline -->
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Yesterday you asked.</p>
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Here's what came back.</p>
+
+          ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${firstName}.</p>` : ''}
 
           <!-- Q&A blocks -->
           ${qaBlocks}
@@ -147,12 +150,24 @@ export async function GET(req: NextRequest) {
     byEmail[row.email].push(row)
   }
 
+  // Batch-fetch names for personalization
+  const recapEmails = Object.keys(byEmail)
+  const { data: recapProfiles } = await supabase
+    .from('profiles')
+    .select('email, first_name')
+    .in('email', recapEmails)
+  const recapNameMap: Record<string, string> = {}
+  for (const p of recapProfiles || []) {
+    if (p.email && p.first_name) recapNameMap[p.email] = p.first_name
+  }
+
   let sent = 0
   const ids: string[] = []
 
   for (const [email, qs] of Object.entries(byEmail)) {
     try {
-      const html = buildEmail(email, qs)
+      const firstName = recapNameMap[email] || null
+      const html = buildEmail(email, qs, firstName)
       const toAddress = process.env.RESEND_TO_OVERRIDE || email // sandbox: always send to yourself
 
       await resend.emails.send({

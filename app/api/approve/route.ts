@@ -58,13 +58,21 @@ export async function POST(req: NextRequest) {
   // Fetch question record
   const { data: record, error: fetchError } = await supabase
     .from('questions')
-    .select('question, email')
+    .select('question, email, sources')
     .eq('id', questionId)
     .single()
 
   if (fetchError || !record) {
     return NextResponse.json({ error: 'Question not found' }, { status: 404 })
   }
+
+  // Fetch name for personalization
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('first_name')
+    .eq('email', record.email.toLowerCase())
+    .single()
+  const firstName = profile?.first_name || null
 
   // Update in Supabase
   await supabase
@@ -100,6 +108,8 @@ export async function POST(req: NextRequest) {
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Elijah wrote back.</p>
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Read it twice.</p>
 
+          ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${firstName}.</p>` : ''}
+
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
             <p style="font-size:12px;color:#ffffff !important;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">You asked</p>
             <p style="font-size:16px;font-weight:600;margin:0;color:#ffffff !important;line-height:1.5;font-family:-apple-system,sans-serif;">${record.question}</p>
@@ -117,6 +127,21 @@ export async function POST(req: NextRequest) {
           <p style="font-size:14px;color:#ffffff !important;line-height:1.6;margin:0 0 32px;font-family:-apple-system,sans-serif;">
             Read it twice. Do the steps. I'll check in with you soon.
           </p>
+
+          ${(() => {
+            const sources: { title: string; url: string; type: string }[] = Array.isArray(record.sources) ? record.sources.filter((s: { url: string }) => s.url) : []
+            if (!sources.length) return ''
+            return `
+          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:40px;">
+            <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#ffffff !important;margin:0 0 12px;font-family:-apple-system,sans-serif;">More from Elijah on this</p>
+            ${sources.map(s => `
+            <p style="margin:0 0 10px;font-family:-apple-system,sans-serif;">
+              <a href="${s.url}" style="font-size:13px;color:#555555;text-decoration:none;">
+                ${s.type === 'newsletter' ? 'Read the full guide' : 'Watch on YouTube'}: ${s.title} →
+              </a>
+            </p>`).join('')}
+          </div>`
+          })()}
 
           <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;"><a href="${siteUrl}/ask" style="color:#555555;text-decoration:none;">Ask your next question →</a></p>
 
