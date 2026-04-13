@@ -264,9 +264,13 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
           I'm thinking through your actual situation — not just giving you a generic answer. Give me a little time to write something worth reading.
         </p>
 
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 40px;">
+        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 32px;">
           When it's ready, it'll come straight to this inbox. Read it twice when it does.
         </p>
+
+        <a href="${siteUrl}/browse" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">
+          See what other players are asking →
+        </a>
 
         <hr style="border: none; border-top: 1px solid #eee; margin-bottom: 24px;" />
 
