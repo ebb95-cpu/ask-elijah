@@ -150,9 +150,17 @@ export default function ProfilePage() {
                 <div>
                   <p className="text-xs text-gray-600 uppercase tracking-widest mb-2">Your player profile</p>
                   <p className="text-2xl font-bold text-white leading-tight">
-                    {[position, level].filter(Boolean).join(' · ')}
+                    {[
+                      position === 'PG' ? 'Point Guard' :
+                      position === 'SG' ? 'Shooting Guard' :
+                      position === 'SF' ? 'Small Forward' :
+                      position === 'PF' ? 'Power Forward' :
+                      position === 'C' ? 'Center' :
+                      position,
+                      level ? `${level} Level` : null,
+                    ].filter(Boolean).join(' · ')}
                   </p>
-                  {country && <p className="text-gray-500 text-sm mt-1">{country}</p>}
+                  {country && <p className="text-gray-500 text-sm mt-1">Playing in {country}</p>}
                 </div>
                 <button
                   onClick={() => setIsEditing(true)}
@@ -163,18 +171,24 @@ export default function ProfilePage() {
               </div>
               {challenge && (
                 <div className="border-t border-gray-900 pt-4">
-                  <p className="text-xs text-gray-600 uppercase tracking-widest mb-1">Working on</p>
-                  <p className="text-white font-semibold">{challenge}</p>
+                  <p className="text-xs text-gray-600 uppercase tracking-widest mb-2">Working on</p>
+                  <p className="text-white font-semibold mb-3">{challenge}</p>
+                  <Link
+                    href={`/ask?q=${encodeURIComponent(`I'm struggling with ${challenge.toLowerCase()} in my game.`)}`}
+                    className="text-xs text-gray-600 hover:text-white transition-colors"
+                  >
+                    Ask Elijah about it →
+                  </Link>
                 </div>
               )}
             </div>
 
-            {/* Stats */}
+            {/* Stats — only when there's data */}
             {journal.length > 0 && (
               <div className="grid grid-cols-3 border border-gray-900 mb-8">
                 <div className="p-5 border-r border-gray-900">
                   <p className="text-3xl font-bold text-white">{journal.length}</p>
-                  <p className="text-xs text-gray-600 mt-1 uppercase tracking-widest">Answered</p>
+                  <p className="text-xs text-gray-600 mt-1 uppercase tracking-widest">Answers from Elijah</p>
                 </div>
                 <div className="p-5 border-r border-gray-900">
                   <p className="text-3xl font-bold text-white">{daysActive}</p>
@@ -195,21 +209,11 @@ export default function ProfilePage() {
               Ask Elijah →
             </Link>
 
-            {/* Journal */}
-            <div>
-              <p className="text-xs text-gray-600 uppercase tracking-widest mb-1">Your Journal</p>
-              <p className="text-xs text-gray-700 mb-8">Every question you asked, what Elijah said, the steps he gave you, and what you reflected on.</p>
-
-              {journalLoading && <p className="text-gray-700 text-sm">Loading...</p>}
-
-              {!journalLoading && journal.length === 0 && (
-                <div className="border border-gray-900 p-6 text-center">
-                  <p className="text-gray-600 text-sm mb-3">No entries yet.</p>
-                  <Link href="/ask" className="text-xs text-white underline">Ask your first question →</Link>
-                </div>
-              )}
-
-              {!journalLoading && journal.length > 0 && (
+            {/* Journal — only show when there are entries */}
+            {!journalLoading && journal.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-600 uppercase tracking-widest mb-1">Your Journal</p>
+                <p className="text-xs text-gray-700 mb-8">Every question you asked, what Elijah said, the steps he gave you, and what you reflected on.</p>
                 <div className="space-y-0">
                   {journal.map((entry, i) => (
                     <div key={entry.id} className={`py-7 ${i < journal.length - 1 ? 'border-b border-gray-900' : ''}`}>
@@ -218,7 +222,6 @@ export default function ProfilePage() {
                         <p className="text-white font-semibold text-base leading-snug mb-1">{entry.question}</p>
                         <p className="text-xs text-gray-600">{expandedId === entry.id ? 'Hide ↑' : 'Read answer ↓'}</p>
                       </button>
-
                       {expandedId === entry.id && (
                         <div className="mt-5 space-y-5">
                           <div>
@@ -248,8 +251,8 @@ export default function ProfilePage() {
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </>
         )}
 
