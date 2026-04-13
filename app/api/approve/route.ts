@@ -16,18 +16,26 @@ async function embedText(text: string): Promise<number[]> {
   return data.data[0].embedding
 }
 
-async function saveToPinecone(questionId: string, question: string, answer: string, topic?: string | null) {
-  // Save the Q+A together so future searches surface this real answer
+async function saveToPinecone(
+  questionId: string,
+  question: string,
+  answer: string,
+  opts?: { topic?: string | null; trigger?: string | null; level?: string | null; age_range?: string | null; helpful_count?: number }
+) {
   const combined = `Q: ${question}\n\nA: ${answer}`
   const embedding = await embedText(combined)
 
-  const metadata: Record<string, string> = {
+  const metadata: Record<string, string | number> = {
     text: combined,
     source_type: 'approved_answer',
     source_title: 'Elijah Bryant — Approved Answer',
     question,
+    helpful_count: opts?.helpful_count ?? 0,
   }
-  if (topic) metadata.topic = topic
+  if (opts?.topic) metadata.topic = opts.topic
+  if (opts?.trigger) metadata.trigger = opts.trigger
+  if (opts?.level) metadata.level = opts.level
+  if (opts?.age_range) metadata.age_range = opts.age_range
 
   await fetch(`${process.env.PINECONE_HOST}/vectors/upsert`, {
     method: 'POST',
@@ -61,7 +69,7 @@ export async function POST(req: NextRequest) {
   // Fetch question record
   const { data: record, error: fetchError } = await supabase
     .from('questions')
-    .select('question, email, sources, topic')
+    .select('question, email, sources, topic, trigger')
     .eq('id', questionId)
     .single()
 
@@ -69,10 +77,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Question not found' }, { status: 404 })
   }
 
-  // Fetch name for personalization
+  // Fetch name + level/age_range for personalization and Pinecone metadata
   const { data: profile } = await supabase
     .from('profiles')
-    .select('first_name')
+    .select('first_name, level, age_range')
     .eq('email', record.email.toLowerCase())
     .single()
   const firstName = profile?.first_name || null
@@ -139,7 +147,12 @@ export async function POST(req: NextRequest) {
 
   // Save to Pinecone knowledge base
   try {
-    await saveToPinecone(questionId, record.question, finalAnswer, record.topic)
+    await saveToPinecone(questionId, record.question, finalAnswer, {
+      topic: record.topic,
+      trigger: record.trigger,
+      level: profile?.level ?? null,
+      age_range: profile?.age_range ?? null,
+    })
   } catch (err) {
     console.warn('Pinecone save failed (non-fatal):', err)
   }

@@ -40,6 +40,38 @@ function highlightVerifyMarkers(text: string): string {
 const TOPICS = ['confidence', 'pressure', 'consistency', 'focus', 'slump', 'coaching', 'team', 'mindset', 'motivation', 'identity'] as const
 type Topic = typeof TOPICS[number]
 
+const TRIGGERS = ['fear_of_failure', 'embarrassment', 'external_pressure', 'self_doubt', 'frustration', 'loss_of_motivation', 'overthinking'] as const
+type Trigger = typeof TRIGGERS[number]
+
+async function tagTrigger(question: string): Promise<Trigger | null> {
+  try {
+    const res = await getAnthropic().messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 20,
+      messages: [{
+        role: 'user',
+        content: `Identify the core emotional trigger in this basketball player's question. Pick exactly one:
+
+fear_of_failure = scared of messing up, afraid to fail, worried about letting people down
+embarrassment = humiliated after a bad game, scared of being judged, shame
+external_pressure = coach, parents, teammates, scouts putting pressure on them
+self_doubt = not believing in themselves, imposter syndrome, feeling like they don't belong
+frustration = angry at situation, things not going their way, hitting a wall
+loss_of_motivation = burnout, losing love for the game, don't want to play anymore
+overthinking = stuck in their head, can't stop analyzing, paralyzed by thoughts
+
+Question: "${question}"
+
+Reply with only the single tag word.`,
+      }],
+    })
+    const tag = res.content[0].type === 'text' ? res.content[0].text.trim().toLowerCase() : ''
+    return (TRIGGERS as readonly string[]).includes(tag) ? tag as Trigger : null
+  } catch {
+    return null
+  }
+}
+
 async function tagTopic(question: string): Promise<Topic | null> {
   try {
     const res = await getAnthropic().messages.create({
@@ -397,10 +429,11 @@ export async function POST(req: NextRequest) {
 
     // ip already declared above for rate limiting
 
-    // Detect language + tag topic in parallel
-    const [{ language: detectedLanguage, englishTranslation }, topic] = await Promise.all([
+    // Detect language + tag topic + tag trigger in parallel
+    const [{ language: detectedLanguage, englishTranslation }, topic, trigger] = await Promise.all([
       detectLanguage(question).catch(() => ({ language: 'English', englishTranslation: null })),
       tagTopic(question),
+      tagTrigger(question),
     ])
     const queryForEmbedding = englishTranslation || question
 
@@ -420,7 +453,7 @@ export async function POST(req: NextRequest) {
       console.warn('RAG lookup failed:', ragErr)
     }
 
-    // Fetch player context + extract memories in parallel (non-blocking for fallback path)
+    // Fetch player context early so it's ready for Claude draft generation
     const playerContextPromise = getPlayerContext(email).catch(() => '')
 
     // If no relevant chunks and no preview answer, use fallback
@@ -429,7 +462,7 @@ export async function POST(req: NextRequest) {
       const supabase = getSupabase()
       const { data: record } = await supabase
         .from('questions')
-        .insert({ question, answer: FALLBACK, sources: [], ip, email: email.trim().toLowerCase(), status: 'pending' })
+        .insert({ question, answer: FALLBACK, sources: [], ip, email: email.trim().toLowerCase(), status: 'pending', topic: topic ?? null, trigger: trigger ?? null, language_detected: detectedLanguage !== 'English' ? detectedLanguage : null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null })
         .select('id').single()
       const playerContext = await playerContextPromise
       if (record?.id) await notifyElijah(record.id, question, FALLBACK, email, playerContext).catch(console.error)
@@ -453,7 +486,14 @@ export async function POST(req: NextRequest) {
       ? `\n\nIMPORTANT: The user wrote in ${detectedLanguage}. Respond entirely in ${detectedLanguage}.`
       : ''
 
-    const userMessage = `${ragContext}Now answer this question using the above context where relevant:\n\n${question}`
+    // Await player context so Claude can tailor the draft to this specific player
+    const playerContext = await playerContextPromise
+
+    const playerContextBlock = playerContext
+      ? `CONTEXT ABOUT THIS PLAYER — use this to personalize your answer:\n${playerContext}\n\n---\n\n`
+      : ''
+
+    const userMessage = `${playerContextBlock}${ragContext}Now answer this question using the above context where relevant:\n\n${question}`
 
     // Use preview answer if already generated on the frontend, otherwise generate fresh
     let draft = ''
@@ -491,6 +531,7 @@ export async function POST(req: NextRequest) {
         email: email.trim().toLowerCase(),
         status: 'pending',
         topic: topic ?? null,
+        trigger: trigger ?? null,
         language_detected: detectedLanguage !== 'English' ? detectedLanguage : null,
         utm_source: utm_source || null,
         utm_medium: utm_medium || null,
@@ -498,8 +539,6 @@ export async function POST(req: NextRequest) {
       })
       .select('id')
       .single()
-
-    const playerContext = await playerContextPromise
 
     const cleanEmail = email.trim().toLowerCase()
 
