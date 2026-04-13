@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getSupabaseClient } from '@/lib/supabase-client'
 
@@ -344,7 +344,7 @@ function ProfileModal({
   )
 }
 
-export default function AskPage() {
+function AskPageInner() {
   const [mode, setMode] = useState<Mode>('input')
   const [question, setQuestion] = useState('')
   const [email, setEmail] = useState('')
@@ -370,6 +370,7 @@ export default function AskPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const detectedLang = typeof navigator !== 'undefined'
     ? navigator.language?.split('-')[0] || 'en'
@@ -389,7 +390,13 @@ export default function AskPage() {
       setQuestion(pending)
       setShowSuggestions(false)
     } else {
-      textareaRef.current?.focus()
+      const qParam = searchParams.get('q')
+      if (qParam) {
+        setQuestion(qParam)
+        setShowSuggestions(false)
+      } else {
+        textareaRef.current?.focus()
+      }
     }
   }, [])
 
@@ -1062,5 +1069,13 @@ export default function AskPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AskPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <AskPageInner />
+    </Suspense>
   )
 }
