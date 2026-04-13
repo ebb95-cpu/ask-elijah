@@ -242,40 +242,42 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
     to: userEmail,
     subject: 'Got it. Reading it now.',
     html: `
-      <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 48px 24px; color: #111; background: #fff;">
+      <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; background: #000;">
+        <div style="padding: 48px 32px;">
 
-        <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 40px;">
-          <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
-          <div style="width: 24px; height: 1.5px; background: #000;"></div>
-          <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
-          <div style="width: 24px; height: 1.5px; background: #000;"></div>
-          <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
+          <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 48px;">
+            <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+            <div style="width: 24px; height: 1.5px; background: #fff;"></div>
+            <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+            <div style="width: 24px; height: 1.5px; background: #fff;"></div>
+            <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+          </div>
+
+          <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 24px;">
+            I got your question.
+          </p>
+
+          <div style="border-left: 3px solid #fff; padding-left: 20px; margin-bottom: 32px;">
+            <p style="font-size: 18px; font-weight: 600; margin: 0; color: #fff; line-height: 1.5; font-style: italic;">"${question}"</p>
+          </div>
+
+          <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 16px;">
+            I'm thinking through your actual situation — not just giving you a generic answer. Give me a little time to write something worth reading.
+          </p>
+
+          <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 40px;">
+            When it's ready, it'll come straight to this inbox. Read it twice when it does.
+          </p>
+
+          <a href="${siteUrl}/browse" style="display: inline-block; background: #fff; color: #000; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 48px;">
+            See what other players are asking →
+          </a>
+
+          <p style="font-size: 13px; color: #555; line-height: 1.6; margin: 0;">
+            Elijah
+          </p>
+
         </div>
-
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 24px;">
-          I got your question.
-        </p>
-
-        <div style="border-left: 3px solid #000; padding-left: 20px; margin-bottom: 28px;">
-          <p style="font-size: 18px; font-weight: 600; margin: 0; color: #000; line-height: 1.5; font-style: italic;">"${question}"</p>
-        </div>
-
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-          I'm thinking through your actual situation — not just giving you a generic answer. Give me a little time to write something worth reading.
-        </p>
-
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 32px;">
-          When it's ready, it'll come straight to this inbox. Read it twice when it does.
-        </p>
-
-        <a href="${siteUrl}/browse" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">
-          See what other players are asking →
-        </a>
-
-        <p style="font-size: 13px; color: #999; line-height: 1.6; margin: 0;">
-          Elijah
-        </p>
-
       </div>
     `,
   })
