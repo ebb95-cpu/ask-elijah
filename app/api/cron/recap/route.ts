@@ -157,7 +157,7 @@ export async function GET(req: NextRequest) {
 
       await resend.emails.send({
         from: process.env.RESEND_FROM || 'Elijah Bryant <elijah@elijahbryant.pro>',
-        reply_to: 'ebb95@mac.com',
+        replyTo: 'ebb95@mac.com',
         to: toAddress,
         subject: `You asked. Here's what came back.`,
         html,

@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
       // Send the nudge
       await resend.emails.send({
         from: 'Elijah Bryant <elijah@elijahbryant.pro>',
-      reply_to: 'ebb95@mac.com',
+      replyTo: 'ebb95@mac.com',
         to: email,
         subject: "Elijah doesn't know enough about you yet.",
         html: `

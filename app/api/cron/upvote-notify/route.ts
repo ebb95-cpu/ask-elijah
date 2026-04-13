@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
       try {
         await resend.emails.send({
           from: 'Elijah Bryant <elijah@elijahbryant.pro>',
-      reply_to: 'ebb95@mac.com',
+      replyTo: 'ebb95@mac.com',
           to: q.email,
           subject: `Your question is helping a lot of players.`,
           html: `
@@ -143,7 +143,7 @@ export async function GET(req: NextRequest) {
           await Promise.allSettled(batch.map(email =>
             resend.emails.send({
               from: 'Elijah Bryant <elijah@elijahbryant.pro>',
-      reply_to: 'ebb95@mac.com',
+      replyTo: 'ebb95@mac.com',
               to: email,
               subject: `${count} players are dealing with the same thing right now.`,
               html: `
