@@ -272,8 +272,6 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
           See what other players are asking →
         </a>
 
-        <hr style="border: none; border-top: 1px solid #eee; margin-bottom: 24px;" />
-
         <p style="font-size: 13px; color: #999; line-height: 1.6; margin: 0;">
           Elijah
         </p>
