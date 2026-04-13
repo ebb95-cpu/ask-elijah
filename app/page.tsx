@@ -672,9 +672,8 @@ export default function HomePage() {
           <cite className="text-sm text-gray-500 not-italic">— Marcus, 17, Chicago</cite>
         </blockquote>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-px max-w-3xl mx-auto bg-gray-900">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-px max-w-2xl mx-auto bg-gray-900">
           {[
-            { title: "Not AI. Not a template.", sub: "Every answer written by him, for your situation." },
             { title: "He reads every one.", sub: "Elijah reads it. Elijah writes back." },
             { title: "NBA. EuroLeague finals. 3 continents.", sub: "Advice from inside the arena, not from the stands." },
           ].map(({ title, sub }) => (
