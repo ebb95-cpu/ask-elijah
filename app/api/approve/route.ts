@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
 
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
             <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
               <table cellpadding="0" cellspacing="0">
                 <tr valign="middle">
@@ -107,6 +107,17 @@ export async function POST(req: NextRequest) {
               </table>
             </td></tr>
           </table>
+
+          <!-- Credential line -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
+            <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
+              <p style="font-size:10px;color:#555555;margin:0;text-transform:uppercase;letter-spacing:0.15em;font-family:-apple-system,sans-serif;">&#8226; Elijah Bryant &middot; NBA &middot; EuroLeague Champion &#8226;</p>
+            </td></tr>
+          </table>
+
+          <!-- Big two-tone headline -->
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Elijah wrote back.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Read it twice.</p>
 
           <div style="border-left:3px solid #333333;padding-left:20px;margin-bottom:32px;">
             <p style="font-size:12px;color:#ffffff !important;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">You asked</p>

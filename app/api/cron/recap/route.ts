@@ -67,7 +67,7 @@ function buildEmail(
         <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
 
           <!-- Logo centered -->
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
             <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
               <table cellpadding="0" cellspacing="0">
                 <tr valign="middle">
@@ -81,13 +81,16 @@ function buildEmail(
             </td></tr>
           </table>
 
-          <!-- Headline -->
-          <h1 style="font-size:24px;font-weight:700;color:#ffffff !important;margin:0 0 8px;line-height:1.3;font-family:-apple-system,sans-serif;">
-            Yesterday you asked. Here's what came back.
-          </h1>
-          <p style="font-size:15px;color:#ffffff !important;margin:0 0 40px;font-family:-apple-system,sans-serif;">
-            Your answers — plus something to think about today.
-          </p>
+          <!-- Credential line -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
+            <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
+              <p style="font-size:10px;color:#555555;margin:0;text-transform:uppercase;letter-spacing:0.15em;font-family:-apple-system,sans-serif;">&#8226; Elijah Bryant &middot; NBA &middot; EuroLeague Champion &#8226;</p>
+            </td></tr>
+          </table>
+
+          <!-- Big two-tone headline -->
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Yesterday you asked.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Here's what came back.</p>
 
           <!-- Q&A blocks -->
           ${qaBlocks}

@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
 
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
             <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
               <table cellpadding="0" cellspacing="0">
                 <tr valign="middle">
@@ -103,9 +103,16 @@ export async function GET(req: NextRequest) {
             </td></tr>
           </table>
 
-          <p style="font-size:26px;font-weight:800;line-height:1.2;margin:0 0 24px;color:#ffffff !important;font-family:-apple-system,sans-serif;">
-            Your answer is with me. But I'm missing something.
-          </p>
+          <!-- Credential line -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
+            <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
+              <p style="font-size:10px;color:#555555;margin:0;text-transform:uppercase;letter-spacing:0.15em;font-family:-apple-system,sans-serif;">&#8226; Elijah Bryant &middot; NBA &middot; EuroLeague Champion &#8226;</p>
+            </td></tr>
+          </table>
+
+          <!-- Big two-tone headline -->
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Your answer is with me.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">But I'm missing something.</p>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
             I'm writing back without knowing your position, your level, or what you're actually dealing with. Tell me so I can give you something worth reading.
