@@ -29,9 +29,6 @@ function buildEmail(
     .map(
       (q, i) => `
     <div style="margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid #1a1a1a;">
-      <p style="font-size:11px;color:#ffffff !important;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px;font-family:-apple-system,sans-serif;">
-        Question ${i + 1}
-      </p>
       <p style="font-size:16px;color:#ffffff !important;margin:0 0 16px;font-style:italic;font-family:-apple-system,sans-serif;">"${q.question}"</p>
       <p style="font-size:16px;color:#ffffff !important;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">${q.answer}</p>
       ${
@@ -86,7 +83,7 @@ function buildEmail(
             <p style="font-size:18px;color:#ffffff !important;font-weight:600;margin:0 0 24px;line-height:1.4;font-family:-apple-system,sans-serif;">
               ${followUp}
             </p>
-            <a href="https://elijahbryant.pro/ask" style="font-size:13px;color:#555555;text-decoration:none;font-family:-apple-system,sans-serif;">Ask Elijah →</a>
+            <a href="https://elijahbryant.pro/ask" style="font-size:17px;font-weight:700;color:#ffffff !important;text-decoration:none;font-family:-apple-system,sans-serif;">Ask Elijah →</a>
           </div>
 
           <!-- Signature -->
