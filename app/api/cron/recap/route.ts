@@ -28,18 +28,18 @@ function buildEmail(
     .map(
       (q, i) => `
     <div style="margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid #1a1a1a;">
-      <p style="font-size:11px;color:#ffffff;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px;font-family:-apple-system,sans-serif;">
+      <p style="font-size:11px;color:#ffffff !important;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px;font-family:-apple-system,sans-serif;">
         Question ${i + 1}
       </p>
-      <p style="font-size:16px;color:#ffffff;margin:0 0 16px;font-style:italic;font-family:-apple-system,sans-serif;">"${q.question}"</p>
-      <p style="font-size:16px;color:#ffffff;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">${q.answer}</p>
+      <p style="font-size:16px;color:#ffffff !important;margin:0 0 16px;font-style:italic;font-family:-apple-system,sans-serif;">"${q.question}"</p>
+      <p style="font-size:16px;color:#ffffff !important;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">${q.answer}</p>
       ${
         q.sources && q.sources.length > 0
-          ? `<p style="font-size:12px;color:#ffffff;margin:0 0 6px;font-family:-apple-system,sans-serif;">More from Elijah on this:</p>
+          ? `<p style="font-size:12px;color:#ffffff !important;margin:0 0 6px;font-family:-apple-system,sans-serif;">More from Elijah on this:</p>
              ${q.sources
                .map(
                  (s) =>
-                   `<a href="${s.url}" style="display:block;font-size:13px;color:#ffffff;margin-bottom:4px;text-decoration:underline;font-family:-apple-system,sans-serif;">
+                   `<a href="${s.url}" style="display:block;font-size:13px;color:#ffffff !important;margin-bottom:4px;text-decoration:underline;font-family:-apple-system,sans-serif;">
                      ${s.type === 'newsletter' ? '📧' : '▶️'} ${s.title}
                    </a>`
                )
@@ -53,17 +53,22 @@ function buildEmail(
 
   return `
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#000000;">
-    <tr><td align="center">
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+</head>
+<body style="margin:0;padding:0;background-color:#000000;" bgcolor="#000000">
+  <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#000000" style="background-color:#000000;">
+    <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
-        <tr><td style="padding:48px 32px 32px;">
+        <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
 
           <!-- Logo centered -->
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
-            <tr><td align="center">
+            <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
               <table cellpadding="0" cellspacing="0">
                 <tr valign="middle">
                   <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
@@ -77,10 +82,10 @@ function buildEmail(
           </table>
 
           <!-- Headline -->
-          <h1 style="font-size:24px;font-weight:700;color:#ffffff;margin:0 0 8px;line-height:1.3;font-family:-apple-system,sans-serif;">
+          <h1 style="font-size:24px;font-weight:700;color:#ffffff !important;margin:0 0 8px;line-height:1.3;font-family:-apple-system,sans-serif;">
             Yesterday you asked. Here's what came back.
           </h1>
-          <p style="font-size:15px;color:#ffffff;margin:0 0 40px;font-family:-apple-system,sans-serif;">
+          <p style="font-size:15px;color:#ffffff !important;margin:0 0 40px;font-family:-apple-system,sans-serif;">
             Your answers — plus something to think about today.
           </p>
 
@@ -89,10 +94,10 @@ function buildEmail(
 
           <!-- Follow-up hook -->
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:48px;">
-            <p style="font-size:11px;color:#ffffff;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 12px;font-family:-apple-system,sans-serif;">
+            <p style="font-size:11px;color:#ffffff !important;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 12px;font-family:-apple-system,sans-serif;">
               Something to think about
             </p>
-            <p style="font-size:18px;color:#ffffff;font-weight:600;margin:0 0 24px;line-height:1.4;font-family:-apple-system,sans-serif;">
+            <p style="font-size:18px;color:#ffffff !important;font-weight:600;margin:0 0 24px;line-height:1.4;font-family:-apple-system,sans-serif;">
               ${followUp}
             </p>
             <a href="https://elijahbryant.pro/ask"
@@ -102,7 +107,7 @@ function buildEmail(
           </div>
 
           <!-- Signature -->
-          <p style="font-size:14px;color:#ffffff;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
+          <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
           <p style="font-size:11px;color:#444444;margin:0 0 24px;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
 
           <!-- Unsubscribe -->

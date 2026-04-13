@@ -75,54 +75,65 @@ export async function GET(req: NextRequest) {
         to: email,
         subject: "Elijah doesn't know enough about you yet.",
         html: `
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#000000;">
-            <tr><td align="center">
-              <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
-                <tr><td style="padding:48px 32px 32px;">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+</head>
+<body style="margin:0;padding:0;background-color:#000000;" bgcolor="#000000">
+  <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#000000" style="background-color:#000000;">
+    <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
 
-                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
-                    <tr><td align="center">
-                      <table cellpadding="0" cellspacing="0">
-                        <tr valign="middle">
-                          <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
-                          <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
-                          <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
-                          <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
-                          <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
-                        </tr>
-                      </table>
-                    </td></tr>
-                  </table>
-
-                  <p style="font-size:26px;font-weight:800;line-height:1.2;margin:0 0 24px;color:#ffffff;font-family:-apple-system,sans-serif;">
-                    Your answer is with me. But I'm missing something.
-                  </p>
-
-                  <p style="font-size:15px;color:#ffffff;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">
-                    I'm reading your question without knowing much about you. Your position. Your level. What's been holding you back.
-                  </p>
-
-                  <p style="font-size:15px;color:#ffffff;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-                    That information changes everything. It's the difference between a general answer and one written specifically for your situation.
-                  </p>
-
-                  <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:40px;">
-                    <p style="font-size:15px;color:#ffffff;line-height:1.7;margin:0;font-family:-apple-system,sans-serif;">
-                      Two minutes. Three questions. Then I know exactly who I'm talking to.
-                    </p>
-                  </div>
-
-                  <a href="${siteUrl}/profile" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:48px;font-family:-apple-system,sans-serif;">
-                    Tell me who you are →
-                  </a>
-
-                  <p style="font-size:14px;color:#ffffff;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
-                  <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
-
-                </td></tr>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
+            <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
+              <table cellpadding="0" cellspacing="0">
+                <tr valign="middle">
+                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
               </table>
             </td></tr>
           </table>
+
+          <p style="font-size:26px;font-weight:800;line-height:1.2;margin:0 0 24px;color:#ffffff !important;font-family:-apple-system,sans-serif;">
+            Your answer is with me. But I'm missing something.
+          </p>
+
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">
+            I'm reading your question without knowing much about you. Your position. Your level. What's been holding you back.
+          </p>
+
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
+            That information changes everything. It's the difference between a general answer and one written specifically for your situation.
+          </p>
+
+          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:40px;">
+            <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0;font-family:-apple-system,sans-serif;">
+              Two minutes. Three questions. Then I know exactly who I'm talking to.
+            </p>
+          </div>
+
+          <a href="${siteUrl}/profile" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:48px;font-family:-apple-system,sans-serif;">
+            Tell me who you are →
+          </a>
+
+          <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
+          <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
+
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
         `,
       })
 

@@ -52,54 +52,65 @@ export async function GET(req: NextRequest) {
           to: q.email,
           subject: `${count} players have the exact same question as you.`,
           html: `
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#000000;">
-              <tr><td align="center">
-                <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
-                  <tr><td style="padding:48px 32px 32px;">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+</head>
+<body style="margin:0;padding:0;background-color:#000000;" bgcolor="#000000">
+  <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#000000" style="background-color:#000000;">
+    <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
 
-                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
-                      <tr><td align="center">
-                        <table cellpadding="0" cellspacing="0">
-                          <tr valign="middle">
-                            <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
-                            <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
-                            <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
-                            <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
-                            <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
-                          </tr>
-                        </table>
-                      </td></tr>
-                    </table>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
+            <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
+              <table cellpadding="0" cellspacing="0">
+                <tr valign="middle">
+                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
 
-                    <p style="font-size:26px;font-weight:800;line-height:1.2;margin:0 0 24px;color:#ffffff;font-family:-apple-system,sans-serif;">
-                      You're not the only one.
-                    </p>
+          <p style="font-size:26px;font-weight:800;line-height:1.2;margin:0 0 24px;color:#ffffff !important;font-family:-apple-system,sans-serif;">
+            You're not the only one.
+          </p>
 
-                    <div style="border-left:3px solid #333333;padding-left:20px;margin-bottom:28px;">
-                      <p style="font-size:12px;color:#ffffff;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">You asked</p>
-                      <p style="font-size:17px;font-weight:600;margin:0;color:#ffffff;line-height:1.4;font-family:-apple-system,sans-serif;">${q.question}</p>
-                    </div>
+          <div style="border-left:3px solid #333333;padding-left:20px;margin-bottom:28px;">
+            <p style="font-size:12px;color:#ffffff !important;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">You asked</p>
+            <p style="font-size:17px;font-weight:600;margin:0;color:#ffffff !important;line-height:1.4;font-family:-apple-system,sans-serif;">${q.question}</p>
+          </div>
 
-                    <p style="font-size:40px;font-weight:900;color:#ffffff;margin:0 0 8px;font-family:-apple-system,sans-serif;">${count} players</p>
-                    <p style="font-size:15px;color:#ffffff;line-height:1.7;margin:0 0 24px;font-family:-apple-system,sans-serif;">
-                      said they've got the same thing going on. That number keeps climbing.
-                    </p>
+          <p style="font-size:40px;font-weight:900;color:#ffffff !important;margin:0 0 8px;font-family:-apple-system,sans-serif;">${count} players</p>
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 24px;font-family:-apple-system,sans-serif;">
+            said they've got the same thing going on. That number keeps climbing.
+          </p>
 
-                    <p style="font-size:15px;color:#ffffff;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
-                      Most players think it's just them. It's not. You asked the right question. Now make sure you're actually using the answer.
-                    </p>
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
+            Most players think it's just them. It's not. You asked the right question. Now make sure you're actually using the answer.
+          </p>
 
-                    <a href="${siteUrl}" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:48px;font-family:-apple-system,sans-serif;">
-                      Ask your next question →
-                    </a>
+          <a href="${siteUrl}" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:48px;font-family:-apple-system,sans-serif;">
+            Ask your next question →
+          </a>
 
-                    <p style="font-size:14px;color:#ffffff;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
-                    <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
+          <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
+          <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
 
-                  </td></tr>
-                </table>
-              </td></tr>
-            </table>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
           `,
         })
 
@@ -141,54 +152,65 @@ export async function GET(req: NextRequest) {
               to: email,
               subject: `${count} players are dealing with the same thing right now.`,
               html: `
-                <table width="100%" cellpadding="0" cellspacing="0" style="background:#000000;">
-                  <tr><td align="center">
-                    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
-                      <tr><td style="padding:48px 32px 32px;">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+</head>
+<body style="margin:0;padding:0;background-color:#000000;" bgcolor="#000000">
+  <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#000000" style="background-color:#000000;">
+    <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
 
-                        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
-                          <tr><td align="center">
-                            <table cellpadding="0" cellspacing="0">
-                              <tr valign="middle">
-                                <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
-                                <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
-                                <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
-                                <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
-                                <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
-                              </tr>
-                            </table>
-                          </td></tr>
-                        </table>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
+            <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
+              <table cellpadding="0" cellspacing="0">
+                <tr valign="middle">
+                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
 
-                        <p style="font-size:26px;font-weight:800;line-height:1.2;margin:0 0 24px;color:#ffffff;font-family:-apple-system,sans-serif;">
-                          ${count} players are dealing with the same thing right now.
-                        </p>
+          <p style="font-size:26px;font-weight:800;line-height:1.2;margin:0 0 24px;color:#ffffff !important;font-family:-apple-system,sans-serif;">
+            ${count} players are dealing with the same thing right now.
+          </p>
 
-                        <p style="font-size:15px;color:#ffffff;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-                          One player asked. Then another said they had the same thing. Then another. It kept going.
-                        </p>
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
+            One player asked. Then another said they had the same thing. Then another. It kept going.
+          </p>
 
-                        <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
-                          <p style="font-size:12px;color:#ffffff;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">The question</p>
-                          <p style="font-size:19px;font-weight:700;margin:0 0 16px;color:#ffffff;line-height:1.4;font-family:-apple-system,sans-serif;">${q.question}</p>
-                          <p style="font-size:14px;color:#ffffff;line-height:1.7;margin:0;font-style:italic;font-family:-apple-system,sans-serif;">"${teaser}"</p>
-                        </div>
+          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
+            <p style="font-size:12px;color:#ffffff !important;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">The question</p>
+            <p style="font-size:19px;font-weight:700;margin:0 0 16px;color:#ffffff !important;line-height:1.4;font-family:-apple-system,sans-serif;">${q.question}</p>
+            <p style="font-size:14px;color:#ffffff !important;line-height:1.7;margin:0;font-style:italic;font-family:-apple-system,sans-serif;">"${teaser}"</p>
+          </div>
 
-                        <p style="font-size:15px;color:#ffffff;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
-                          Players who get better aren't the ones with fewer problems. They're the ones who actually ask about them.
-                        </p>
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
+            Players who get better aren't the ones with fewer problems. They're the ones who actually ask about them.
+          </p>
 
-                        <a href="${siteUrl}" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:48px;font-family:-apple-system,sans-serif;">
-                          Ask Elijah your version of this →
-                        </a>
+          <a href="${siteUrl}" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:48px;font-family:-apple-system,sans-serif;">
+            Ask Elijah your version of this →
+          </a>
 
-                        <p style="font-size:14px;color:#ffffff;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
-                        <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
+          <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
+          <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
 
-                      </td></tr>
-                    </table>
-                  </td></tr>
-                </table>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
               `,
             })
           ))

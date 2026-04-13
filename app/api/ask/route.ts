@@ -242,43 +242,64 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
     to: userEmail,
     subject: 'Got it. Reading it now.',
     html: `
-      <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; background: #000;">
-        <div style="padding: 48px 32px;">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+</head>
+<body style="margin:0;padding:0;background-color:#000000;" bgcolor="#000000">
+  <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#000000" style="background-color:#000000;">
+    <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
+          <!-- Logo centered -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
+            <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
+              <table cellpadding="0" cellspacing="0">
+                <tr valign="middle">
+                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
+                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
 
-          <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 48px;">
-            <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
-            <div style="width: 24px; height: 1.5px; background: #fff;"></div>
-            <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
-            <div style="width: 24px; height: 1.5px; background: #fff;"></div>
-            <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
-          </div>
-
-          <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 24px;">
+          <!-- Body -->
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 24px;font-family:-apple-system,sans-serif;">
             I got your question.
           </p>
 
-          <div style="border-left: 3px solid #fff; padding-left: 20px; margin-bottom: 32px;">
-            <p style="font-size: 18px; font-weight: 600; margin: 0; color: #fff; line-height: 1.5; font-style: italic;">"${question}"</p>
+          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
+            <p style="font-size:18px;font-weight:600;color:#ffffff !important;line-height:1.5;font-style:italic;margin:0;font-family:-apple-system,sans-serif;">"${question}"</p>
           </div>
 
-          <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 16px;">
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">
             I'm thinking through your actual situation — not just giving you a generic answer. Give me a little time to write something worth reading.
           </p>
 
-          <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 40px;">
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
             When it's ready, it'll come straight to this inbox. Read it twice when it does.
           </p>
 
-          <a href="${siteUrl}/browse" style="display: inline-block; background: #fff; color: #000; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 48px;">
+          <a href="${siteUrl}/browse" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:56px;font-family:-apple-system,sans-serif;">
             See what other players are asking →
           </a>
 
-          <p style="font-size: 13px; color: #555; line-height: 1.6; margin: 0;">
-            Elijah
-          </p>
-
-        </div>
-      </div>
+          <!-- Signature -->
+          <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
+          <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
     `,
   })
 }
