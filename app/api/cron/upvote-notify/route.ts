@@ -52,46 +52,44 @@ export async function GET(req: NextRequest) {
           to: q.email,
           subject: `${count} players have the exact same question as you.`,
           html: `
-            <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 48px 24px; color: #111; background: #fff;">
+            <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; background: #000;">
+              <div style="padding: 48px 32px;">
 
-              <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 40px;">
-                <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
-                <div style="width: 24px; height: 1.5px; background: #000;"></div>
-                <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
-                <div style="width: 24px; height: 1.5px; background: #000;"></div>
-                <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
+                <div style="text-align: center; margin-bottom: 48px;">
+                  <div style="display: inline-flex; gap: 6px; align-items: center;">
+                    <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+                    <div style="width: 24px; height: 1.5px; background: #fff;"></div>
+                    <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+                    <div style="width: 24px; height: 1.5px; background: #fff;"></div>
+                    <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+                  </div>
+                </div>
+
+                <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #fff;">
+                  You're not the only one.
+                </p>
+
+                <div style="border-left: 3px solid #333; padding-left: 20px; margin-bottom: 28px;">
+                  <p style="font-size: 12px; color: #555; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.08em;">You asked</p>
+                  <p style="font-size: 17px; font-weight: 600; margin: 0; color: #fff; line-height: 1.4;">${q.question}</p>
+                </div>
+
+                <p style="font-size: 40px; font-weight: 900; color: #fff; margin: 0 0 8px;">${count} players</p>
+                <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 24px;">
+                  said they've got the same thing going on. That number keeps climbing.
+                </p>
+
+                <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 40px;">
+                  Most players think it's just them. It's not. You asked the right question. Now make sure you're actually using the answer.
+                </p>
+
+                <a href="${siteUrl}" style="display: inline-block; background: #fff; color: #000; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 48px;">
+                  Ask your next question →
+                </a>
+
+                <p style="font-size: 13px; color: #555; margin: 0;">Elijah</p>
+
               </div>
-
-              <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #000;">
-                You're not the only one.
-              </p>
-
-              <div style="background: #f7f7f7; border-left: 3px solid #000; padding: 16px 20px; margin-bottom: 28px;">
-                <p style="font-size: 13px; color: #999; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.06em;">You asked</p>
-                <p style="font-size: 17px; font-weight: 600; margin: 0; color: #000; line-height: 1.4;">${q.question}</p>
-              </div>
-
-              <p style="font-size: 32px; font-weight: 900; color: #000; margin: 0 0 8px;">${count} players</p>
-              <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 24px;">
-                said they've got the same thing going on. That number keeps climbing.
-              </p>
-
-              <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-                Most players think it's just them. It's not. This is one of the most common things holding players back. Almost nobody talks about it out loud.
-              </p>
-
-              <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 32px;">
-                You asked the right question. Now go make sure you're actually using the answer.
-              </p>
-
-              <a href="${siteUrl}" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">
-                Ask your next question →
-              </a>
-
-              <hr style="border: none; border-top: 1px solid #eee; margin-bottom: 24px;" />
-              <p style="font-size: 12px; color: #bbb; line-height: 1.6; margin: 0;">
-                Your question is spreading. Other players are finding it helpful too.
-              </p>
             </div>
           `,
         })
@@ -134,46 +132,44 @@ export async function GET(req: NextRequest) {
               to: email,
               subject: `${count} players are dealing with the same thing right now.`,
               html: `
-                <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 48px 24px; color: #111; background: #fff;">
+                <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; background: #000;">
+                  <div style="padding: 48px 32px;">
 
-                  <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 40px;">
-                    <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
-                    <div style="width: 24px; height: 1.5px; background: #000;"></div>
-                    <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
-                    <div style="width: 24px; height: 1.5px; background: #000;"></div>
-                    <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
+                    <div style="text-align: center; margin-bottom: 48px;">
+                      <div style="display: inline-flex; gap: 6px; align-items: center;">
+                        <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+                        <div style="width: 24px; height: 1.5px; background: #fff;"></div>
+                        <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+                        <div style="width: 24px; height: 1.5px; background: #fff;"></div>
+                        <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+                      </div>
+                    </div>
+
+                    <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #fff;">
+                      ${count} players are dealing with the same thing right now.
+                    </p>
+
+                    <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 28px;">
+                      One player asked. Then another said they had the same thing. Then another. It kept going.
+                    </p>
+
+                    <div style="border-left: 3px solid #fff; padding-left: 20px; margin-bottom: 32px;">
+                      <p style="font-size: 12px; color: #555; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.08em;">The question</p>
+                      <p style="font-size: 19px; font-weight: 700; margin: 0 0 16px; color: #fff; line-height: 1.4;">${q.question}</p>
+                      <p style="font-size: 14px; color: #888; line-height: 1.7; margin: 0; font-style: italic;">"${teaser}"</p>
+                    </div>
+
+                    <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 40px;">
+                      Players who get better aren't the ones with fewer problems. They're the ones who actually ask about them.
+                    </p>
+
+                    <a href="${siteUrl}" style="display: inline-block; background: #fff; color: #000; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 48px;">
+                      Ask Elijah your version of this →
+                    </a>
+
+                    <p style="font-size: 13px; color: #555; margin: 0;">Elijah</p>
+
                   </div>
-
-                  <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #000;">
-                    ${count} players are dealing with the same thing right now.
-                  </p>
-
-                  <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 28px;">
-                    One player asked. Then another said "I've got that too." Then another. Then another. It kept going.
-                  </p>
-
-                  <div style="background: #f7f7f7; border-left: 3px solid #000; padding: 20px 24px; margin-bottom: 28px;">
-                    <p style="font-size: 13px; color: #999; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.06em;">The question</p>
-                    <p style="font-size: 19px; font-weight: 700; margin: 0 0 16px; color: #000; line-height: 1.4;">${q.question}</p>
-                    <p style="font-size: 14px; color: #555; line-height: 1.7; margin: 0; font-style: italic;">"${teaser}"</p>
-                  </div>
-
-                  <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-                    If that sounds familiar, you're not the only one sitting on it. There's an answer for it. Elijah wrote it personally.
-                  </p>
-
-                  <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 32px;">
-                    Players who get better aren't the ones with fewer problems. They're the ones who actually ask about them.
-                  </p>
-
-                  <a href="${siteUrl}" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">
-                    Ask Elijah your version of this →
-                  </a>
-
-                  <hr style="border: none; border-top: 1px solid #eee; margin-bottom: 24px;" />
-                  <p style="font-size: 12px; color: #bbb; line-height: 1.6; margin: 0;">
-                    This question is spreading through the community. Thought it might hit home for you too.
-                  </p>
                 </div>
               `,
             })

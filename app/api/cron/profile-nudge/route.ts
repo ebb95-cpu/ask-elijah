@@ -75,43 +75,44 @@ export async function GET(req: NextRequest) {
         to: email,
         subject: "Elijah doesn't know enough about you yet.",
         html: `
-          <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 48px 24px; color: #111; background: #fff;">
+          <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; background: #000;">
+            <div style="padding: 48px 32px;">
 
-            <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 40px;">
-              <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
-              <div style="width: 24px; height: 1.5px; background: #000;"></div>
-              <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
-              <div style="width: 24px; height: 1.5px; background: #000;"></div>
-              <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
-            </div>
+              <div style="text-align: center; margin-bottom: 48px;">
+                <div style="display: inline-flex; gap: 6px; align-items: center;">
+                  <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+                  <div style="width: 24px; height: 1.5px; background: #fff;"></div>
+                  <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+                  <div style="width: 24px; height: 1.5px; background: #fff;"></div>
+                  <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+                </div>
+              </div>
 
-            <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #000;">
-              Your answer is with him. But he's missing something.
-            </p>
-
-            <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
-              Right now Elijah is reading your question without knowing much about you. Your position. Your level. What's been holding you back.
-            </p>
-
-            <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 28px;">
-              That information changes everything. It's the difference between a general answer and one written specifically for your situation.
-            </p>
-
-            <div style="background: #f7f7f7; border-left: 3px solid #000; padding: 20px 24px; margin-bottom: 32px;">
-              <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0;">
-                Two minutes. Three questions. Then Elijah knows exactly who he's talking to.
+              <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #fff;">
+                Your answer is with me. But I'm missing something.
               </p>
+
+              <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 16px;">
+                I'm reading your question without knowing much about you. Your position. Your level. What's been holding you back.
+              </p>
+
+              <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 28px;">
+                That information changes everything. It's the difference between a general answer and one written specifically for your situation.
+              </p>
+
+              <div style="border-left: 3px solid #fff; padding-left: 20px; margin-bottom: 40px;">
+                <p style="font-size: 15px; color: #ccc; line-height: 1.7; margin: 0;">
+                  Two minutes. Three questions. Then I know exactly who I'm talking to.
+                </p>
+              </div>
+
+              <a href="${siteUrl}/profile" style="display: inline-block; background: #fff; color: #000; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 48px;">
+                Tell me who you are →
+              </a>
+
+              <p style="font-size: 13px; color: #555; margin: 0;">Elijah</p>
+
             </div>
-
-            <a href="${siteUrl}/profile" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">
-              Tell Elijah who you are →
-            </a>
-
-            <hr style="border: none; border-top: 1px solid #eee; margin-bottom: 24px;" />
-            <p style="font-size: 12px; color: #bbb; line-height: 1.6; margin: 0;">
-              This is the only time I'll ask. Fill it out or don't — either way your answer is coming.
-            </p>
-
           </div>
         `,
       })

@@ -27,19 +27,19 @@ function buildEmail(
   const qaBlocks = questions
     .map(
       (q, i) => `
-    <div style="margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid #f0f0f0;">
-      <p style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px;">
+    <div style="margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid #1a1a1a;">
+      <p style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 8px;">
         Question ${i + 1}
       </p>
-      <p style="font-size:16px;color:#666;margin:0 0 16px;font-style:italic;">"${q.question}"</p>
-      <p style="font-size:16px;color:#111;line-height:1.7;margin:0 0 16px;">${q.answer}</p>
+      <p style="font-size:16px;color:#888;margin:0 0 16px;font-style:italic;">"${q.question}"</p>
+      <p style="font-size:16px;color:#ccc;line-height:1.7;margin:0 0 16px;">${q.answer}</p>
       ${
         q.sources && q.sources.length > 0
-          ? `<p style="font-size:12px;color:#999;margin:0 0 6px;">Elijah talked more about this in:</p>
+          ? `<p style="font-size:12px;color:#555;margin:0 0 6px;">More from Elijah on this:</p>
              ${q.sources
                .map(
                  (s) =>
-                   `<a href="${s.url}" style="display:block;font-size:13px;color:#111;margin-bottom:4px;text-decoration:underline;">
+                   `<a href="${s.url}" style="display:block;font-size:13px;color:#aaa;margin-bottom:4px;text-decoration:underline;">
                      ${s.type === 'newsletter' ? '📧' : '▶️'} ${s.title}
                    </a>`
                )
@@ -55,49 +55,49 @@ function buildEmail(
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <div style="max-width:580px;margin:0 auto;padding:40px 24px;">
+<body style="margin:0;padding:0;background:#000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="max-width:560px;margin:0 auto;padding:48px 32px;">
 
-    <!-- Logo -->
-    <div style="margin-bottom:40px;">
-      <svg width="52" height="8" viewBox="0 0 52 8" fill="none">
-        <circle cx="4" cy="4" r="4" fill="#000"/>
-        <line x1="8" y1="4" x2="20" y2="4" stroke="#000" stroke-width="1.5"/>
-        <circle cx="24" cy="4" r="4" fill="#000"/>
-        <line x1="28" y1="4" x2="40" y2="4" stroke="#000" stroke-width="1.5"/>
-        <circle cx="44" cy="4" r="4" fill="#000"/>
-      </svg>
+    <!-- Logo centered -->
+    <div style="text-align:center;margin-bottom:48px;">
+      <div style="display:inline-flex;gap:6px;align-items:center;">
+        <div style="width:8px;height:8px;background:#fff;border-radius:50%;"></div>
+        <div style="width:24px;height:1.5px;background:#fff;"></div>
+        <div style="width:8px;height:8px;background:#fff;border-radius:50%;"></div>
+        <div style="width:24px;height:1.5px;background:#fff;"></div>
+        <div style="width:8px;height:8px;background:#fff;border-radius:50%;"></div>
+      </div>
     </div>
 
     <!-- Headline -->
-    <h1 style="font-size:24px;font-weight:700;color:#111;margin:0 0 8px;line-height:1.3;">
-      Yesterday you asked. Here's what Elijah said.
+    <h1 style="font-size:24px;font-weight:700;color:#fff;margin:0 0 8px;line-height:1.3;">
+      Yesterday you asked. Here's what came back.
     </h1>
-    <p style="font-size:15px;color:#999;margin:0 0 40px;">
-      Your answers from yesterday — plus something to think about today.
+    <p style="font-size:15px;color:#555;margin:0 0 40px;">
+      Your answers — plus something to think about today.
     </p>
 
     <!-- Q&A blocks -->
     ${qaBlocks}
 
     <!-- Follow-up hook -->
-    <div style="background:#000;padding:28px;margin-bottom:32px;">
-      <p style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 12px;">
+    <div style="border-left:3px solid #fff;padding-left:20px;margin-bottom:48px;">
+      <p style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 12px;">
         Something to think about
       </p>
-      <p style="font-size:18px;color:#fff;font-weight:600;margin:0 0 20px;line-height:1.4;">
+      <p style="font-size:18px;color:#fff;font-weight:600;margin:0 0 24px;line-height:1.4;">
         ${followUp}
       </p>
       <a href="https://elijahbryant.pro/ask"
-         style="display:inline-block;background:#fff;color:#000;padding:12px 24px;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:0.05em;">
+         style="display:inline-block;background:#fff;color:#000;padding:14px 28px;font-size:14px;font-weight:700;text-decoration:none;">
         Ask Elijah →
       </a>
     </div>
 
     <!-- Footer -->
-    <p style="font-size:12px;color:#ccc;margin:0;">
-      Ask Elijah ·
-      <a href="https://elijahbryant.pro/unsubscribe?email=${encodeURIComponent(email)}" style="color:#ccc;">Unsubscribe</a>
+    <p style="font-size:12px;color:#333;margin:0;">
+      Elijah ·
+      <a href="https://elijahbryant.pro/unsubscribe?email=${encodeURIComponent(email)}" style="color:#333;">Unsubscribe</a>
     </p>
 
   </div>

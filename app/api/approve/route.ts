@@ -80,42 +80,43 @@ export async function POST(req: NextRequest) {
     to: record.email,
     subject: 'Elijah wrote back.',
     html: `
-      <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 40px 24px; color: #111; background: #fff;">
+      <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; background: #000;">
+        <div style="padding: 48px 32px;">
 
-        <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 40px;">
-          <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
-          <div style="width: 24px; height: 1.5px; background: #000;"></div>
-          <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
-          <div style="width: 24px; height: 1.5px; background: #000;"></div>
-          <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
-        </div>
+          <div style="text-align: center; margin-bottom: 48px;">
+            <div style="display: inline-flex; gap: 6px; align-items: center;">
+              <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+              <div style="width: 24px; height: 1.5px; background: #fff;"></div>
+              <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+              <div style="width: 24px; height: 1.5px; background: #fff;"></div>
+              <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+            </div>
+          </div>
 
-        <div style="border-left: 3px solid #eee; padding-left: 16px; margin-bottom: 32px;">
-          <p style="font-size: 13px; color: #999; margin: 0 0 4px; text-transform: uppercase; letter-spacing: 0.06em;">You asked</p>
-          <p style="font-size: 16px; font-weight: 600; margin: 0; color: #111;">${record.question}</p>
-        </div>
+          <div style="border-left: 3px solid #333; padding-left: 20px; margin-bottom: 32px;">
+            <p style="font-size: 12px; color: #555; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.08em;">You asked</p>
+            <p style="font-size: 16px; font-weight: 600; margin: 0; color: #fff; line-height: 1.5;">${record.question}</p>
+          </div>
 
-        <div style="font-size: 16px; line-height: 1.8; color: #222; white-space: pre-wrap;">${finalAnswer}</div>
+          <div style="font-size: 16px; line-height: 1.8; color: #ccc; white-space: pre-wrap; margin-bottom: 40px;">${finalAnswer}</div>
 
-        ${actionSteps ? `
-        <div style="margin-top: 40px; background: #f7f7f7; border-left: 3px solid #000; padding: 20px 24px;">
-          <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #999; margin: 0 0 12px;">Your action steps</p>
-          <div style="font-size: 15px; line-height: 1.8; color: #111; white-space: pre-wrap;">${actionSteps}</div>
-        </div>` : ''}
+          ${actionSteps ? `
+          <div style="border-left: 3px solid #fff; padding-left: 20px; margin-bottom: 40px;">
+            <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #555; margin: 0 0 12px;">Your action steps</p>
+            <div style="font-size: 15px; line-height: 1.8; color: #ccc; white-space: pre-wrap;">${actionSteps}</div>
+          </div>` : ''}
 
-        <div style="margin-top: 40px; border-top: 2px solid #000; padding-top: 28px;">
-          <p style="font-size: 17px; font-weight: 800; color: #000; margin: 0 0 10px;">Now go use it.</p>
-          <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 24px;">
+          <p style="font-size: 17px; font-weight: 800; color: #fff; margin: 0 0 10px;">Now go use it.</p>
+          <p style="font-size: 14px; color: #aaa; line-height: 1.6; margin: 0 0 32px;">
             Read it twice. Do the steps. I'll check in with you soon.
           </p>
-          <a href="${siteUrl}" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700;">
+
+          <a href="${siteUrl}/ask" style="display: inline-block; background: #fff; color: #000; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 48px;">
             Ask your next question →
           </a>
-        </div>
 
-        <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #f0f0f0;">
-          <p style="font-size: 13px; color: #999; margin: 0;">— Elijah Bryant</p>
-          <p style="font-size: 11px; color: #bbb; margin: 4px 0 0;">NBA Champion. Ask Elijah.</p>
+          <p style="font-size: 13px; color: #555; margin: 0;">Elijah</p>
+
         </div>
       </div>
     `,
