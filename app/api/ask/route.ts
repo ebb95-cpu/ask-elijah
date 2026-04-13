@@ -264,8 +264,12 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
             <p style="font-size:18px;font-weight:600;color:#ffffff !important;line-height:1.5;font-style:italic;margin:0;font-family:-apple-system,sans-serif;">"${question}"</p>
           </div>
 
-          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
             Give me some time with it. I'll write back when I have something real to say.
+          </p>
+
+          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+            <a href="${siteUrl}/browse" style="color:#555555;text-decoration:none;">While you wait, see what other players are asking →</a>
           </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
