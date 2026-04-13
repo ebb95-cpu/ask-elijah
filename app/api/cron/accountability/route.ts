@@ -45,48 +45,57 @@ export async function GET(req: NextRequest) {
         to: q.email,
         subject: '48 hours ago I gave you steps. Did you do them?',
         html: `
-          <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; background: #000;">
-            <div style="padding: 48px 32px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#000000;">
+            <tr><td align="center">
+              <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+                <tr><td style="padding:48px 32px 32px;">
 
-              <div style="text-align: center; margin-bottom: 48px;">
-                <div style="display: inline-flex; gap: 6px; align-items: center;">
-                  <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
-                  <div style="width: 24px; height: 1.5px; background: #fff;"></div>
-                  <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
-                  <div style="width: 24px; height: 1.5px; background: #fff;"></div>
-                  <div style="width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
-                </div>
-              </div>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
+                    <tr><td align="center">
+                      <table cellpadding="0" cellspacing="0">
+                        <tr valign="middle">
+                          <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                          <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
+                          <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                          <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
+                          <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                        </tr>
+                      </table>
+                    </td></tr>
+                  </table>
 
-              <p style="font-size: 24px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #fff;">
-                Did you do the steps?
-              </p>
+                  <p style="font-size:24px;font-weight:800;line-height:1.2;margin:0 0 24px;color:#ffffff;font-family:-apple-system,sans-serif;">
+                    Did you do the steps?
+                  </p>
 
-              <div style="border-left: 3px solid #333; padding-left: 20px; margin-bottom: 28px;">
-                <p style="font-size: 12px; color: #555; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.08em;">You asked</p>
-                <p style="font-size: 15px; font-weight: 600; margin: 0; color: #fff;">${q.question}</p>
-              </div>
+                  <div style="border-left:3px solid #333333;padding-left:20px;margin-bottom:28px;">
+                    <p style="font-size:12px;color:#ffffff;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">You asked</p>
+                    <p style="font-size:15px;font-weight:600;margin:0;color:#ffffff;font-family:-apple-system,sans-serif;">${q.question}</p>
+                  </div>
 
-              <div style="border-left: 3px solid #fff; padding-left: 20px; margin-bottom: 32px;">
-                <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #555; margin: 0 0 12px;">Your action steps</p>
-                <div style="font-size: 15px; line-height: 1.8; color: #ccc; white-space: pre-wrap;">${q.action_steps}</div>
-              </div>
+                  <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
+                    <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#ffffff;margin:0 0 12px;font-family:-apple-system,sans-serif;">Your action steps</p>
+                    <div style="font-size:15px;line-height:1.8;color:#ffffff;white-space:pre-wrap;font-family:-apple-system,sans-serif;">${q.action_steps}</div>
+                  </div>
 
-              <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 16px;">
-                Most players read the answer and move on. The ones who get better actually do the steps.
-              </p>
-              <p style="font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 40px;">
-                Hit reply and tell me what happened — what you did, what you felt, what changed.
-              </p>
+                  <p style="font-size:15px;color:#ffffff;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">
+                    Most players read the answer and move on. The ones who get better actually do the steps.
+                  </p>
+                  <p style="font-size:15px;color:#ffffff;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
+                    Hit reply and tell me what happened — what you did, what you felt, what changed.
+                  </p>
 
-              <a href="${siteUrl}" style="display: inline-block; background: #fff; color: #000; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 48px;">
-                Tell me what happened →
-              </a>
+                  <a href="${siteUrl}" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:48px;font-family:-apple-system,sans-serif;">
+                    Tell me what happened →
+                  </a>
 
-              <p style="font-size: 13px; color: #555; margin: 0;">Elijah</p>
+                  <p style="font-size:14px;color:#ffffff;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
+                  <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
 
-            </div>
-          </div>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
         `,
       })
 
