@@ -88,7 +88,7 @@ const STRUGGLES = [
   "Dealing with a tough coach",
 ]
 
-type Mode = 'input' | 'email_gate' | 'loading' | 'submitted' | 'returning' | 'upvote_prompt'
+type Mode = 'input' | 'email_gate' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt'
 
 type JournalEntry = {
   id: string
@@ -360,6 +360,13 @@ export default function AskPage() {
   const [reflectionSubmitting, setReflectionSubmitting] = useState(false)
   const [votedIds, setVotedIds] = useState<Set<string>>(new Set())
 
+  // Onboarding state
+  const [onboardStep, setOnboardStep] = useState(0)
+  const [onboardName, setOnboardName] = useState('')
+  const [onboardPosition, setOnboardPosition] = useState('')
+  const [onboardLevel, setOnboardLevel] = useState('')
+  const [onboardChallenge, setOnboardChallenge] = useState('')
+
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
@@ -422,15 +429,9 @@ export default function AskPage() {
   const hasCompletedProfile = () =>
     !!localStorage.getItem('profile_done')
 
-  // Step 1: question submitted → go to email gate (or profile first)
+  // Step 1: question submitted → go to email gate
   const handleQuestionSubmit = () => {
     if (!question.trim()) return
-    const count = getQuestionCount()
-    if (count >= 1 && !hasCompletedProfile()) {
-      setPendingQ(question)
-      setShowProfile(true)
-      return
-    }
     setMode('email_gate')
     setTimeout(() => emailRef.current?.focus(), 100)
   }
@@ -466,11 +467,39 @@ export default function AskPage() {
         return
       }
 
-      setMode('submitted')
+      // Route to onboarding if profile not done, otherwise straight to submitted
+      if (!hasCompletedProfile()) {
+        setOnboardStep(0)
+        setMode('onboarding')
+      } else {
+        setMode('submitted')
+      }
     } catch {
       setEmailError('Something went wrong. Try again.')
       setMode('email_gate')
     }
+  }
+
+  const handleOnboardComplete = async (skip = false) => {
+    localStorage.setItem('profile_done', '1')
+    if (!skip && (onboardName || onboardPosition || onboardLevel || onboardChallenge)) {
+      const savedEmail = sessionStorage.getItem('user_email') || email
+      try {
+        await fetch('/api/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: savedEmail,
+            name: onboardName,
+            position: onboardPosition,
+            level: onboardLevel,
+            challenge: onboardChallenge,
+            language: detectedLang,
+          }),
+        })
+      } catch { /* fail silently */ }
+    }
+    setMode('submitted')
   }
 
   const handleEmailKey = (e: React.KeyboardEvent) => {
@@ -830,6 +859,164 @@ export default function AskPage() {
         <div className="border border-gray-800 rounded-lg px-6 py-4 max-w-sm w-full text-left">
           <p className="text-gray-600 text-xs uppercase tracking-widest mb-2">Your question</p>
           <p className="text-gray-300 text-sm italic">&ldquo;{question}&rdquo;</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Onboarding — fires after email submit, before showing submitted
+  if (mode === 'onboarding') {
+    const CHALLENGES = [
+      'Confidence & mental game',
+      'Getting more minutes',
+      'Performing under pressure',
+      'Dealing with a tough coach',
+      'Breaking out of a slump',
+      'Getting recruited',
+    ]
+    const ONBOARD_LEVELS = [
+      { value: 'middle_school', label: 'Middle School' },
+      { value: 'high_school', label: 'High School' },
+      { value: 'college', label: 'College' },
+      { value: 'pro', label: 'Pro / Semi-Pro' },
+      { value: 'recreational', label: 'Recreational' },
+    ]
+    const totalSteps = 3
+    const progress = ((onboardStep + 1) / totalSteps) * 100
+
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        {/* Progress bar */}
+        <div className="h-0.5 bg-gray-900 w-full">
+          <div className="h-full bg-white transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center px-8 max-w-lg mx-auto w-full">
+
+          {/* Step 0 — Name */}
+          {onboardStep === 0 && (
+            <div className="w-full text-center">
+              <p className="text-xs text-gray-600 tracking-widest uppercase mb-6">While Elijah reads your question</p>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-3">What should he call you?</h2>
+              <p className="text-gray-600 text-sm mb-10">He wants to know who he&apos;s talking to.</p>
+              <input
+                autoFocus
+                type="text"
+                placeholder="First name"
+                value={onboardName}
+                onChange={(e) => setOnboardName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && onboardName.trim() && setOnboardStep(1)}
+                className="w-full bg-transparent border-b border-gray-700 focus:border-white pb-3 text-2xl text-center text-white placeholder-gray-700 outline-none transition-colors mb-10"
+              />
+              <button
+                onClick={() => setOnboardStep(1)}
+                disabled={!onboardName.trim()}
+                className="bg-white text-black px-10 py-3 text-sm font-semibold disabled:opacity-20 hover:opacity-80 transition-opacity"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+
+          {/* Step 1 — Position + Level */}
+          {onboardStep === 1 && (
+            <div className="w-full text-center">
+              <p className="text-xs text-gray-600 tracking-widest uppercase mb-6">Help him tailor the answer</p>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-10">Where do you play?</h2>
+
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">Position</p>
+              <div className="flex gap-3 justify-center mb-10">
+                {POSITIONS.map((pos) => (
+                  <button
+                    key={pos}
+                    onClick={() => setOnboardPosition(pos === onboardPosition ? '' : pos)}
+                    className={`w-14 h-14 text-base font-bold border-2 transition-all duration-150 ${
+                      onboardPosition === pos
+                        ? 'bg-white text-black border-white'
+                        : 'border-gray-700 text-gray-400 hover:border-white hover:text-white'
+                    }`}
+                  >
+                    {pos}
+                  </button>
+                ))}
+              </div>
+
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">Level</p>
+              <div className="flex flex-col gap-2 max-w-xs mx-auto mb-10">
+                {ONBOARD_LEVELS.map((l) => (
+                  <button
+                    key={l.value}
+                    onClick={() => setOnboardLevel(l.value === onboardLevel ? '' : l.value)}
+                    className={`py-2.5 px-6 text-sm font-semibold border transition-all duration-150 ${
+                      onboardLevel === l.value
+                        ? 'bg-white text-black border-white'
+                        : 'border-gray-800 text-gray-400 hover:border-gray-500 hover:text-white'
+                    }`}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-4 justify-center">
+                <button onClick={() => setOnboardStep(0)} className="text-gray-600 hover:text-white text-sm transition-colors">← Back</button>
+                <button
+                  onClick={() => setOnboardStep(2)}
+                  className="bg-white text-black px-10 py-3 text-sm font-semibold hover:opacity-80 transition-opacity"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2 — Biggest challenge */}
+          {onboardStep === 2 && (
+            <div className="w-full text-center">
+              <p className="text-xs text-gray-600 tracking-widest uppercase mb-6">One more thing</p>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-3">What&apos;s holding you back right now?</h2>
+              <p className="text-gray-600 text-sm mb-10">Elijah will use this to sharpen your answer.</p>
+              <div className="flex flex-wrap gap-2 justify-center mb-10">
+                {CHALLENGES.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setOnboardChallenge(c === onboardChallenge ? '' : c)}
+                    className={`px-4 py-2.5 text-sm border transition-all duration-150 ${
+                      onboardChallenge === c
+                        ? 'bg-white text-black border-white'
+                        : 'border-gray-800 text-gray-400 hover:border-gray-500 hover:text-white'
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-4 justify-center">
+                <button onClick={() => setOnboardStep(1)} className="text-gray-600 hover:text-white text-sm transition-colors">← Back</button>
+                <button
+                  onClick={() => handleOnboardComplete(false)}
+                  className="bg-white text-black px-10 py-3 text-sm font-semibold hover:opacity-80 transition-opacity"
+                >
+                  Done →
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Step dots + skip */}
+        <div className="text-center pb-8">
+          <div className="flex gap-2 justify-center mb-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className={`rounded-full transition-all ${i === onboardStep ? 'w-5 h-2 bg-white' : 'w-2 h-2 bg-gray-700'}`} />
+            ))}
+          </div>
+          <button
+            onClick={() => handleOnboardComplete(true)}
+            className="text-xs text-gray-700 hover:text-gray-500 transition-colors"
+          >
+            Skip for now →
+          </button>
         </div>
       </div>
     )
