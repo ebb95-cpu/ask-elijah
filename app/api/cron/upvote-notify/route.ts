@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
         await resend.emails.send({
           from: 'Elijah Bryant <elijah@elijahbryant.pro>',
           to: q.email,
-          subject: `${count} players have the exact same question as you.`,
+          subject: `Your question is helping a lot of players.`,
           html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -68,20 +68,18 @@ export async function GET(req: NextRequest) {
 
           <p style="text-align:center;margin:0 0 48px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:inline-block;border:0;width:52px;height:8px;" /></p>
 
-          <!-- Big two-tone headline -->
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">${count} players.</p>
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Same question as you.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Your question blew up.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">${count} players needed this.</p>
 
-          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:28px;">
-            <p style="font-size:12px;color:#ffffff !important;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">You asked</p>
-            <p style="font-size:17px;font-weight:600;margin:0;color:#ffffff !important;line-height:1.4;font-family:-apple-system,sans-serif;">${q.question}</p>
+          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
+            <p style="font-size:17px;font-style:italic;font-weight:600;margin:0;color:#ffffff !important;line-height:1.4;font-family:-apple-system,sans-serif;">"${q.question}"</p>
           </div>
 
-          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
-            You're not alone in this. Make sure you're actually using the answer.
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+            I've answered it. Other players are reading it and saying it hit exactly what they needed. Go see it on the site.
           </p>
 
-          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;"><a href="${siteUrl}" style="color:#555555;text-decoration:none;">Ask your next question →</a></p>
+          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;"><a href="${siteUrl}/browse" style="color:#555555;text-decoration:none;">See the answer on the browse page →</a></p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
           <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
