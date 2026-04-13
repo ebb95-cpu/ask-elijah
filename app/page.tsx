@@ -610,9 +610,6 @@ export default function HomePage() {
               Ask →
             </button>
           </div>
-          <p className="text-xs text-gray-600 mt-4 text-center">
-            Not a bot. Not a template. Elijah writes back personally.
-          </p>
         </div>
       </section>
 
