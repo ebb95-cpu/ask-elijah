@@ -240,7 +240,7 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
   await resend.emails.send({
     from: 'Elijah Bryant <elijah@elijahbryant.pro>',
     to: userEmail,
-    subject: 'Elijah got your question.',
+    subject: 'Got it. Reading it now.',
     html: `
       <div style="font-family: -apple-system, sans-serif; max-width: 560px; margin: 0 auto; padding: 48px 24px; color: #111; background: #fff;">
 
@@ -252,29 +252,26 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
           <div style="width: 8px; height: 8px; background: #000; border-radius: 50%;"></div>
         </div>
 
-        <p style="font-size: 26px; font-weight: 800; line-height: 1.2; margin: 0 0 24px; color: #000;">
-          Your question is with him.
+        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 24px;">
+          I got your question.
         </p>
 
-        <div style="background: #f7f7f7; border-left: 3px solid #000; padding: 16px 20px; margin-bottom: 28px;">
-          <p style="font-size: 13px; color: #999; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.06em;">You asked</p>
-          <p style="font-size: 17px; font-weight: 600; margin: 0; color: #000; line-height: 1.4;">${question}</p>
+        <div style="border-left: 3px solid #000; padding-left: 20px; margin-bottom: 28px;">
+          <p style="font-size: 18px; font-weight: 600; margin: 0; color: #000; line-height: 1.5; font-style: italic;">"${question}"</p>
         </div>
 
-        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 28px;">
-          He reads every one personally. Not a template. Your situation, specifically. His answer will come straight to this inbox. When it lands, read it twice. Then go do it.
+        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 16px;">
+          I'm thinking through your actual situation — not just giving you a generic answer. Give me a little time to write something worth reading.
         </p>
 
-        <a href="${siteUrl}/browse" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 14px 28px; font-size: 14px; font-weight: 700; margin-bottom: 40px;">
-          See what other players are asking →
-        </a>
+        <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0 0 40px;">
+          When it's ready, it'll come straight to this inbox. Read it twice when it does.
+        </p>
 
         <hr style="border: none; border-top: 1px solid #eee; margin-bottom: 24px;" />
 
-        <p style="font-size: 12px; color: #bbb; line-height: 1.6; margin: 0;">
-          ${newsletterOptIn
-            ? "You'll get Elijah's answer plus his weekly breakdowns. Unsubscribe anytime."
-            : "You'll only hear from us when Elijah has answered. That's it."}
+        <p style="font-size: 13px; color: #999; line-height: 1.6; margin: 0;">
+          — Elijah
         </p>
 
       </div>
