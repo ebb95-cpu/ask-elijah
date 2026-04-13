@@ -30,20 +30,8 @@ function buildEmail(
       (q, i) => `
     <div style="margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid #1a1a1a;">
       <p style="font-size:16px;color:#ffffff !important;margin:0 0 16px;font-style:italic;font-family:-apple-system,sans-serif;">"${q.question}"</p>
-      <p style="font-size:16px;color:#ffffff !important;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">${q.answer}</p>
-      ${
-        q.sources && q.sources.length > 0
-          ? `<p style="font-size:12px;color:#ffffff !important;margin:0 0 6px;font-family:-apple-system,sans-serif;">More from Elijah on this:</p>
-             ${q.sources
-               .map(
-                 (s) =>
-                   `<a href="${s.url}" style="display:block;font-size:13px;color:#ffffff !important;margin-bottom:4px;text-decoration:underline;font-family:-apple-system,sans-serif;">
-                     ${s.type === 'newsletter' ? '📧' : '▶️'} ${s.title}
-                   </a>`
-               )
-               .join('')}`
-          : ''
-      }
+      <p style="font-size:16px;color:#ffffff !important;line-height:1.7;margin:0 0 20px;font-family:-apple-system,sans-serif;">${q.answer.split(' ').slice(0, 40).join(' ')}...</p>
+      <p style="font-size:15px;font-weight:700;margin:0;font-family:-apple-system,sans-serif;"><a href="https://elijahbryant.pro/history" style="color:#ffffff !important;text-decoration:none;">See full answer →</a></p>
     </div>
   `
     )

@@ -116,35 +116,11 @@ export async function POST(req: NextRequest) {
             <p style="font-size:16px;font-weight:600;margin:0;color:#ffffff !important;line-height:1.5;font-family:-apple-system,sans-serif;">${record.question}</p>
           </div>
 
-          <div style="font-size:16px;line-height:1.8;color:#ffffff !important;white-space:pre-wrap;margin-bottom:40px;font-family:-apple-system,sans-serif;">${finalAnswer}</div>
+          <div style="font-size:16px;line-height:1.8;color:#ffffff !important;white-space:pre-wrap;margin-bottom:32px;font-family:-apple-system,sans-serif;">${finalAnswer.split(' ').slice(0, 40).join(' ')}...</div>
 
-          ${actionSteps ? `
-          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:40px;">
-            <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#ffffff !important;margin:0 0 12px;font-family:-apple-system,sans-serif;">Your action steps</p>
-            ${actionSteps.split('\n').filter((s: string) => s.trim()).map((step: string) => `<p style="font-size:15px;line-height:1.6;color:#ffffff !important;margin:0 0 12px;font-family:-apple-system,sans-serif;">${step.trim()}</p>`).join('')}
-          </div>` : ''}
-
-          <p style="font-size:17px;font-weight:800;color:#ffffff !important;margin:0 0 10px;font-family:-apple-system,sans-serif;">Now go use it.</p>
-          <p style="font-size:14px;color:#ffffff !important;line-height:1.6;margin:0 0 32px;font-family:-apple-system,sans-serif;">
-            Read it twice. Do the steps. I'll check in with you soon.
+          <p style="font-size:18px;font-weight:700;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+            <a href="${siteUrl}/history" style="color:#ffffff !important;text-decoration:none;">See your full answer →</a>
           </p>
-
-          ${(() => {
-            const sources: { title: string; url: string; type: string }[] = Array.isArray(record.sources) ? record.sources.filter((s: { url: string }) => s.url) : []
-            if (!sources.length) return ''
-            return `
-          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:40px;">
-            <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#ffffff !important;margin:0 0 12px;font-family:-apple-system,sans-serif;">More from Elijah on this</p>
-            ${sources.map(s => `
-            <p style="margin:0 0 10px;font-family:-apple-system,sans-serif;">
-              <a href="${s.url}" style="font-size:13px;color:#555555;text-decoration:none;">
-                ${s.type === 'newsletter' ? 'Read the full guide' : 'Watch on YouTube'}: ${s.title} →
-              </a>
-            </p>`).join('')}
-          </div>`
-          })()}
-
-          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;"><a href="${siteUrl}/ask" style="color:#555555;text-decoration:none;">Ask your next question →</a></p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
           <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
