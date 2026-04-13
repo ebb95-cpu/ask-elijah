@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     .eq('status', 'approved')
     .not('action_steps', 'is', null)
     .is('accountability_sent_at', null)
-    .lt('updated_at', cutoff)
+    .lt('created_at', cutoff)
     .limit(50)
 
   if (error) {
