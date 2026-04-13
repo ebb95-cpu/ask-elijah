@@ -66,7 +66,7 @@ function buildEmail(
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
 
-          <p style="text-align:center;margin:0 0 16px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="120" height="20" alt="" style="display:inline-block;border:0;" /></p>
+          <p style="text-align:center;margin:0 0 16px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="120" height="20" alt="" style="display:inline-block;border:0;width:120px;height:20px;" /></p>
 
           <!-- Credential line -->
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
@@ -90,10 +90,13 @@ function buildEmail(
             <p style="font-size:18px;color:#ffffff !important;font-weight:600;margin:0 0 24px;line-height:1.4;font-family:-apple-system,sans-serif;">
               ${followUp}
             </p>
-            <a href="https://elijahbryant.pro/ask"
-               style="display:inline-block;background:#ffffff;color:#000000;padding:14px 28px;font-size:14px;font-weight:700;text-decoration:none;font-family:-apple-system,sans-serif;">
-              Ask Elijah →
-            </a>
+            <table cellpadding="0" cellspacing="0">
+              <tr>
+                <td bgcolor="#ffffff" style="background-color:#ffffff !important;">
+                  <a href="https://elijahbryant.pro/ask" style="display:inline-block;padding:14px 28px;font-size:14px;font-weight:700;color:#000000 !important;text-decoration:none;font-family:-apple-system,sans-serif;">Ask Elijah →</a>
+                </td>
+              </tr>
+            </table>
           </div>
 
           <!-- Signature -->

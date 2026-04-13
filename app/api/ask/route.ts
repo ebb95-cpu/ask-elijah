@@ -255,7 +255,7 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
     <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
-          <p style="text-align:center;margin:0 0 16px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="120" height="20" alt="" style="display:inline-block;border:0;" /></p>
+          <p style="text-align:center;margin:0 0 16px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="120" height="20" alt="" style="display:inline-block;border:0;width:120px;height:20px;" /></p>
 
           <!-- Credential line -->
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
@@ -280,9 +280,13 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
             Check your inbox.
           </p>
 
-          <a href="${siteUrl}/browse" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:14px 28px;font-size:14px;font-weight:700;margin-bottom:56px;font-family:-apple-system,sans-serif;">
-            See what other players are asking →
-          </a>
+          <table cellpadding="0" cellspacing="0" style="margin-bottom:56px;">
+            <tr>
+              <td bgcolor="#ffffff" style="background-color:#ffffff !important;">
+                <a href="${siteUrl}/browse" style="display:inline-block;padding:14px 28px;font-size:14px;font-weight:700;color:#000000 !important;text-decoration:none;font-family:-apple-system,sans-serif;">See what other players are asking →</a>
+              </td>
+            </tr>
+          </table>
 
           <!-- Signature -->
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
