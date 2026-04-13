@@ -5,6 +5,22 @@ export const dynamic = 'force-dynamic'
 
 const TEASER_CHARS = 160
 
+const SB_URL = () => process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SB_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+async function sbFetch(path: string) {
+  const res = await fetch(`${SB_URL()}${path}`, {
+    headers: {
+      apikey: SB_KEY(),
+      Authorization: `Bearer ${SB_KEY()}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  })
+  if (!res.ok) return null
+  return res.json()
+}
+
 export async function GET(req: NextRequest) {
   const email = req.nextUrl.searchParams.get('email') || ''
   const supabase = getSupabase()
@@ -20,26 +36,19 @@ export async function GET(req: NextRequest) {
     subscribed = profile?.subscribed === true
   }
 
-  // Use direct REST fetch to avoid supabase-js quirks
-  const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const restRes = await fetch(
-    `${sbUrl}/rest/v1/questions?status=eq.approved&select=id,question,answer&order=created_at.desc&limit=50`,
-    { headers: { apikey: sbKey!, Authorization: `Bearer ${sbKey}`, 'Content-Type': 'application/json' }, cache: 'no-store' }
+  // Fetch approved questions via direct REST (supabase-js has a known issue with this query)
+  const questions: { id: string; question: string; answer: string }[] | null = await sbFetch(
+    '/rest/v1/questions?status=eq.approved&select=id,question,answer&order=created_at.desc&limit=50'
   )
-  const questions: { id: string; question: string; answer: string }[] | null = restRes.ok ? await restRes.json() : null
 
-  if (!restRes.ok) console.error('Browse REST error:', restRes.status, await restRes.text().catch(() => ''))
-  console.log('Browse REST returned:', questions?.length, 'questions')
+  if (!questions?.length) return NextResponse.json({ questions: [], subscribed })
 
-  if (!questions?.length) return NextResponse.json({ questions: [], subscribed, _debug: { status: restRes.status, count: 0, url: sbUrl?.slice(0, 40) } })
-
-  // Get upvote counts
+  // Get upvote counts via direct REST
   const ids = questions.map(q => q.id)
-  const { data: upvotes } = await supabase
-    .from('upvotes')
-    .select('question_id, email')
-    .in('question_id', ids)
+  const upvoteFilter = ids.map(id => `question_id.eq.${id}`).join(',')
+  const upvotes: { question_id: string; email: string }[] | null = await sbFetch(
+    `/rest/v1/upvotes?select=question_id,email&or=(${upvoteFilter})`
+  )
 
   const countMap: Record<string, number> = {}
   const userSet = new Set<string>()
@@ -51,11 +60,11 @@ export async function GET(req: NextRequest) {
   const result = questions.map(q => ({
     id: q.id,
     question: q.question,
-    answer: subscribed ? q.answer : q.answer.slice(0, TEASER_CHARS),
-    truncated: !subscribed && q.answer.length > TEASER_CHARS,
+    answer: subscribed ? q.answer : (q.answer || '').slice(0, TEASER_CHARS),
+    truncated: !subscribed && (q.answer || '').length > TEASER_CHARS,
     upvote_count: countMap[q.id] || 0,
     user_upvoted: userSet.has(q.id),
   })).sort((a, b) => b.upvote_count - a.upvote_count)
 
-  return NextResponse.json({ questions: result, subscribed, _debug: { count: questions.length, url: process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 40), keyHint: process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(-6) } })
+  return NextResponse.json({ questions: result, subscribed })
 }
