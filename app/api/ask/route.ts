@@ -255,7 +255,7 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
     <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
-          <p style="text-align:center;margin:0 0 16px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="78" height="12" alt="" style="display:inline-block;border:0;width:78px;height:12px;" /></p>
+          <p style="text-align:center;margin:0 0 16px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:inline-block;border:0;width:52px;height:8px;" /></p>
 
           <!-- Credential line -->
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
