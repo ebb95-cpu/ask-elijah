@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   if (qErr) console.error('Browse query error:', qErr)
   console.log('Browse query returned:', questions?.length, 'questions')
 
-  if (!questions?.length) return NextResponse.json({ questions: [], subscribed, _debug: { error: qErr, count: 0 } })
+  if (!questions?.length) return NextResponse.json({ questions: [], subscribed, _debug: { error: qErr, count: 0, url: process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 30) } })
 
   // Get upvote counts
   const ids = questions.map(q => q.id)
@@ -55,5 +55,5 @@ export async function GET(req: NextRequest) {
     user_upvoted: userSet.has(q.id),
   })).sort((a, b) => b.upvote_count - a.upvote_count)
 
-  return NextResponse.json({ questions: result, subscribed })
+  return NextResponse.json({ questions: result, subscribed, _debug: { count: questions.length, url: process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 40), keyHint: process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(-6) } })
 }
