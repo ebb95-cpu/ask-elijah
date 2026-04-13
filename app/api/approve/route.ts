@@ -94,19 +94,7 @@ export async function POST(req: NextRequest) {
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
 
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
-            <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
-              <table cellpadding="0" cellspacing="0">
-                <tr valign="middle">
-                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
-                  <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
-                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
-                  <td style="width:24px;height:2px;background:#ffffff;font-size:0;line-height:0;">&nbsp;</td>
-                  <td style="width:8px;height:8px;background:#ffffff;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
-                </tr>
-              </table>
-            </td></tr>
-          </table>
+          <p style="text-align:center;color:#ffffff !important;font-size:20px;letter-spacing:8px;margin:0 0 16px;font-family:-apple-system,sans-serif;">&#9679;&#9135;&#9679;&#9135;&#9679;</p>
 
           <!-- Credential line -->
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
