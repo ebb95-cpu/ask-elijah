@@ -578,7 +578,7 @@ export default function HomePage() {
         <div className="flex items-center gap-3 mb-8">
           <span className="w-1.5 h-1.5 rounded-full bg-gray-600 flex-shrink-0" />
           <p className="text-xs text-gray-500 tracking-widest uppercase">
-            Elijah Bryant &middot; NBA &middot; EuroLeague Champion
+            NBA &middot; EuroLeague Champion
           </p>
           <span className="w-1.5 h-1.5 rounded-full bg-gray-600 flex-shrink-0" />
         </div>
