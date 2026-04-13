@@ -93,8 +93,12 @@ export async function GET(req: NextRequest) {
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">
             Most players read the answer and move on. The ones who actually get better do the steps.
           </p>
-          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 32px;font-family:-apple-system,sans-serif;">
             Hit reply. Tell me what happened.
+          </p>
+
+          <p style="font-size:18px;font-weight:700;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+            <a href="${siteUrl}/history" style="color:#ffffff !important;text-decoration:none;">Review your answer →</a>
           </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>

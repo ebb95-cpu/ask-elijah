@@ -280,8 +280,8 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
             Give me some time with it. I'll write back when I have something real to say.
           </p>
 
-          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
-            <a href="${siteUrl}/browse" style="color:#555555;text-decoration:none;">While you wait, see what other players are asking →</a>
+          <p style="font-size:18px;font-weight:700;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+            <a href="${siteUrl}/history" style="color:#ffffff !important;text-decoration:none;">Track your question →</a>
           </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
