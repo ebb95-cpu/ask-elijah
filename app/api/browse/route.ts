@@ -20,14 +20,17 @@ export async function GET(req: NextRequest) {
     subscribed = profile?.subscribed === true
   }
 
-  const { data: questions } = await supabase
+  const { data: questions, error: qErr } = await supabase
     .from('questions')
     .select('id, question, answer')
     .eq('status', 'approved')
     .order('created_at', { ascending: false })
     .limit(50)
 
-  if (!questions?.length) return NextResponse.json({ questions: [], subscribed })
+  if (qErr) console.error('Browse query error:', qErr)
+  console.log('Browse query returned:', questions?.length, 'questions')
+
+  if (!questions?.length) return NextResponse.json({ questions: [], subscribed, _debug: { error: qErr, count: 0 } })
 
   // Get upvote counts
   const ids = questions.map(q => q.id)
