@@ -63,17 +63,6 @@ function buildEmail(
           <!-- Q&A blocks -->
           ${qaBlocks}
 
-          <!-- Follow-up hook -->
-          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:48px;">
-            <p style="font-size:11px;color:#ffffff !important;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 12px;font-family:-apple-system,sans-serif;">
-              Something to think about
-            </p>
-            <p style="font-size:18px;color:#ffffff !important;font-weight:600;margin:0 0 24px;line-height:1.4;font-family:-apple-system,sans-serif;">
-              ${followUp}
-            </p>
-            <a href="https://elijahbryant.pro/ask" style="font-size:17px;font-weight:700;color:#ffffff !important;text-decoration:none;font-family:-apple-system,sans-serif;">Ask Elijah →</a>
-          </div>
-
           <!-- Signature -->
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
           <p style="font-size:11px;color:#444444;margin:0 0 24px;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
