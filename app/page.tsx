@@ -576,11 +576,9 @@ export default function HomePage() {
 
         {/* Above-fold credential */}
         <div className="flex items-center gap-3 mb-8">
-          <span className="w-1.5 h-1.5 rounded-full bg-gray-600 flex-shrink-0" />
           <p className="text-xs text-gray-500 tracking-widest uppercase">
             NBA &middot; EuroLeague Champion
           </p>
-          <span className="w-1.5 h-1.5 rounded-full bg-gray-600 flex-shrink-0" />
         </div>
 
         <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight mb-3 max-w-3xl text-white">
