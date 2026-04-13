@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
 
-          <p style="text-align:center;margin:0 0 16px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="130" height="20" alt="" style="display:inline-block;border:0;width:130px;height:20px;" /></p>
+          <p style="text-align:center;margin:0 0 16px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="78" height="12" alt="" style="display:inline-block;border:0;width:78px;height:12px;" /></p>
 
           <!-- Credential line -->
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
@@ -164,7 +164,7 @@ export async function GET(req: NextRequest) {
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
 
-          <p style="text-align:center;margin:0 0 16px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="130" height="20" alt="" style="display:inline-block;border:0;width:130px;height:20px;" /></p>
+          <p style="text-align:center;margin:0 0 16px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="78" height="12" alt="" style="display:inline-block;border:0;width:78px;height:12px;" /></p>
 
           <!-- Credential line -->
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:48px;">
