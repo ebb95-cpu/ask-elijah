@@ -605,24 +605,11 @@ export default function HomePage() {
             style={{ minHeight: '80px' }}
           />
 
-          <div className="mt-5 flex items-start justify-between gap-4">
-            <div className="flex flex-wrap gap-x-3 gap-y-2">
-              {SUGGESTIONS.slice(0, 3).map((s, i) => (
-                <span key={s} className="flex items-center gap-3">
-                  <button
-                    onClick={() => setQuestion(s)}
-                    className="text-xs text-gray-600 hover:text-gray-300 transition-colors text-left"
-                  >
-                    {s}
-                  </button>
-                  {i < 2 && <span className="text-gray-800 text-xs hidden sm:inline">·</span>}
-                </span>
-              ))}
-            </div>
+          <div className="mt-5 flex justify-end">
             <button
               onClick={handleSubmit}
               disabled={!question.trim()}
-              className="text-sm font-semibold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all flex-shrink-0"
+              className="text-sm font-semibold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all"
             >
               Ask →
             </button>
