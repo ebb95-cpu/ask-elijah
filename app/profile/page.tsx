@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 const POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C', 'Coach']
 const LEVELS = ['Youth', 'High School', 'College', 'Pro']
 const CHALLENGES = ['Confidence', 'Pressure', 'Consistency', 'Leadership', 'Slumps', 'Focus']
+const AGE_RANGES = ['Under 18', '18-24', '25+']
 
 type JournalEntry = {
   id: string
@@ -25,6 +26,8 @@ export default function ProfilePage() {
   const [level, setLevel] = useState('')
   const [country, setCountry] = useState('')
   const [challenge, setChallenge] = useState('')
+  const [ageRange, setAgeRange] = useState('')
+  const [teamSchool, setTeamSchool] = useState('')
   const [savePhase, setSavePhase] = useState<SavePhase>('idle')
   const [journal, setJournal] = useState<JournalEntry[]>([])
   const [journalLoading, setJournalLoading] = useState(false)
@@ -46,6 +49,8 @@ export default function ProfilePage() {
           if (d.level) setLevel(d.level)
           if (d.country) setCountry(d.country)
           if (d.challenge) setChallenge(d.challenge)
+          if (d.age_range) setAgeRange(d.age_range)
+          if (d.team_school) setTeamSchool(d.team_school)
           setProfileLoaded(true)
         })
 
@@ -70,7 +75,7 @@ export default function ProfilePage() {
     await fetch('/api/profile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, position, level, country, challenge }),
+      body: JSON.stringify({ email, position, level, country, challenge, age_range: ageRange, team_school: teamSchool }),
     })
     localStorage.setItem('ask_elijah_email', email)
     isFirstSave.current = false
@@ -314,6 +319,29 @@ export default function ProfilePage() {
                   value={country}
                   onChange={e => setCountry(e.target.value)}
                   placeholder="e.g. Turkey, USA, Spain..."
+                  className="w-full bg-transparent border-b border-gray-800 focus:border-gray-500 text-white placeholder-gray-700 text-sm outline-none pb-2 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-600 uppercase tracking-widest block mb-3">Age range</label>
+                <div className="flex flex-wrap gap-2">
+                  {AGE_RANGES.map(a => (
+                    <button key={a} onClick={() => setAgeRange(a)}
+                      className={`px-3 py-1.5 text-xs border transition-colors ${ageRange === a ? 'border-white text-white' : 'border-gray-800 text-gray-600 hover:border-gray-600'}`}>
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-600 uppercase tracking-widest block mb-3">Team / School</label>
+                <input
+                  type="text"
+                  value={teamSchool}
+                  onChange={e => setTeamSchool(e.target.value)}
+                  placeholder="e.g. UCLA, Anadolu Efes, AAU..."
                   className="w-full bg-transparent border-b border-gray-800 focus:border-gray-500 text-white placeholder-gray-700 text-sm outline-none pb-2 transition-colors"
                 />
               </div>

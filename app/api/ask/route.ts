@@ -3,6 +3,17 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getSupabase } from '@/lib/supabase-server'
 import { Resend } from 'resend'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+
+const ratelimit = new Ratelimit({
+  redis: new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL!,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+  }),
+  limiter: Ratelimit.slidingWindow(5, '1 d'),
+  prefix: 'rl:ask',
+})
 
 function getAnthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -24,6 +35,41 @@ function highlightVerifyMarkers(text: string): string {
     /<<VERIFY:\s*([^>]+)>>/g,
     '<span style="background:#fff3cd;color:#856404;padding:2px 6px;border-radius:3px;font-weight:600;">⚠️ VERIFY: $1</span>'
   )
+}
+
+const TOPICS = ['confidence', 'pressure', 'consistency', 'focus', 'slump', 'coaching', 'team', 'mindset', 'motivation', 'identity'] as const
+type Topic = typeof TOPICS[number]
+
+async function tagTopic(question: string): Promise<Topic | null> {
+  try {
+    const res = await getAnthropic().messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 20,
+      messages: [{
+        role: 'user',
+        content: `Categorize this basketball player's mental performance question with exactly one of these tags: confidence, pressure, consistency, focus, slump, coaching, team, mindset, motivation, identity.
+
+confidence = self-belief, fear of failure, imposter syndrome
+pressure = big game nerves, performance anxiety, clutch moments
+consistency = hot/cold streaks, staying locked in, habits
+focus = concentration, distractions, mental noise, being in the zone
+slump = shooting slump, bad form, losing rhythm
+coaching = coach relationship, playing time, feedback, being benched
+team = teammates, leadership, team dynamics, locker room
+mindset = mental toughness, resilience, attitude, growth
+motivation = drive, passion, burnout, losing love for the game
+identity = who am I as a player, position change, role, purpose
+
+Question: "${question}"
+
+Reply with only the single tag word.`,
+      }],
+    })
+    const tag = res.content[0].type === 'text' ? res.content[0].text.trim().toLowerCase() : ''
+    return (TOPICS as readonly string[]).includes(tag) ? tag as Topic : null
+  } catch {
+    return null
+  }
 }
 
 // Extract memorable facts from a question using Claude
@@ -101,6 +147,31 @@ const BLOCKED = [
   /shut\s+up/i,
   /stupid|idiot|moron|loser|bum\b/i,
 ]
+
+async function detectLanguage(text: string): Promise<{ language: string; englishTranslation: string | null }> {
+  try {
+    const res = await getAnthropic().messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 256,
+      messages: [{
+        role: 'user',
+        content: `Detect the language of this text. If it is not English, provide a natural English translation.
+
+Return JSON only: {"language": "English", "translation": null} for English, or {"language": "Greek", "translation": "..."} for other languages.
+
+Text: "${text.replace(/"/g, '\\"')}"`,
+      }],
+    })
+    const raw = res.content[0].type === 'text' ? res.content[0].text.trim() : ''
+    const parsed = JSON.parse(raw)
+    return {
+      language: parsed.language || 'English',
+      englishTranslation: parsed.translation || null,
+    }
+  } catch {
+    return { language: 'English', englishTranslation: null }
+  }
+}
 
 async function embedQuestion(question: string): Promise<number[]> {
   const res = await fetch('https://api.voyageai.com/v1/embeddings', {
@@ -298,10 +369,18 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
 
 export async function POST(req: NextRequest) {
   try {
-    const { question, email, language, previewAnswer, newsletterOptIn } = await req.json()
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
+    const { success } = await ratelimit.limit(ip)
+    if (!success) return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 })
+
+    const { question, email, previewAnswer, newsletterOptIn, utm_source, utm_medium, utm_campaign } = await req.json()
 
     if (!question?.trim()) {
       return NextResponse.json({ error: 'Question required' }, { status: 400 })
+    }
+
+    if (question.trim().length > 500) {
+      return NextResponse.json({ error: 'Question too long (max 500 characters)' }, { status: 400 })
     }
 
     if (!email?.trim()) {
@@ -316,17 +395,21 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const ip =
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      req.headers.get('x-real-ip') ||
-      'unknown'
+    // ip already declared above for rate limiting
+
+    // Detect language + tag topic in parallel
+    const [{ language: detectedLanguage, englishTranslation }, topic] = await Promise.all([
+      detectLanguage(question).catch(() => ({ language: 'English', englishTranslation: null })),
+      tagTopic(question),
+    ])
+    const queryForEmbedding = englishTranslation || question
 
     // RAG lookup
     let ragContext = ''
     let hasChunks = false
     let sources: { title: string; url: string; type: string }[] = []
     try {
-      const embedding = await embedQuestion(question)
+      const embedding = await embedQuestion(queryForEmbedding)
       const result = await searchPinecone(embedding)
       sources = result.sources
       if (result.chunks.length > 0) {
@@ -365,15 +448,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, questionId: record?.id })
     }
 
-    // Language instruction
-    const langMap: Record<string, string> = {
-      tr: 'Turkish', he: 'Hebrew', el: 'Greek', sr: 'Serbian',
-      es: 'Spanish', fr: 'French', de: 'German', pt: 'Portuguese',
-      it: 'Italian', ar: 'Arabic', zh: 'Chinese', ja: 'Japanese',
-    }
-    const langName = langMap[language] || null
-    const langInstruction = langName
-      ? `\n\nIMPORTANT: The user's language is ${langName}. Respond entirely in ${langName}.`
+    // Language instruction — use detected language from question content
+    const langInstruction = detectedLanguage && detectedLanguage !== 'English'
+      ? `\n\nIMPORTANT: The user wrote in ${detectedLanguage}. Respond entirely in ${detectedLanguage}.`
       : ''
 
     const userMessage = `${ragContext}Now answer this question using the above context where relevant:\n\n${question}`
@@ -413,6 +490,11 @@ export async function POST(req: NextRequest) {
         ip,
         email: email.trim().toLowerCase(),
         status: 'pending',
+        topic: topic ?? null,
+        language_detected: detectedLanguage !== 'English' ? detectedLanguage : null,
+        utm_source: utm_source || null,
+        utm_medium: utm_medium || null,
+        utm_campaign: utm_campaign || null,
       })
       .select('id')
       .single()

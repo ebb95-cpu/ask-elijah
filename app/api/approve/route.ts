@@ -16,10 +16,18 @@ async function embedText(text: string): Promise<number[]> {
   return data.data[0].embedding
 }
 
-async function saveToPinecone(questionId: string, question: string, answer: string) {
+async function saveToPinecone(questionId: string, question: string, answer: string, topic?: string | null) {
   // Save the Q+A together so future searches surface this real answer
   const combined = `Q: ${question}\n\nA: ${answer}`
   const embedding = await embedText(combined)
+
+  const metadata: Record<string, string> = {
+    text: combined,
+    source_type: 'approved_answer',
+    source_title: 'Elijah Bryant — Approved Answer',
+    question,
+  }
+  if (topic) metadata.topic = topic
 
   await fetch(`${process.env.PINECONE_HOST}/vectors/upsert`, {
     method: 'POST',
@@ -31,12 +39,7 @@ async function saveToPinecone(questionId: string, question: string, answer: stri
       vectors: [{
         id: `approved_${questionId}`,
         values: embedding,
-        metadata: {
-          text: combined,
-          source_type: 'approved_answer',
-          source_title: 'Elijah Bryant — Approved Answer',
-          question,
-        },
+        metadata,
       }],
     }),
   })
@@ -58,7 +61,7 @@ export async function POST(req: NextRequest) {
   // Fetch question record
   const { data: record, error: fetchError } = await supabase
     .from('questions')
-    .select('question, email, sources')
+    .select('question, email, sources, topic')
     .eq('id', questionId)
     .single()
 
@@ -136,7 +139,7 @@ export async function POST(req: NextRequest) {
 
   // Save to Pinecone knowledge base
   try {
-    await saveToPinecone(questionId, record.question, finalAnswer)
+    await saveToPinecone(questionId, record.question, finalAnswer, record.topic)
   } catch (err) {
     console.warn('Pinecone save failed (non-fatal):', err)
   }

@@ -2,6 +2,17 @@
 import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+
+const ratelimit = new Ratelimit({
+  redis: new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL!,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+  }),
+  limiter: Ratelimit.slidingWindow(10, '1 h'),
+  prefix: 'rl:preview',
+})
 
 async function embedQuestion(question: string): Promise<number[]> {
   const res = await fetch('https://api.voyageai.com/v1/embeddings', {
@@ -42,8 +53,13 @@ async function searchPinecone(embedding: number[], topK = 5) {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
+    const { success } = await ratelimit.limit(ip)
+    if (!success) return new Response('Too many requests. Try again later.', { status: 429 })
+
     const { question, profile, memories } = await req.json()
     if (!question?.trim()) return new Response('Question required', { status: 400 })
+    if (question.trim().length > 500) return new Response('Question too long (max 500 characters)', { status: 400 })
 
     const profileParts: string[] = []
     if (profile?.position) profileParts.push(`Position: ${profile.position}`)

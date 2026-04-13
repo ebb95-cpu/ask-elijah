@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
@@ -36,7 +36,16 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState('')
+  const [newAnswer, setNewAnswer] = useState(false)
+  const knownIdsRef = useRef<Set<string>>(new Set())
   const router = useRouter()
+
+  const fetchQuestions = async () => {
+    const res = await fetch('/api/history')
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.questions || []
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -50,15 +59,27 @@ export default function HistoryPage() {
 
       setUserEmail(user.email || '')
 
-      const res = await fetch('/api/history')
-      if (res.ok) {
-        const data = await res.json()
-        setQuestions(data.questions || [])
-      }
+      const qs = await fetchQuestions()
+      setQuestions(qs)
+      knownIdsRef.current = new Set(qs.map((q: Question) => q.id))
       setLoading(false)
     }
     init()
   }, [router])
+
+  // Poll every 30 seconds for new answers
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const qs = await fetchQuestions()
+      const newIds = qs.filter((q: Question) => !knownIdsRef.current.has(q.id))
+      if (newIds.length > 0) {
+        setNewAnswer(true)
+        setQuestions(qs)
+        newIds.forEach((q: Question) => knownIdsRef.current.add(q.id))
+      }
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const handleSignOut = async () => {
     const supabase = getSupabaseClient()
@@ -68,6 +89,17 @@ export default function HistoryPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
+      {/* New answer notification */}
+      {newAnswer && (
+        <div
+          className="fixed top-0 left-0 right-0 z-50 bg-black text-white px-6 py-4 flex items-center justify-between cursor-pointer"
+          onClick={() => { setNewAnswer(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+        >
+          <p className="text-sm font-semibold">Elijah wrote back. New answer at the top.</p>
+          <button onClick={() => setNewAnswer(false)} className="text-gray-400 hover:text-white text-xs ml-4">Dismiss</button>
+        </div>
+      )}
+
       <nav className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
         <Link href="/ask" className="text-gray-400 hover:text-black transition-colors text-sm">← Ask</Link>
         <Logo />

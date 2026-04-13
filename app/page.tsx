@@ -99,6 +99,17 @@ function LiveTicker() {
   )
 }
 
+const PLACEHOLDERS = [
+  "What's the one thing costing you right now?",
+  "¿Qué es lo que más te está costando?",
+  "Τι είναι αυτό που σε κοστίζει τώρα;",
+  "Šta te košta najviše u ovom trenutku?",
+  "מה הדבר שהכי עולה לך עכשיו?",
+  "Кое е нещото, което те коства сега?",
+  "Quelle est la chose qui te coûte le plus?",
+  "Ano ang isang bagay na nagpapahirap sa iyo?",
+]
+
 const ALL_SUGGESTIONS = [
   "I freeze up in real games but ball out in practice",
   "How do I get my confidence back after a bad streak?",
@@ -265,6 +276,32 @@ export default function HomePage() {
   const userEmailRef = useRef('')
   const profileRef = useRef<Record<string, string> | null>(null)
   const memoriesRef = useRef<{ fact_type: string; fact_text: string; expires_at: string | null }[]>([])
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
+  const [placeholderFade, setPlaceholderFade] = useState(true)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setPlaceholderFade(false)
+      setTimeout(() => {
+        setPlaceholderIndex(i => (i + 1) % PLACEHOLDERS.length)
+        setPlaceholderFade(true)
+      }, 300)
+    }, 3500)
+    return () => clearInterval(id)
+  }, [])
+
+  // Capture UTM params once on landing and persist them
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const utm = {
+      utm_source: params.get('utm_source'),
+      utm_medium: params.get('utm_medium'),
+      utm_campaign: params.get('utm_campaign'),
+    }
+    if (utm.utm_source || utm.utm_medium || utm.utm_campaign) {
+      localStorage.setItem('ask_elijah_utm', JSON.stringify(utm))
+    }
+  }, [])
 
   useEffect(() => {
     const stored = localStorage.getItem('ask_elijah_email')
@@ -335,7 +372,8 @@ export default function HomePage() {
           question: question.trim(),
           email: email.trim(),
           previewAnswer: fullAnswerRef.current,
-          newsletterOptIn,
+          newsletterOptIn: true,
+          ...JSON.parse(localStorage.getItem('ask_elijah_utm') || '{}'),
         }),
       })
       prevQuestionRef.current = question.trim()
@@ -455,8 +493,8 @@ export default function HomePage() {
             {/* Email gate — stacked below, not overlaid */}
             {hiddenText && (
               <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
-                <p className="text-white font-semibold text-base">Get the full answer</p>
-                <p className="text-gray-500 text-sm">Elijah will send it to you personally.</p>
+                <p className="text-white font-semibold text-base">Get Elijah's answer</p>
+                <p className="text-gray-500 text-sm leading-relaxed">You'll also be joined to the Consistency Club — his weekly newsletter on building your faith and consistency on and off the court.</p>
                 <input
                   type="email"
                   placeholder="your@email.com"
@@ -474,21 +512,12 @@ export default function HomePage() {
                   />
                   I confirm I am 13 years of age or older
                 </label>
-                <label className="flex items-start gap-2 text-xs text-gray-400 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={newsletterOptIn}
-                    onChange={e => setNewsletterOptIn(e.target.checked)}
-                    className="mt-0.5 accent-white"
-                  />
-                  Get Elijah&apos;s weekly mental performance breakdowns — 4,000 players getting better every week.
-                </label>
                 <button
                   onClick={handleEmailSubmit}
                   disabled={!email.trim() || !ageConfirmed || emailLoading}
                   className="w-full bg-white text-black py-3 text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
                 >
-                  {emailLoading ? 'Sending...' : 'Send me the full answer →'}
+                  {emailLoading ? 'Sending...' : 'Get my answer →'}
                 </button>
               </div>
             )}
@@ -509,31 +538,18 @@ export default function HomePage() {
         </nav>
         <div className="flex-1 flex flex-col items-center justify-center px-5 text-center gap-6 max-w-sm mx-auto">
           <div>
-            <h2 className="text-3xl font-bold mb-3">Elijah got your question.</h2>
-            <p className="text-gray-500 text-base leading-relaxed">
-              The full answer is on its way to
-            </p>
-            <p className="text-white font-semibold mt-1 mb-6">{email}</p>
-          </div>
-
-          {/* Beta message */}
-          <div className="border border-gray-800 px-6 py-5 text-left w-full">
-            <p className="text-gray-500 text-sm leading-relaxed">
-              Since we&apos;re in beta, we personally verify every question and answer before it reaches you. Bear with us.{' '}
-              <span className="text-white">We&apos;re connecting the dots.</span>
-            </p>
+            <h2 className="text-3xl font-bold mb-2">Elijah got your question.</h2>
+            <p className="text-gray-500 text-base leading-relaxed mt-4">He reads every one personally.</p>
+            <p className="text-gray-500 text-base leading-relaxed">When he writes back, it&apos;ll be in your inbox.</p>
           </div>
 
           <div className="border-l-2 border-gray-800 pl-4 text-left w-full">
             <p className="text-gray-600 text-sm italic">&ldquo;{question}&rdquo;</p>
           </div>
 
-          <button
-            onClick={reset}
-            className="text-sm text-gray-600 hover:text-white transition-colors"
-          >
-            Ask another question
-          </button>
+          <a href="/history" className="text-sm font-semibold text-white hover:opacity-70 transition-opacity">
+            Track your question →
+          </a>
         </div>
       </div>
     )
@@ -567,7 +583,11 @@ export default function HomePage() {
         </div>
         <div className="flex items-center gap-6">
           <Link href="/browse" className="text-sm text-gray-500 hover:text-white transition-colors">Browse</Link>
-          <Link href="/profile" className="text-sm text-gray-500 hover:text-white transition-colors">Profile</Link>
+          {userEmailRef.current ? (
+            <Link href="/history" className="text-sm text-white font-semibold hover:opacity-70 transition-opacity">My questions →</Link>
+          ) : (
+            <Link href="/sign-in" className="text-sm text-gray-500 hover:text-white transition-colors">Sign in</Link>
+          )}
         </div>
       </nav>
 
@@ -592,15 +612,25 @@ export default function HomePage() {
 
         <div className="w-full max-w-xl mt-6">
           <div className="flex items-end gap-4 border-b border-gray-700 focus-within:border-gray-400 transition-colors pb-3">
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder="What's the one thing costing you right now?"
-              rows={1}
-              autoFocus
-              className="flex-1 text-white placeholder-gray-500 text-base sm:text-lg leading-relaxed resize-none outline-none bg-transparent"
-            />
+            <div className="relative flex-1">
+              {!question && (
+                <div
+                  className="absolute top-0 left-0 pointer-events-none select-none text-gray-500 text-base sm:text-lg leading-relaxed"
+                  style={{ opacity: placeholderFade ? 1 : 0, transition: 'opacity 0.3s ease' }}
+                >
+                  {PLACEHOLDERS[placeholderIndex]}
+                </div>
+              )}
+              <textarea
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={handleKey}
+                placeholder=""
+                rows={1}
+                autoFocus
+                className="w-full text-white text-base sm:text-lg leading-relaxed resize-none outline-none bg-transparent"
+              />
+            </div>
             <button
               onClick={handleSubmit}
               disabled={!question.trim()}

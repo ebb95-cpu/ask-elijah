@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import NewAnswerNotification from "@/components/NewAnswerNotification";
 
 export const metadata: Metadata = {
   title: "Ask Elijah — Submit one question. Get a personal answer from an NBA Champion.",
@@ -21,6 +22,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased min-h-screen flex flex-col">
         {children}
+        <NewAnswerNotification />
       </body>
     </html>
   );
