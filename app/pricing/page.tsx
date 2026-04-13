@@ -28,7 +28,7 @@ export default function PricingPage() {
         <p className="text-gray-400 text-center mb-16">Pick what works for where you are right now.</p>
 
         {/* Pricing cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-20 max-w-2xl mx-auto w-full">
           {/* Free */}
           <div className="border border-gray-800 p-8 flex flex-col">
             <p className="text-xs text-gray-500 tracking-widest uppercase mb-4">Free</p>
@@ -61,23 +61,6 @@ export default function PricingPage() {
               Get started
             </Link>
           </div>
-
-          {/* Ask Directly */}
-          <div className="border border-gray-800 p-8 flex flex-col">
-            <p className="text-xs text-gray-500 tracking-widest uppercase mb-4">Ask Directly</p>
-            <p className="text-4xl font-bold mb-1">$25<span className="text-lg font-normal text-gray-400">–$50</span></p>
-            <p className="text-gray-400 text-sm mb-8">Pay per personal review</p>
-            <ul className="space-y-3 text-sm text-gray-400 mb-10 flex-1">
-              <li>Voice review — $25</li>
-              <li>Video/film review — $50</li>
-              <li>Elijah personally responds</li>
-              <li>10 slots available per week</li>
-              <li>Delivered within 48 hours</li>
-            </ul>
-            <Link href="/ask-directly" className="border border-gray-600 text-gray-400 px-6 py-3 text-sm font-semibold text-center hover:border-white hover:text-white transition-colors">
-              Book a slot
-            </Link>
-          </div>
         </div>
 
         {/* What's included table */}
@@ -89,7 +72,7 @@ export default function PricingPage() {
               { item: "EuroLeague champion knowledge base", elsewhere: "Not available", here: "Included" },
               { item: "Recovery & nutrition protocols", elsewhere: "$150/session", here: "Included" },
               { item: "Mental game coaching", elsewhere: "$200/session", here: "Included" },
-              { item: "Film breakdown", elsewhere: "$300/session", here: "$50 one-time" },
+              { item: "Personalized answers to your exact situation", elsewhere: "$300/session", here: "Included" },
             ].map(({ item, elsewhere, here }) => (
               <div key={item} className="grid grid-cols-3 px-6 py-4 text-sm">
                 <span className="text-gray-300">{item}</span>
