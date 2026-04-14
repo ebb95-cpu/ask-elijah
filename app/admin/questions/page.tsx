@@ -328,12 +328,14 @@ function PlayerQuestionCard({
   onFocus,
   onApproved,
   onSkipped,
+  onToast,
 }: {
   item: PlayerQuestion
   focused: boolean
   onFocus: () => void
   onApproved: (id: string) => void
   onSkipped: (id: string) => void
+  onToast?: (msg: string) => void
 }) {
   const [draft, setDraft] = useState(item.answer || '')
   const [approving, setApproving] = useState(false)
@@ -356,6 +358,7 @@ function PlayerQuestionCard({
       })
       if (!res.ok) throw new Error('Failed to approve')
       setApproved(true)
+      onToast?.(`Email sent to ${item.email}`)
       setTimeout(() => onApproved(item.id), 800)
     } catch {
       setError('Failed to approve. Try again.')
@@ -535,6 +538,8 @@ export default function AdminQuestionsPage() {
   const [waitlistCount, setWaitlistCount] = useState<number | null>(null)
   const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>([])
   const [showWaitlist, setShowWaitlist] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const waitlistRef = useRef<HTMLDivElement>(null)
 
   // Run research state
   const [researching, setResearching] = useState(false)
@@ -852,16 +857,19 @@ export default function AdminQuestionsPage() {
             label: 'Total Players',
             value: dashStats ? dashStats.totalPlayers : '—',
             sub: 'unique emails',
+            onClick: () => setFilter('answered'),
           },
           {
             label: 'This Week',
             value: dashStats ? dashStats.questionsThisWeek : '—',
             sub: 'questions submitted',
+            onClick: () => setFilter('pending'),
           },
           {
             label: 'Answer Rate',
             value: dashStats ? `${dashStats.answerRate}%` : '—',
             sub: 'questions answered',
+            onClick: () => setFilter('answered'),
           },
           {
             label: 'Avg Response',
@@ -873,22 +881,32 @@ export default function AdminQuestionsPage() {
                 : `${Math.round(dashStats.avgResponseHours / 24)}d`
               : '—',
             sub: 'time to answer',
+            onClick: null,
           },
           {
             label: 'Waitlist',
             value: waitlistCount === null ? '—' : waitlistCount,
             sub: 'waiting for access',
+            onClick: () => {
+              setShowWaitlist(true)
+              setTimeout(() => waitlistRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+            },
           },
         ].map((stat) => (
           <div
             key={stat.label}
+            onClick={stat.onClick ?? undefined}
             style={{
               background: '#0a0a0a',
               border: '1px solid #1a1a1a',
               borderRadius: '8px',
               padding: '16px',
               fontFamily: '-apple-system, sans-serif',
+              cursor: stat.onClick ? 'pointer' : 'default',
+              transition: 'border-color 0.15s',
             }}
+            onMouseEnter={stat.onClick ? (e) => (e.currentTarget.style.borderColor = '#333') : undefined}
+            onMouseLeave={stat.onClick ? (e) => (e.currentTarget.style.borderColor = '#1a1a1a') : undefined}
           >
             <p style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>
               {stat.label}
@@ -920,8 +938,8 @@ export default function AdminQuestionsPage() {
       </div>
 
       {/* Waitlist panel */}
-      {waitlistEntries.length > 0 && (
-        <div style={{ marginBottom: '32px', border: '1px solid #1a1a1a', borderRadius: '8px', overflow: 'hidden' }}>
+      {waitlistEntries.filter(w => !w.notified).length > 0 && (
+        <div ref={waitlistRef} style={{ marginBottom: '32px', border: '1px solid #1a1a1a', borderRadius: '8px', overflow: 'hidden' }}>
           <button
             onClick={() => setShowWaitlist(v => !v)}
             style={{
@@ -931,14 +949,14 @@ export default function AdminQuestionsPage() {
             }}
           >
             <span style={{ fontSize: '13px', fontWeight: 600, color: '#ffffff' }}>
-              Waitlist ({waitlistEntries.length})
+              Waitlist ({waitlistEntries.filter(w => !w.notified).length})
             </span>
             <span style={{ fontSize: '11px', color: '#555' }}>{showWaitlist ? '▲ Hide' : '▼ Show'}</span>
           </button>
 
           {showWaitlist && (
             <div>
-              {waitlistEntries.map((entry) => (
+              {waitlistEntries.filter(w => !w.notified).map((entry) => (
                 <div
                   key={entry.id}
                   style={{
@@ -1045,7 +1063,32 @@ export default function AdminQuestionsPage() {
       </div>
 
       {/* Spinner keyframes (injected inline) */}
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+
+      {/* Toast notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '32px',
+          right: '32px',
+          background: '#111',
+          border: '1px solid #2a2a2a',
+          borderRadius: '8px',
+          padding: '14px 20px',
+          fontSize: '14px',
+          color: '#ffffff',
+          fontFamily: '-apple-system, sans-serif',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+          zIndex: 9999,
+          animation: 'fadeInUp 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}>
+          <span style={{ color: '#22c55e', fontSize: '16px' }}>✓</span>
+          {toast}
+        </div>
+      )}
 
       {/* Content */}
       {loading ? (
@@ -1076,6 +1119,7 @@ export default function AdminQuestionsPage() {
                 onFocus={() => setFocusedId(`pq-${item.data.id}`)}
                 onApproved={handlePublished}
                 onSkipped={handleSkipped}
+                onToast={(msg) => { setToast(msg); setTimeout(() => setToast(null), 3500) }}
               />
             )
           }

@@ -57,7 +57,18 @@ export async function GET(req: NextRequest) {
     if (email && uv.email === email.toLowerCase()) userSet.add(uv.question_id)
   }
 
-  const result = questions.map(q => ({
+  // Deduplicate by question text — keep the one with more upvotes
+  const seenQuestions = new Map<string, { id: string; question: string; answer: string }>()
+  for (const q of questions) {
+    const key = q.question.toLowerCase().trim()
+    const existing = seenQuestions.get(key)
+    if (!existing || (countMap[q.id] || 0) > (countMap[existing.id] || 0)) {
+      seenQuestions.set(key, q)
+    }
+  }
+  const deduped = Array.from(seenQuestions.values())
+
+  const result = deduped.map(q => ({
     id: q.id,
     question: q.question,
     answer: subscribed ? q.answer : (q.answer || '').slice(0, TEASER_CHARS),

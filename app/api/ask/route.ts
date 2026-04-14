@@ -1,3 +1,4 @@
+import { escapeHtml } from '@/lib/escape-html'
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getSupabase } from '@/lib/supabase-server'
@@ -6,14 +7,16 @@ import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 
-const ratelimit = new Ratelimit({
-  redis: new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-  }),
-  limiter: Ratelimit.slidingWindow(5, '1 d'),
-  prefix: 'rl:ask',
-})
+const ratelimit = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  ? new Ratelimit({
+      redis: new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      }),
+      limiter: Ratelimit.slidingWindow(5, '1 d'),
+      prefix: 'rl:ask',
+    })
+  : null
 
 function getAnthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -36,6 +39,8 @@ function highlightVerifyMarkers(text: string): string {
     '<span style="background:#fff3cd;color:#856404;padding:2px 6px;border-radius:3px;font-weight:600;">⚠️ VERIFY: $1</span>'
   )
 }
+
+const MIN_PINECONE_SCORE = 0.35
 
 const TOPICS = ['confidence', 'pressure', 'consistency', 'focus', 'slump', 'coaching', 'team', 'mindset', 'motivation', 'identity'] as const
 type Topic = typeof TOPICS[number]
@@ -259,7 +264,7 @@ async function searchPinecone(embedding: number[], topK = 5, topic?: string | nu
   const seenTexts = new Set<string>()
 
   const addMatch = (m: { score: number; metadata: Record<string, string> }) => {
-    if (m.score < 0.3) return
+    if (m.score < MIN_PINECONE_SCORE) return
     const meta = m.metadata || {}
     const text = meta.text || ''
     if (seenTexts.has(text)) return
@@ -407,7 +412,7 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Got your question.</p>
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Working on it.</p>
 
-          ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${firstName}.</p>` : ''}
+          ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${escapeHtml(firstName)}.</p>` : ''}
 
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
             <p style="font-size:18px;font-weight:600;color:#ffffff !important;line-height:1.5;font-style:italic;margin:0;font-family:-apple-system,sans-serif;">"${question}"</p>
@@ -442,8 +447,14 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
-    const { success } = await ratelimit.limit(ip)
-    if (!success) return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 })
+    if (ratelimit) {
+      try {
+        const { success } = await ratelimit.limit(ip)
+        if (!success) return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 })
+      } catch (rlErr) {
+        console.warn('Rate limiter unavailable, allowing request:', rlErr)
+      }
+    }
 
     const { question, email, previewAnswer, newsletterOptIn, utm_source, utm_medium, utm_campaign } = await req.json()
 
@@ -457,6 +468,20 @@ export async function POST(req: NextRequest) {
 
     if (!email?.trim()) {
       return NextResponse.json({ error: 'Email required' }, { status: 400 })
+    }
+
+    // Duplicate submission guard — same email within 2 minutes
+    const supabaseCheck = getSupabase()
+    const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+    const { data: recentQ } = await supabaseCheck
+      .from('questions')
+      .select('id')
+      .eq('email', email.trim().toLowerCase())
+      .gte('created_at', twoMinsAgo)
+      .limit(1)
+      .single()
+    if (recentQ) {
+      return NextResponse.json({ error: 'You just sent a question. Give Elijah a moment to work on it.' }, { status: 429 })
     }
 
     // Content moderation
@@ -556,6 +581,10 @@ export async function POST(req: NextRequest) {
           messages: [{ role: 'user', content: userMessage + langInstruction }],
         })
         draft = response.content[0].type === 'text' ? response.content[0].text : ''
+      }
+      // If Claude returned empty for any reason, use the fallback
+      if (!draft.trim() || draft.trim().length < 30) {
+        draft = FALLBACK
       }
     }
 

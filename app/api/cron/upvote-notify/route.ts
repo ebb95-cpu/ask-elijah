@@ -1,3 +1,4 @@
+import { escapeHtml } from '@/lib/escape-html'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 import { Resend } from 'resend'
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Your question blew up.</p>
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">${count} players needed this.</p>
 
-          ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${firstName}.</p>` : ''}
+          ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${escapeHtml(firstName)}.</p>` : ''}
 
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
             <p style="font-size:17px;font-style:italic;font-weight:600;margin:0;color:#ffffff !important;line-height:1.4;font-family:-apple-system,sans-serif;">"${q.question}"</p>

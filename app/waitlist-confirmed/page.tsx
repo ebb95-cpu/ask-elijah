@@ -29,7 +29,6 @@ function ConfirmedInner() {
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20 text-center">
         <div className="w-full max-w-sm">
-          <div className="w-2 h-2 bg-white rounded-full mx-auto mb-10" />
           <h1 className="text-3xl font-bold mb-4 leading-tight">
             {firstName ? `You're locked in, ${firstName}.` : "You're locked in."}
           </h1>

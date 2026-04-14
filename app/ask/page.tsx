@@ -1194,7 +1194,9 @@ function AskPageInner() {
           {/* Header */}
           <div className="text-center mb-10">
             <div className="w-2 h-2 bg-white rounded-full mx-auto mb-8" />
-            <h2 className="text-3xl font-bold mb-3">Here&apos;s a first take.</h2>
+            <h2 className="text-3xl font-bold mb-3">
+              {draftAnswer ? "Here\u2019s a first take." : "Question received."}
+            </h2>
             <p className="text-gray-500 text-sm leading-relaxed">
               Elijah is reviewing this personally. Once he signs off, the final answer lands in your inbox at <span className="text-white">{email}</span>
             </p>

@@ -1,3 +1,4 @@
+import { escapeHtml } from '@/lib/escape-html'
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { getSupabase } from '@/lib/supabase-server'
@@ -58,7 +59,7 @@ function buildEmail(
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">You asked.</p>
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">I answered.</p>
 
-          ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${firstName}.</p>` : ''}
+          ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${escapeHtml(firstName)}.</p>` : ''}
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
             Most players never ask. They sit on the same problem for months and wonder why nothing changes. You asked. That's already different. Now read the answer like you mean it.
