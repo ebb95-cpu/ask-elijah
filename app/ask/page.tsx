@@ -369,6 +369,7 @@ function AskPageInner() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
+
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -712,16 +713,20 @@ function AskPageInner() {
             style={{ minHeight: '80px' }}
           />
           <div className="flex items-center justify-between px-4 pb-3">
-            {question.length >= 140 && (
-              <span className="text-xs text-gray-600">{question.length}</span>
-            )}
-            <button
-              onClick={handleQuestionSubmit}
-              disabled={!question.trim()}
-              className="ml-auto bg-white text-black px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
-            >
-              Ask Elijah →
-            </button>
+            <div className="flex items-center gap-3">
+              {question.length >= 140 && (
+                <span className="text-xs text-gray-600">{question.length}</span>
+              )}
+            </div>
+            <div className="ml-auto">
+              <button
+                onClick={handleQuestionSubmit}
+                disabled={!question.trim()}
+                className="bg-white text-black px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
+              >
+                Ask Elijah →
+              </button>
+            </div>
           </div>
         </div>
       </div>
