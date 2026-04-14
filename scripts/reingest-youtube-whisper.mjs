@@ -59,7 +59,7 @@ async function downloadAudio(videoId) {
   if (existsSync(audioPath)) unlinkSync(audioPath)
 
   execSync(
-    `yt-dlp -x --audio-format mp3 --audio-quality 3 -o "${audioPath}" --max-filesize 25m "https://youtube.com/watch?v=${videoId}" --quiet`,
+    `yt-dlp -x --audio-format mp3 --audio-quality 3 --ffmpeg-location /Users/elijahbryant/bin -o "${audioPath}" --max-filesize 25m "https://youtube.com/watch?v=${videoId}" --quiet`,
     { timeout: 120000 }
   )
 
@@ -109,35 +109,24 @@ async function upsertVectors(vectors) {
   if (!res.ok) throw new Error(`Pinecone ${res.status}: ${await res.text()}`)
 }
 
-// ── Channel Videos ──────────────────────────────────────────────────────────
+// ── Channel Videos (all of them via yt-dlp) ─────────────────────────────────
 
-async function getChannelVideos(handle) {
-  const pageRes = await fetch(`https://www.youtube.com/@${handle}/videos`, { headers: HEADERS })
-  if (!pageRes.ok) throw new Error(`Channel fetch failed: ${pageRes.status}`)
-  const html = await pageRes.text()
-  const match = html.match(/var ytInitialData\s*=\s*(\{.+?\});\s*<\/script>/)
-  if (match) {
-    try {
-      const data = JSON.parse(match[1])
-      const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || []
-      const videosTab = tabs.find(t => t?.tabRenderer?.title === 'Videos')
-      const items = videosTab?.tabRenderer?.content?.richGridRenderer?.contents || []
-      const videos = items
-        .map(item => {
-          const video = item?.richItemRenderer?.content?.videoRenderer
-          if (!video?.videoId) return null
-          return { videoId: video.videoId, title: video.title?.runs?.[0]?.text || '' }
-        })
-        .filter(Boolean)
-      if (videos.length > 0) return videos
-    } catch { /* fallthrough */ }
-  }
-  const ids = [...new Set([...html.matchAll(/"videoId":"([^"]{11})"/g)].map(m => m[1]))]
-  const titleMap = {}
-  for (const m of html.matchAll(/"videoId":"([^"]{11})"[^}]*?"text":"([^"]+)"/g)) {
-    if (!titleMap[m[1]]) titleMap[m[1]] = m[2]
-  }
-  return ids.map(id => ({ videoId: id, title: titleMap[id] || '' }))
+function getChannelVideos(handle) {
+  // yt-dlp --flat-playlist gets every video ID + title with full pagination
+  const output = execSync(
+    `yt-dlp --flat-playlist --print "%(id)s|%(title)s" --ffmpeg-location /Users/elijahbryant/bin "https://www.youtube.com/@${handle}/videos" 2>/dev/null`,
+    { timeout: 60000, maxBuffer: 10 * 1024 * 1024 }
+  ).toString().trim()
+
+  return output.split('\n')
+    .filter(Boolean)
+    .map(line => {
+      const sep = line.indexOf('|')
+      const videoId = line.slice(0, sep).trim()
+      const title = line.slice(sep + 1).trim()
+      return { videoId, title }
+    })
+    .filter(v => v.videoId?.length === 11)
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────
