@@ -18,11 +18,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Get un-notified waitlist emails
+  // Get approved + confirmed + un-notified waitlist entries
   const { data: waitlist, error } = await supabase
     .from('waitlist')
-    .select('id, email')
+    .select('id, email, name')
     .eq('notified', false)
+    .eq('confirmed', true)
+    .eq('approved', true)
     .order('created_at', { ascending: true })
 
   if (error || !waitlist?.length) {

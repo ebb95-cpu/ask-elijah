@@ -359,6 +359,8 @@ function AskPageInner() {
   const [returnEntry, setReturnEntry] = useState<JournalEntry | null>(null)
   const [betaSpotsLeft, setBetaSpotsLeft] = useState<number | null>(null)
   const [waitlistEmail, setWaitlistEmail] = useState('')
+  const [waitlistName, setWaitlistName] = useState('')
+  const [waitlistChallenge, setWaitlistChallenge] = useState('')
   const [waitlistDone, setWaitlistDone] = useState(false)
   const [waitlistLoading, setWaitlistLoading] = useState(false)
   const [reflectionText, setReflectionText] = useState('')
@@ -609,13 +611,17 @@ function AskPageInner() {
   // Beta full — waitlist screen
   if (mode === 'beta_full') {
     const handleWaitlist = async () => {
-      if (!waitlistEmail.trim()) return
+      if (!waitlistEmail.trim() || !waitlistName.trim()) return
       setWaitlistLoading(true)
       try {
         await fetch('/api/waitlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: waitlistEmail.trim() }),
+          body: JSON.stringify({
+            email: waitlistEmail.trim(),
+            name: waitlistName.trim(),
+            challenge: waitlistChallenge.trim(),
+          }),
         })
         posthog?.capture('waitlist_joined', { email: waitlistEmail.trim().toLowerCase() })
         setWaitlistDone(true)
@@ -638,33 +644,59 @@ function AskPageInner() {
                 <p className="text-xs text-gray-600 tracking-widest uppercase mb-6">Beta</p>
                 <h1 className="text-3xl font-bold mb-4 leading-tight">This week&apos;s spots are full.</h1>
                 <p className="text-gray-500 text-sm leading-relaxed mb-10">
-                  Elijah is answering questions personally. When the next wave opens, you&apos;ll be the first to know.
+                  Elijah is answering questions personally. Drop your info and you&apos;ll be first when the next wave opens.
                 </p>
 
-                <input
-                  type="email"
-                  autoFocus
-                  placeholder="your@email.com"
-                  value={waitlistEmail}
-                  onChange={(e) => setWaitlistEmail(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleWaitlist() }}
-                  className="w-full bg-transparent border-b border-gray-700 focus:border-white pb-3 text-xl text-center text-white placeholder-gray-700 outline-none transition-colors mb-8 block"
-                />
+                <div className="space-y-6 mb-8 text-left">
+                  <div>
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="Your name"
+                      value={waitlistName}
+                      onChange={(e) => setWaitlistName(e.target.value)}
+                      className="w-full bg-transparent border-b border-gray-700 focus:border-white pb-3 text-lg text-center text-white placeholder-gray-700 outline-none transition-colors block"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="email"
+                      placeholder="your@email.com"
+                      value={waitlistEmail}
+                      onChange={(e) => setWaitlistEmail(e.target.value)}
+                      className="w-full bg-transparent border-b border-gray-700 focus:border-white pb-3 text-lg text-center text-white placeholder-gray-700 outline-none transition-colors block"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="What are you working through right now?"
+                      value={waitlistChallenge}
+                      onChange={(e) => setWaitlistChallenge(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleWaitlist() }}
+                      className="w-full bg-transparent border-b border-gray-700 focus:border-white pb-3 text-lg text-center text-white placeholder-gray-700 outline-none transition-colors block"
+                    />
+                  </div>
+                </div>
 
                 <button
                   onClick={handleWaitlist}
-                  disabled={!waitlistEmail.trim() || waitlistLoading}
+                  disabled={!waitlistEmail.trim() || !waitlistName.trim() || waitlistLoading}
                   className="w-full bg-white text-black py-3 text-sm font-semibold tracking-tight disabled:opacity-30 hover:opacity-80 transition-opacity"
                 >
-                  {waitlistLoading ? 'Saving...' : 'Notify me when spots open →'}
+                  {waitlistLoading ? 'Saving...' : 'Get notified →'}
                 </button>
               </>
             ) : (
               <>
                 <div className="w-2 h-2 bg-white rounded-full mx-auto mb-10" />
-                <h1 className="text-3xl font-bold mb-4">You&apos;re on the list.</h1>
-                <p className="text-gray-500 text-sm leading-relaxed">
-                  When the next wave opens, you&apos;ll get an email before anyone else.
+                <h1 className="text-3xl font-bold mb-4">Check your email.</h1>
+                <p className="text-gray-500 text-sm leading-relaxed mb-2">
+                  We sent a confirmation to
+                </p>
+                <p className="text-white font-semibold mb-6">{waitlistEmail}</p>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Click the link to lock in your spot. When access opens, you&apos;ll be first.
                 </p>
               </>
             )}

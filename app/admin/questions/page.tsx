@@ -513,6 +513,17 @@ interface DashboardStats {
   avgResponseHours: number | null
 }
 
+interface WaitlistEntry {
+  id: string
+  email: string
+  name: string | null
+  challenge: string | null
+  confirmed: boolean
+  approved: boolean
+  notified: boolean
+  created_at: string
+}
+
 export default function AdminQuestionsPage() {
   const [items, setItems] = useState<QueueItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -522,6 +533,8 @@ export default function AdminQuestionsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [dashStats, setDashStats] = useState<DashboardStats | null>(null)
   const [waitlistCount, setWaitlistCount] = useState<number | null>(null)
+  const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>([])
+  const [showWaitlist, setShowWaitlist] = useState(false)
 
   // Run research state
   const [researching, setResearching] = useState(false)
@@ -641,10 +654,27 @@ export default function AdminQuestionsPage() {
     loadDashStats()
     fetch('/api/waitlist')
       .then(r => r.json())
-      .then(d => setWaitlistCount((d.waitlist || []).filter((w: { notified: boolean }) => !w.notified).length))
+      .then(d => {
+        const list: WaitlistEntry[] = d.waitlist || []
+        setWaitlistEntries(list)
+        setWaitlistCount(list.filter(w => w.approved && w.confirmed && !w.notified).length)
+      })
       .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  async function handleApproveEntry(id: string, approved: boolean) {
+    await fetch('/api/admin/approve-waitlist-entry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, approved }),
+    })
+    setWaitlistEntries(prev => prev.map(w => w.id === id ? { ...w, approved } : w))
+    setWaitlistCount(prev => {
+      const updated = waitlistEntries.map(w => w.id === id ? { ...w, approved } : w)
+      return updated.filter(w => w.approved && w.confirmed && !w.notified).length
+    })
+  }
 
   async function handleNotifyWaitlist() {
     if (!confirm(`Email all ${waitlistCount} people on the waitlist that spots are open?`)) return
@@ -888,6 +918,91 @@ export default function AdminQuestionsPage() {
           Skipped
         </span>
       </div>
+
+      {/* Waitlist panel */}
+      {waitlistEntries.length > 0 && (
+        <div style={{ marginBottom: '32px', border: '1px solid #1a1a1a', borderRadius: '8px', overflow: 'hidden' }}>
+          <button
+            onClick={() => setShowWaitlist(v => !v)}
+            style={{
+              width: '100%', background: '#0a0a0a', border: 'none', padding: '14px 16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              cursor: 'pointer', fontFamily: '-apple-system, sans-serif',
+            }}
+          >
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#ffffff' }}>
+              Waitlist ({waitlistEntries.length})
+            </span>
+            <span style={{ fontSize: '11px', color: '#555' }}>{showWaitlist ? '▲ Hide' : '▼ Show'}</span>
+          </button>
+
+          {showWaitlist && (
+            <div>
+              {waitlistEntries.map((entry) => (
+                <div
+                  key={entry.id}
+                  style={{
+                    padding: '14px 16px',
+                    borderTop: '1px solid #1a1a1a',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    background: entry.approved ? '#0a1a0a' : '#0a0a0a',
+                  }}
+                >
+                  {/* Status dot */}
+                  <div style={{ paddingTop: '4px', flexShrink: 0 }}>
+                    <div style={{
+                      width: '8px', height: '8px', borderRadius: '50%',
+                      background: !entry.confirmed ? '#555' : entry.approved ? '#22c55e' : '#f59e0b',
+                    }} />
+                  </div>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', margin: '0 0 2px', fontFamily: '-apple-system, sans-serif' }}>
+                      {entry.name || '—'}
+                    </p>
+                    <p style={{ fontSize: '12px', color: '#555', margin: '0 0 4px', fontFamily: '-apple-system, sans-serif' }}>
+                      {entry.email}
+                    </p>
+                    {entry.challenge && (
+                      <p style={{ fontSize: '12px', color: '#777', margin: 0, fontStyle: 'italic', fontFamily: '-apple-system, sans-serif' }}>
+                        &ldquo;{entry.challenge}&rdquo;
+                      </p>
+                    )}
+                    {!entry.confirmed && (
+                      <p style={{ fontSize: '11px', color: '#555', margin: '4px 0 0', fontFamily: '-apple-system, sans-serif' }}>
+                        Not confirmed yet
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Approve / unapprove */}
+                  {entry.confirmed && (
+                    <button
+                      onClick={() => handleApproveEntry(entry.id, !entry.approved)}
+                      style={{
+                        flexShrink: 0,
+                        background: 'none',
+                        border: `1px solid ${entry.approved ? '#2a5a2a' : '#2a2a2a'}`,
+                        borderRadius: '4px',
+                        padding: '4px 10px',
+                        fontSize: '11px',
+                        color: entry.approved ? '#22c55e' : '#777',
+                        cursor: 'pointer',
+                        fontFamily: '-apple-system, sans-serif',
+                      }}
+                    >
+                      {entry.approved ? 'Approved ✓' : 'Approve'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Search bar */}
       <div style={{ marginBottom: '24px' }}>
