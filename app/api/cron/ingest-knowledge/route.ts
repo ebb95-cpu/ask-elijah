@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 800
+export const maxDuration = 300
 
 const PINECONE_HOST = process.env.PINECONE_HOST!
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY!
