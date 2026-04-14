@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   const { email } = await req.json()
-  const isAdmin = email?.trim().toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()
-  return NextResponse.json({ isAdmin })
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase() ?? ''
+  const incoming = email?.trim().toLowerCase() ?? ''
+  const isAdmin = incoming !== '' && incoming === adminEmail
+  return NextResponse.json({ isAdmin, debug: { adminEmail, incoming } })
 }
