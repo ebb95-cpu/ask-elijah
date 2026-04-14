@@ -78,14 +78,14 @@ export default function SignInPage() {
     setLoading(true)
     setError('')
     try {
-      const supabase = getSupabaseClient()
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
       })
-      if (authError) throw authError
+      if (!res.ok) throw new Error('Wrong password')
       router.push('/admin/questions')
-    } catch (err: unknown) {
+    } catch {
       setError('Wrong password.')
       setLoading(false)
     }
