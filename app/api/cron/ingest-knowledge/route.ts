@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRequire } from 'module'
 import { google } from 'googleapis'
-const require = createRequire(import.meta.url)
-const pdfParse = require('pdf-parse')
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 800
@@ -381,7 +378,8 @@ async function ingestGoogleDrivePdfs(): Promise<number> {
       )
       const buffer = Buffer.from(dlRes.data as ArrayBuffer)
 
-      // Parse PDF text
+      // Parse PDF text (dynamic import avoids build-time file-system error)
+      const { default: pdfParse } = await import('pdf-parse')
       const parsed = await pdfParse(buffer)
       const text: string = parsed.text || ''
       if (text.length < 200) continue
