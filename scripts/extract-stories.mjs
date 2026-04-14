@@ -102,13 +102,27 @@ async function downloadAndTranscribe(videoId, title) {
   if (existsSync(audioPath)) unlinkSync(audioPath)
 
   try {
-    // Download at low bitrate so even long videos stay small
+    // Step 1: download raw audio in whatever format YouTube provides
+    const rawPath = join(TMP_DIR, `${videoId}.raw`)
     execSync(
-      `yt-dlp -x --audio-format mp3 --audio-quality 5 --postprocessor-args "ffmpeg:-ar 16000 -ac 1 -b:a 64k" --ffmpeg-location /Users/elijahbryant/bin -o "${audioPath}" "https://youtube.com/watch?v=${videoId}" --quiet`,
+      `yt-dlp -x --ffmpeg-location /Users/elijahbryant/bin -o "${rawPath}.%(ext)s" "https://youtube.com/watch?v=${videoId}" --quiet`,
       { timeout: 300000 }
     )
+
+    // Find the downloaded file
+    const { readdirSync: rd } = await import('fs')
+    const rawFile = rd(TMP_DIR).find(f => f.startsWith(`${videoId}.raw`) && !f.endsWith('.mp3'))
+    if (!rawFile) throw new Error('Raw audio file not found after download')
+
+    // Step 2: convert to low-bitrate mono mp3
+    execSync(
+      `${FFMPEG} -i "${join(TMP_DIR, rawFile)}" -ar 16000 -ac 1 -b:a 64k "${audioPath}" -y -loglevel quiet`,
+      { timeout: 120000 }
+    )
+
+    try { unlinkSync(join(TMP_DIR, rawFile)) } catch {}
   } catch (err) {
-    throw new Error(`yt-dlp failed: ${err.message?.slice(0, 100)}`)
+    throw new Error(`download/convert failed: ${err.message?.slice(0, 100)}`)
   }
 
   if (!existsSync(audioPath)) throw new Error('Audio file not created')

@@ -61,11 +61,26 @@ async function downloadAudio(videoId) {
   const audioPath = join(TMP_DIR, `${videoId}.mp3`)
   if (existsSync(audioPath)) unlinkSync(audioPath)
 
-  // Download at low bitrate (64k) so even long videos stay small
+  // Step 1: download raw audio in whatever format YouTube provides
+  const rawPath = join(TMP_DIR, `${videoId}.raw`)
   execSync(
-    `yt-dlp -x --audio-format mp3 --audio-quality 5 --postprocessor-args "ffmpeg:-ar 16000 -ac 1 -b:a 64k" --ffmpeg-location /Users/elijahbryant/bin -o "${audioPath}" "https://youtube.com/watch?v=${videoId}" --quiet`,
+    `yt-dlp -x --ffmpeg-location /Users/elijahbryant/bin -o "${rawPath}.%(ext)s" "https://youtube.com/watch?v=${videoId}" --quiet`,
     { timeout: 300000 }
   )
+
+  // Find the downloaded file (extension may vary)
+  const { readdirSync: rd } = await import('fs')
+  const rawFile = rd(TMP_DIR).find(f => f.startsWith(`${videoId}.raw`) && !f.endsWith('.mp3'))
+  if (!rawFile) throw new Error('Raw audio file not found after download')
+
+  // Step 2: convert to low-bitrate mono mp3 with ffmpeg (small enough for Whisper)
+  execSync(
+    `${FFMPEG} -i "${join(TMP_DIR, rawFile)}" -ar 16000 -ac 1 -b:a 64k "${audioPath}" -y -loglevel quiet`,
+    { timeout: 120000 }
+  )
+
+  // Clean up raw file
+  try { unlinkSync(join(TMP_DIR, rawFile)) } catch {}
 
   if (!existsSync(audioPath)) throw new Error('Audio file not created')
   return audioPath
