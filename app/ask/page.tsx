@@ -89,7 +89,7 @@ const STRUGGLES = [
   "Dealing with a tough coach",
 ]
 
-type Mode = 'input' | 'email_gate' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt'
+type Mode = 'input' | 'email_gate' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt' | 'beta_full'
 
 type JournalEntry = {
   id: string
@@ -357,6 +357,10 @@ function AskPageInner() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [topQuestions, setTopQuestions] = useState<{ id: string; question: string; upvote_count: number }[]>([])
   const [returnEntry, setReturnEntry] = useState<JournalEntry | null>(null)
+  const [betaSpotsLeft, setBetaSpotsLeft] = useState<number | null>(null)
+  const [waitlistEmail, setWaitlistEmail] = useState('')
+  const [waitlistDone, setWaitlistDone] = useState(false)
+  const [waitlistLoading, setWaitlistLoading] = useState(false)
   const [reflectionText, setReflectionText] = useState('')
   const [reflectionSubmitting, setReflectionSubmitting] = useState(false)
   const [votedIds, setVotedIds] = useState<Set<string>>(new Set())
@@ -407,6 +411,20 @@ function AskPageInner() {
     fetch('/api/browse')
       .then(r => r.json())
       .then(d => setTopQuestions((d.questions || []).slice(0, 6)))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/beta-status')
+      .then(r => r.json())
+      .then(d => {
+        if (d.isCapped) {
+          setMode('beta_full')
+          posthog?.capture('beta_cap_hit')
+        } else if (d.spotsLeft !== null) {
+          setBetaSpotsLeft(d.spotsLeft)
+        }
+      })
       .catch(() => {})
   }, [])
 
@@ -586,6 +604,74 @@ function AskPageInner() {
         body: JSON.stringify({ question_id: questionId, email }),
       })
     } catch { /* fail silently */ }
+  }
+
+  // Beta full — waitlist screen
+  if (mode === 'beta_full') {
+    const handleWaitlist = async () => {
+      if (!waitlistEmail.trim()) return
+      setWaitlistLoading(true)
+      try {
+        await fetch('/api/waitlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: waitlistEmail.trim() }),
+        })
+        posthog?.capture('waitlist_joined', { email: waitlistEmail.trim().toLowerCase() })
+        setWaitlistDone(true)
+      } catch { /* fail silently */ }
+      setWaitlistLoading(false)
+    }
+
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-6 py-5">
+          <div className="w-12" />
+          <Logo dark />
+          <div className="w-12" />
+        </nav>
+
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20">
+          <div className="w-full max-w-sm text-center">
+            {!waitlistDone ? (
+              <>
+                <p className="text-xs text-gray-600 tracking-widest uppercase mb-6">Beta</p>
+                <h1 className="text-3xl font-bold mb-4 leading-tight">This week&apos;s spots are full.</h1>
+                <p className="text-gray-500 text-sm leading-relaxed mb-10">
+                  Elijah is answering questions personally. When the next wave opens, you&apos;ll be the first to know.
+                </p>
+
+                <input
+                  type="email"
+                  autoFocus
+                  placeholder="your@email.com"
+                  value={waitlistEmail}
+                  onChange={(e) => setWaitlistEmail(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleWaitlist() }}
+                  className="w-full bg-transparent border-b border-gray-700 focus:border-white pb-3 text-xl text-center text-white placeholder-gray-700 outline-none transition-colors mb-8 block"
+                />
+
+                <button
+                  onClick={handleWaitlist}
+                  disabled={!waitlistEmail.trim() || waitlistLoading}
+                  className="w-full bg-white text-black py-3 text-sm font-semibold tracking-tight disabled:opacity-30 hover:opacity-80 transition-opacity"
+                >
+                  {waitlistLoading ? 'Saving...' : 'Notify me when spots open →'}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 bg-white rounded-full mx-auto mb-10" />
+                <h1 className="text-3xl font-bold mb-4">You&apos;re on the list.</h1>
+                <p className="text-gray-500 text-sm leading-relaxed">
+                  When the next wave opens, you&apos;ll get an email before anyone else.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Return visit — reflection prompt
@@ -784,6 +870,15 @@ function AskPageInner() {
             <Link href="/sign-in" className="text-xs text-gray-500 hover:text-white transition-colors">Sign in</Link>
           )}
         </nav>
+
+        {/* Beta spots remaining banner */}
+        {betaSpotsLeft !== null && betaSpotsLeft <= 10 && (
+          <div className="text-center py-2 px-6">
+            <p className="text-xs text-gray-600">
+              {betaSpotsLeft === 0 ? 'Beta is full' : `${betaSpotsLeft} beta spot${betaSpotsLeft === 1 ? '' : 's'} left`}
+            </p>
+          </div>
+        )}
 
         {/* Desktop: side by side. Mobile: stacked (ask first) */}
         <div className="flex-1 flex flex-col md:flex-row">

@@ -521,10 +521,15 @@ export default function AdminQuestionsPage() {
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [dashStats, setDashStats] = useState<DashboardStats | null>(null)
+  const [waitlistCount, setWaitlistCount] = useState<number | null>(null)
 
   // Run research state
   const [researching, setResearching] = useState(false)
   const [researchResult, setResearchResult] = useState<string | null>(null)
+
+  // Notify waitlist state
+  const [notifying, setNotifying] = useState(false)
+  const [notifyResult, setNotifyResult] = useState<string | null>(null)
 
   const supabase = getSupabaseClient()
 
@@ -634,8 +639,32 @@ export default function AdminQuestionsPage() {
 
   useEffect(() => {
     loadDashStats()
+    fetch('/api/waitlist')
+      .then(r => r.json())
+      .then(d => setWaitlistCount((d.waitlist || []).filter((w: { notified: boolean }) => !w.notified).length))
+      .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  async function handleNotifyWaitlist() {
+    if (!confirm(`Email all ${waitlistCount} people on the waitlist that spots are open?`)) return
+    setNotifying(true)
+    setNotifyResult(null)
+    try {
+      const res = await fetch('/api/admin/notify-waitlist', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setNotifyResult(`Error: ${data.error || 'Unknown'}`)
+      } else {
+        setNotifyResult(`Sent to ${data.sent} people`)
+        setWaitlistCount(0)
+      }
+    } catch {
+      setNotifyResult('Error: Network failure')
+    } finally {
+      setNotifying(false)
+    }
+  }
 
   function removeItem(id: string) {
     setItems((prev) => prev.filter((i) => i.data.id !== id))
@@ -714,6 +743,36 @@ export default function AdminQuestionsPage() {
           Question Queue
         </h1>
 
+        {/* Action buttons */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+
+        {/* Notify waitlist button */}
+        {waitlistCount !== null && waitlistCount > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+            <button
+              onClick={handleNotifyWaitlist}
+              disabled={notifying}
+              style={{
+                background: 'none',
+                border: '1px solid #2a5a2a',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                color: notifying ? '#555' : '#4ade80',
+                cursor: notifying ? 'wait' : 'pointer',
+                fontFamily: '-apple-system, sans-serif',
+              }}
+            >
+              {notifying ? 'Sending...' : `Notify ${waitlistCount} on waitlist`}
+            </button>
+            {notifyResult && (
+              <span style={{ fontSize: '11px', color: notifyResult.startsWith('Error') ? '#ef4444' : '#22c55e', fontFamily: '-apple-system, sans-serif' }}>
+                {notifyResult}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Run Research button */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
           <button
@@ -752,10 +811,12 @@ export default function AdminQuestionsPage() {
             </span>
           )}
         </div>
+
+        </div>{/* end action buttons */}
       </div>
 
       {/* Dashboard stats grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '32px' }}>
         {[
           {
             label: 'Total Players',
@@ -782,6 +843,11 @@ export default function AdminQuestionsPage() {
                 : `${Math.round(dashStats.avgResponseHours / 24)}d`
               : '—',
             sub: 'time to answer',
+          },
+          {
+            label: 'Waitlist',
+            value: waitlistCount === null ? '—' : waitlistCount,
+            sub: 'waiting for access',
           },
         ].map((stat) => (
           <div
