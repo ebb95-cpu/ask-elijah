@@ -89,7 +89,7 @@ const STRUGGLES = [
   "Dealing with a tough coach",
 ]
 
-type Mode = 'input' | 'email_gate' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt' | 'beta_full'
+type Mode = 'input' | 'email_gate' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt' | 'beta_full' | 'paywall'
 
 type JournalEntry = {
   id: string
@@ -367,6 +367,8 @@ function AskPageInner() {
   const [reflectionText, setReflectionText] = useState('')
   const [reflectionSubmitting, setReflectionSubmitting] = useState(false)
   const [votedIds, setVotedIds] = useState<Set<string>>(new Set())
+  const [checkoutLoading, setCheckoutLoading] = useState<'founding' | 'regular' | null>(null)
+  const [upgradedSuccess, setUpgradedSuccess] = useState(false)
 
   // Onboarding state
   const [onboardStep, setOnboardStep] = useState(0)
@@ -431,6 +433,15 @@ function AskPageInner() {
       .catch(() => {})
   }, [])
 
+  // Handle post-upgrade redirect
+  useEffect(() => {
+    const upgraded = searchParams.get('upgraded')
+    if (upgraded === 'true') {
+      setUpgradedSuccess(true)
+      setTimeout(() => setUpgradedSuccess(false), 6000)
+    }
+  }, [])
+
   // Returning user: check if they have an answered question with no reflection
   useEffect(() => {
     const storedEmail = localStorage.getItem('ask_elijah_email')
@@ -479,13 +490,24 @@ function AskPageInner() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleQuestionSubmit() }
   }
 
-  // Step 2: email submitted → call API
+  // Step 2: email submitted → check free tier → call API
   const handleEmailSubmit = async () => {
     if (!email.trim()) { setEmailError('Email is required to get your answer.'); return }
     if (!ageConfirmed) { setEmailError('Please confirm you are 13 or older.'); return }
     setEmailError('')
     posthog?.capture('email_submitted', { email: email.trim().toLowerCase() })
     posthog?.identify(email.trim().toLowerCase(), { email: email.trim().toLowerCase() })
+
+    // Check subscription/free tier before submitting
+    try {
+      const statusRes = await fetch(`/api/subscription-status?email=${encodeURIComponent(email.trim().toLowerCase())}`)
+      const statusData = await statusRes.json()
+      if (!statusData.canAsk) {
+        setMode('paywall')
+        return
+      }
+    } catch { /* fail-open — proceed with API call */ }
+
     setMode('loading')
     incrementQuestionCount()
     sessionStorage.setItem('user_email', email.trim().toLowerCase())
@@ -504,6 +526,10 @@ function AskPageInner() {
       const data = await res.json()
 
       if (!res.ok) {
+        if (res.status === 402 || data.error === 'free_limit_reached') {
+          setMode('paywall')
+          return
+        }
         setEmailError(data.error || 'Something went wrong.')
         setMode('email_gate')
         return
@@ -596,6 +622,28 @@ function AskPageInner() {
     setMode('upvote_prompt')
   }
 
+  const handleStripeCheckout = async (tier: 'founding' | 'regular') => {
+    const priceId = tier === 'founding'
+      ? process.env.NEXT_PUBLIC_STRIPE_FOUNDING_PRICE_ID
+      : process.env.NEXT_PUBLIC_STRIPE_REGULAR_PRICE_ID
+    if (!priceId) return
+    setCheckoutLoading(tier)
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          priceId,
+          isFoundingMember: tier === 'founding',
+        }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+    } catch { /* fail silently */ }
+    setCheckoutLoading(null)
+  }
+
   const handleUpvote = async (questionId: string) => {
     const newVoted = new Set(votedIds)
     if (newVoted.has(questionId)) {
@@ -611,6 +659,85 @@ function AskPageInner() {
         body: JSON.stringify({ question_id: questionId, email }),
       })
     } catch { /* fail silently */ }
+  }
+
+  // Paywall — free tier limit reached
+  if (mode === 'paywall') {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-6 py-5">
+          <button onClick={() => setMode('email_gate')} className="text-gray-500 hover:text-white transition-colors text-sm">
+            ← Back
+          </button>
+          <Logo dark />
+          <div className="w-16" />
+        </nav>
+
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-16">
+          <div className="w-full max-w-md">
+            <p className="text-xs text-gray-600 uppercase tracking-widest mb-5 text-center">Free tier</p>
+            <h2 className="text-3xl font-bold mb-3 leading-tight text-center">
+              You&apos;ve used your<br />free question this week.
+            </h2>
+            <p className="text-gray-500 text-sm text-center mb-12 leading-relaxed">
+              Unlock unlimited questions and get answers from Elijah in 24 hours.
+            </p>
+
+            {/* Founding Member — featured */}
+            <div className="border border-white p-7 mb-4 relative">
+              <div className="absolute -top-3 left-6">
+                <span className="bg-white text-black text-xs font-bold px-3 py-1 tracking-widest uppercase">Founding Member</span>
+              </div>
+              <div className="flex items-baseline gap-2 mb-1 mt-1">
+                <p className="text-4xl font-bold">$49</p>
+                <p className="text-gray-500 text-sm">/month</p>
+              </div>
+              <p className="text-gray-400 text-xs mb-1">Locked forever. Price never goes up.</p>
+              <p className="text-gray-600 text-xs mb-6">After founding closes, new members pay $79/mo</p>
+              <ul className="space-y-2 mb-7">
+                {['Unlimited questions — answered in 24hrs', 'Answers reviewed personally by Elijah', 'Your private question history', 'Founding member badge locked in forever'].map(item => (
+                  <li key={item} className="flex items-center gap-2 text-sm text-gray-300">
+                    <span className="text-white text-xs">✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => handleStripeCheckout('founding')}
+                disabled={checkoutLoading !== null}
+                className="w-full bg-white text-black py-3 text-sm font-bold hover:opacity-80 transition-opacity disabled:opacity-50"
+              >
+                {checkoutLoading === 'founding' ? 'Redirecting...' : 'Lock in $49/mo →'}
+              </button>
+            </div>
+
+            {/* Regular */}
+            <div className="border border-gray-800 p-7 mb-8">
+              <p className="text-xs text-gray-500 tracking-widest uppercase mb-3">Monthly</p>
+              <div className="flex items-baseline gap-2 mb-1">
+                <p className="text-4xl font-bold">$79</p>
+                <p className="text-gray-500 text-sm">/month</p>
+              </div>
+              <p className="text-gray-600 text-xs mb-6">Cancel anytime.</p>
+              <button
+                onClick={() => handleStripeCheckout('regular')}
+                disabled={checkoutLoading !== null}
+                className="w-full border border-gray-600 text-white py-3 text-sm font-semibold hover:border-white transition-colors disabled:opacity-50"
+              >
+                {checkoutLoading === 'regular' ? 'Redirecting...' : 'Get monthly →'}
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-700 text-center">
+              Free tier: 1 question per week.{' '}
+              <button onClick={() => setMode('input')} className="text-gray-600 hover:text-gray-400 underline underline-offset-2 transition-colors">
+                Come back next week
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Beta full — waitlist screen
@@ -908,8 +1035,15 @@ function AskPageInner() {
           )}
         </nav>
 
+        {/* Upgrade success banner */}
+        {upgradedSuccess && (
+          <div className="text-center py-3 px-6 bg-white/5 border-b border-gray-800">
+            <p className="text-sm text-white font-semibold">You&apos;re in. Welcome to Ask Elijah. Ask away.</p>
+          </div>
+        )}
+
         {/* Beta spots remaining banner */}
-        {betaSpotsLeft !== null && betaSpotsLeft <= 10 && (
+        {!upgradedSuccess && betaSpotsLeft !== null && betaSpotsLeft <= 10 && (
           <div className="text-center py-2 px-6">
             <p className="text-xs text-gray-600">
               {betaSpotsLeft === 0 ? 'Beta is full' : `${betaSpotsLeft} beta spot${betaSpotsLeft === 1 ? '' : 's'} left`}
