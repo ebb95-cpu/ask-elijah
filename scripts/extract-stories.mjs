@@ -1,19 +1,24 @@
 /**
- * Ask Elijah — Personal Story Extraction
+ * Ask Elijah — Personal Story Extraction (Whisper-powered)
  *
- * Reads all ingested YouTube transcripts + newsletters via their source APIs,
- * uses Claude to extract Elijah's personal stories from each piece of content,
- * then upserts them to Pinecone as source_type: 'personal_story' with
- * topic + trigger tags.
+ * Downloads audio from YouTube videos via yt-dlp, transcribes with
+ * OpenAI Whisper (word-for-word accurate), then uses Claude to extract
+ * Elijah's personal stories and upserts them to Pinecone.
  *
  * Usage:
- *   node scripts/extract-stories.mjs
- *   node scripts/extract-stories.mjs --newsletters
- *   node scripts/extract-stories.mjs --youtube
+ *   node scripts/extract-stories.mjs                 — newsletters + YouTube
+ *   node scripts/extract-stories.mjs --newsletters   — newsletters only
+ *   node scripts/extract-stories.mjs --youtube       — YouTube only
  */
 
-import { Innertube } from 'youtubei.js'
+import { execSync, exec } from 'child_process'
+import { existsSync, unlinkSync, mkdirSync } from 'fs'
+import { readFile } from 'fs/promises'
+import { join, basename } from 'path'
+import { tmpdir } from 'os'
 import Anthropic from '@anthropic-ai/sdk'
+import FormData from 'form-data'
+import { createReadStream } from 'fs'
 import { config } from 'dotenv'
 config({ path: '.env.local' })
 
@@ -21,8 +26,8 @@ const PINECONE_HOST = process.env.PINECONE_HOST
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY
 const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY
 const BEEHIIV_API_KEY = process.env.BEEHIIV_API_KEY
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const BEEHIIV_PUB_ID = 'pub_9471ed24-57d1-43c6-be5b-ee779941c348'
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 
 const YOUTUBE_CHANNELS = [
   { handle: 'ElijahBryant3', label: 'Elijah Bryant' },
@@ -30,13 +35,71 @@ const YOUTUBE_CHANNELS = [
 ]
 
 const HEADERS = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+const TMP_DIR = join(tmpdir(), 'ask-elijah-audio')
 
-const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY })
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 60)
+}
+
+// ── Whisper Transcription ───────────────────────────────────────────────────
+
+async function transcribeWithWhisper(audioPath) {
+  const form = new FormData()
+  form.append('file', createReadStream(audioPath))
+  form.append('model', 'whisper-1')
+  form.append('language', 'en')
+  form.append('response_format', 'text')
+
+  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      ...form.getHeaders(),
+    },
+    body: form,
+  })
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Whisper API error ${res.status}: ${err}`)
+  }
+
+  return await res.text()
+}
+
+async function downloadAndTranscribe(videoId, title) {
+  if (!existsSync(TMP_DIR)) mkdirSync(TMP_DIR, { recursive: true })
+
+  const audioPath = join(TMP_DIR, `${videoId}.mp3`)
+
+  // Clean up any previous attempt
+  if (existsSync(audioPath)) unlinkSync(audioPath)
+
+  try {
+    // Download audio only via yt-dlp, max 25MB (Whisper limit)
+    execSync(
+      `yt-dlp -x --audio-format mp3 --audio-quality 3 -o "${audioPath}" --max-filesize 25m "https://youtube.com/watch?v=${videoId}" --quiet`,
+      { timeout: 120000 }
+    )
+  } catch (err) {
+    throw new Error(`yt-dlp failed: ${err.message?.slice(0, 100)}`)
+  }
+
+  if (!existsSync(audioPath)) throw new Error('Audio file not created')
+
+  let transcript
+  try {
+    transcript = await transcribeWithWhisper(audioPath)
+  } finally {
+    // Always clean up audio file
+    if (existsSync(audioPath)) unlinkSync(audioPath)
+  }
+
+  return transcript
 }
 
 // ── Story Extraction via Claude ─────────────────────────────────────────────
@@ -61,7 +124,7 @@ From the text below, extract ALL personal stories. For each one:
 3. Assign ONE trigger (the emotional root) or null: fear_of_failure, embarrassment, external_pressure, self_doubt, frustration, loss_of_motivation, overthinking
 
 Return a JSON array only. No markdown. No explanation.
-Format: [{"story": "...", "topic": "...", "trigger": "..." }]
+Format: [{"story": "...", "topic": "...", "trigger": "..."}]
 Return [] if no personal stories are present.
 
 SOURCE: ${sourceTitle}
@@ -71,7 +134,6 @@ ${text.slice(0, 6000)}`,
     })
 
     const raw = res.content[0].type === 'text' ? res.content[0].text.trim() : '[]'
-    // Strip any markdown code fences
     const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim()
     const parsed = JSON.parse(cleaned)
     return Array.isArray(parsed) ? parsed : []
@@ -114,46 +176,6 @@ async function upsertStory(id, story, sourceTitle, topic, trigger) {
 
 // ── YouTube ─────────────────────────────────────────────────────────────────
 
-let _yt = null
-async function getYT() {
-  if (!_yt) {
-    _yt = await Innertube.create({ generate_session_locally: true })
-    _yt.session.on('auth-pending', () => {})
-  }
-  return _yt
-}
-
-const _warn = console.warn
-console.warn = (...args) => {
-  const msg = String(args[0] || '')
-  if (msg.includes('YOUTUBEJS') || msg.includes('Unable to find')) return
-  _warn(...args)
-}
-
-async function fetchTranscript(videoId) {
-  const yt = await getYT()
-  const info = await yt.getInfo(videoId)
-  const tracks = info.captions?.caption_tracks || []
-  if (!tracks.length) throw new Error('No captions')
-  const track =
-    tracks.find(t => t.language_code === 'en' && t.kind !== 'asr') ||
-    tracks.find(t => t.language_code === 'en') ||
-    tracks[0]
-  if (!track?.base_url) throw new Error('No usable track')
-  const res = await fetch(track.base_url + '&fmt=json3', { headers: HEADERS })
-  if (!res.ok) throw new Error(`Caption fetch failed: ${res.status}`)
-  const data = await res.json()
-  const text = (data.events || [])
-    .filter(e => e.segs)
-    .map(e => e.segs.map(s => s.utf8 || '').join(''))
-    .join(' ')
-    .replace(/\[.*?\]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-  if (!text) throw new Error('Empty transcript')
-  return text
-}
-
 async function getChannelVideos(handle) {
   const pageRes = await fetch(`https://www.youtube.com/@${handle}/videos`, { headers: HEADERS })
   if (!pageRes.ok) throw new Error(`Channel fetch failed: ${pageRes.status}`)
@@ -189,7 +211,7 @@ function isShortForm(title = '') {
 }
 
 async function processYouTube() {
-  console.log('\n📺 Extracting stories from YouTube transcripts...\n')
+  console.log('\n📺 Extracting stories from YouTube (Whisper transcription)...\n')
   let totalStories = 0
 
   for (const channel of YOUTUBE_CHANNELS) {
@@ -201,23 +223,28 @@ async function processYouTube() {
       console.log(`  ❌ Could not fetch channel: ${err.message}`)
       continue
     }
+    console.log(`  Found ${videos.length} videos\n`)
 
     for (let i = 0; i < videos.length; i++) {
       const { videoId, title } = videos[i]
       if (isShortForm(title)) continue
 
+      const label = (title || videoId).slice(0, 50)
+      process.stdout.write(`  [${i + 1}/${videos.length}] ${label}... `)
+
       let transcript
       try {
-        transcript = await fetchTranscript(videoId)
-      } catch {
+        transcript = await downloadAndTranscribe(videoId, title)
+      } catch (err) {
+        process.stdout.write(`skipped (${err.message.slice(0, 60)})\n`)
         await sleep(500)
         continue
       }
 
-      if (transcript.length < 400) continue
-
-      const label = (title || videoId).slice(0, 50)
-      process.stdout.write(`  [${i + 1}/${videos.length}] ${label}... `)
+      if (!transcript || transcript.length < 200) {
+        process.stdout.write(`skipped (transcript too short)\n`)
+        continue
+      }
 
       const stories = await extractStories(transcript, title || `YouTube: ${videoId}`)
 
@@ -232,8 +259,7 @@ async function processYouTube() {
         const { story, topic, trigger } = stories[j]
         if (!story?.trim()) continue
         try {
-          const id = `story_yt_${videoId}_${j}`
-          await upsertStory(id, story.trim(), title || `YouTube: ${videoId}`, topic, trigger)
+          await upsertStory(`story_yt_${videoId}_${j}`, story.trim(), title || `YouTube: ${videoId}`, topic, trigger)
           saved++
           await sleep(150)
         } catch (err) {
@@ -247,7 +273,7 @@ async function processYouTube() {
     }
   }
 
-  console.log(`\n  ✅ Total stories extracted from YouTube: ${totalStories}`)
+  console.log(`\n  ✅ Total stories from YouTube: ${totalStories}`)
 }
 
 // ── Newsletters ─────────────────────────────────────────────────────────────
@@ -310,8 +336,7 @@ async function processNewsletters() {
       const { story, topic, trigger } = stories[j]
       if (!story?.trim()) continue
       try {
-        const id = `story_nl_${slugify(title)}_${j}`
-        await upsertStory(id, story.trim(), title, topic, trigger)
+        await upsertStory(`story_nl_${slugify(title)}_${j}`, story.trim(), title, topic, trigger)
         saved++
         await sleep(150)
       } catch (err) {
@@ -324,7 +349,7 @@ async function processNewsletters() {
     await sleep(400)
   }
 
-  console.log(`\n  ✅ Total stories extracted from newsletters: ${totalStories}`)
+  console.log(`\n  ✅ Total stories from newsletters: ${totalStories}`)
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────
@@ -333,11 +358,12 @@ const args = process.argv.slice(2)
 const newslettersOnly = args.includes('--newsletters')
 const youtubeOnly = args.includes('--youtube')
 
-console.log('\n🚀 Ask Elijah — Personal Story Extraction\n')
-console.log('  This reads all ingested content, uses Claude to find Elijah\'s')
-console.log('  personal stories, and saves them to Pinecone as personal_story vectors.\n')
+console.log('\n🚀 Ask Elijah — Personal Story Extraction (Whisper)\n')
 
 if (!youtubeOnly) await processNewsletters()
 if (!newslettersOnly) await processYouTube()
+
+// Clean up temp dir
+try { execSync(`rm -rf "${TMP_DIR}"`) } catch {}
 
 console.log('\n✅ Done.\n')
