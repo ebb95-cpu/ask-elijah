@@ -14,7 +14,7 @@
 
 import { Innertube } from 'youtubei.js'
 import { config } from 'dotenv'
-config({ path: '.env.local' })
+config({ path: '.env.local', override: true })
 
 const PINECONE_HOST = process.env.PINECONE_HOST
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY

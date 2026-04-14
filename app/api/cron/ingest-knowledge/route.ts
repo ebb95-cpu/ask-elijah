@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRequire } from 'module'
+import { google } from 'googleapis'
+const require = createRequire(import.meta.url)
+const pdfParse = require('pdf-parse')
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -268,6 +272,136 @@ async function ingestYouTube(): Promise<number> {
   return count
 }
 
+// ── Google Drive PDFs ─────────────────────────────────────────────────────────
+
+const GDRIVE_FOLDER_ID = '1yWan7qgBSyAU19nundmdo9Bog9SJwEFs'
+
+const PDF_TOPICS = [
+  'confidence', 'pressure', 'consistency', 'focus', 'slump', 'coaching',
+  'team', 'mindset', 'motivation', 'identity', 'nutrition', 'recovery',
+  'workout', 'film', 'recruiting',
+] as const
+
+async function tagPdfWithClaude(text: string): Promise<string> {
+  const snippet = text.slice(0, 2000)
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.ANTHROPIC_API_KEY!,
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5',
+      max_tokens: 20,
+      messages: [{
+        role: 'user',
+        content: `Classify this athletic performance document into exactly one topic from this list:\n${PDF_TOPICS.join(', ')}\n\nRespond with only the single topic word.\n\nDocument excerpt:\n${snippet}`,
+      }],
+    }),
+  })
+  if (!res.ok) return 'mindset'
+  const data = await res.json()
+  const raw = (data.content?.[0]?.text || '').trim().toLowerCase()
+  return PDF_TOPICS.find(t => raw.includes(t)) || 'mindset'
+}
+
+async function listDrivePdfsRecursive(
+  drive: ReturnType<typeof google.drive>,
+  folderId: string,
+  folderName = ''
+): Promise<{ fileId: string; fileName: string; category: string }[]> {
+  const results: { fileId: string; fileName: string; category: string }[] = []
+  let pageToken: string | undefined
+
+  do {
+    const res = await drive.files.list({
+      q: `'${folderId}' in parents and trashed = false`,
+      fields: 'nextPageToken, files(id, name, mimeType)',
+      pageToken,
+    })
+    const files = res.data.files || []
+    pageToken = res.data.nextPageToken || undefined
+
+    for (const file of files) {
+      if (!file.id || !file.name) continue
+      if (file.mimeType === 'application/vnd.google-apps.folder') {
+        const subResults = await listDrivePdfsRecursive(drive, file.id, file.name)
+        results.push(...subResults)
+      } else if (file.mimeType === 'application/pdf') {
+        results.push({ fileId: file.id, fileName: file.name, category: folderName })
+      }
+    }
+  } while (pageToken)
+
+  return results
+}
+
+async function ingestGoogleDrivePdfs(): Promise<number> {
+  const keyData = JSON.parse(process.env.GDRIVE_SERVICE_ACCOUNT || '{}')
+  const auth = new google.auth.GoogleAuth({
+    credentials: keyData,
+    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+  })
+  const drive = google.drive({ version: 'v3', auth })
+
+  const pdfFiles = await listDrivePdfsRecursive(drive, GDRIVE_FOLDER_ID)
+  let count = 0
+
+  for (const { fileId, fileName, category } of pdfFiles) {
+    try {
+      // Download PDF
+      const dlRes = await drive.files.get(
+        { fileId, alt: 'media' },
+        { responseType: 'arraybuffer' }
+      )
+      const buffer = Buffer.from(dlRes.data as ArrayBuffer)
+
+      // Parse PDF text
+      const parsed = await pdfParse(buffer)
+      const text: string = parsed.text || ''
+      if (text.length < 200) continue
+
+      // Tag with Claude Haiku
+      const topic = await tagPdfWithClaude(text)
+
+      // Chunk and embed
+      const chunks = chunkText(text, 500, 80)
+      const vectors: any[] = []
+
+      for (let j = 0; j < chunks.length; j++) {
+        try {
+          const values = await embed(chunks[j])
+          vectors.push({
+            id: `gdrive_${fileId}_${j}`,
+            values,
+            metadata: {
+              text: chunks[j],
+              source_type: 'lead_magnet',
+              source_title: fileName,
+              category: category || 'uncategorized',
+              topic,
+              chunk_index: j,
+            },
+          })
+          await sleep(80)
+        } catch { /* skip chunk */ }
+      }
+
+      if (vectors.length) {
+        for (let k = 0; k < vectors.length; k += 50) {
+          await upsertVectors(vectors.slice(k, k + 50))
+        }
+        count++
+      }
+    } catch (e) {
+      console.error(`PDF ingest error for ${fileName}:`, e)
+    }
+  }
+
+  return count
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -281,8 +415,9 @@ export async function GET(req: NextRequest) {
   const newsletters = await ingestNewsletters().catch(e => { console.error(e); return 0 })
   const products = await ingestLeadMagnets().catch(e => { console.error(e); return 0 })
   const videos = await ingestYouTube().catch(e => { console.error(e); return 0 })
+  const pdfs = await ingestGoogleDrivePdfs().catch(e => { console.error(e); return 0 })
 
-  console.log(`Knowledge ingest complete — newsletters: ${newsletters}, products: ${products}, videos: ${videos}`)
+  console.log(`Knowledge ingest complete — newsletters: ${newsletters}, products: ${products}, videos: ${videos}, pdfs: ${pdfs}`)
 
-  return NextResponse.json({ newsletters, products, videos })
+  return NextResponse.json({ newsletters, products, videos, pdfs })
 }

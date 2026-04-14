@@ -219,41 +219,75 @@ async function embedQuestion(question: string): Promise<number[]> {
   return data.data[0].embedding
 }
 
-async function searchPinecone(embedding: number[], topK = 5): Promise<{
+async function searchPinecone(embedding: number[], topK = 5, topic?: string | null): Promise<{
   chunks: string[]
   sources: { title: string; url: string; type: string }[]
 }> {
-  const res = await fetch(`${process.env.PINECONE_HOST}/query`, {
-    method: 'POST',
-    headers: {
-      'Api-Key': process.env.PINECONE_API_KEY!,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ vector: embedding, topK, includeMetadata: true }),
-  })
-  if (!res.ok) throw new Error(`Pinecone query failed: ${res.status}`)
-  const data = await res.json()
+  const pineconeFetch = (body: object) =>
+    fetch(`${process.env.PINECONE_HOST}/query`, {
+      method: 'POST',
+      headers: {
+        'Api-Key': process.env.PINECONE_API_KEY!,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+
+  let filteredMatches: { score: number; metadata: Record<string, string> }[] = []
+  let unfilteredMatches: { score: number; metadata: Record<string, string> }[] = []
+
+  if (topic) {
+    const [filteredRes, unfilteredRes] = await Promise.all([
+      pineconeFetch({ vector: embedding, topK, includeMetadata: true, filter: { topic: { $eq: topic } } }),
+      pineconeFetch({ vector: embedding, topK, includeMetadata: true }),
+    ])
+    if (!filteredRes.ok) throw new Error(`Pinecone filtered query failed: ${filteredRes.status}`)
+    if (!unfilteredRes.ok) throw new Error(`Pinecone unfiltered query failed: ${unfilteredRes.status}`)
+    const [filteredData, unfilteredData] = await Promise.all([filteredRes.json(), unfilteredRes.json()])
+    filteredMatches = filteredData.matches || []
+    unfilteredMatches = unfilteredData.matches || []
+  } else {
+    const res = await pineconeFetch({ vector: embedding, topK, includeMetadata: true })
+    if (!res.ok) throw new Error(`Pinecone query failed: ${res.status}`)
+    const data = await res.json()
+    unfilteredMatches = data.matches || []
+  }
 
   const chunks: string[] = []
   const sources: { title: string; url: string; type: string }[] = []
-  const seen = new Set<string>()
+  const seenUrls = new Set<string>()
+  const seenTexts = new Set<string>()
 
-  for (const m of data.matches || []) {
-    if (m.score < 0.3) continue
+  const addMatch = (m: { score: number; metadata: Record<string, string> }) => {
+    if (m.score < 0.3) return
     const meta = m.metadata || {}
+    const text = meta.text || ''
+    if (seenTexts.has(text)) return
+    seenTexts.add(text)
+
     const source = meta.source_title || (meta.source_type === 'newsletter' ? 'Consistency Club Newsletter' : '')
     const label = source ? `[From: ${source}]` : ''
-    chunks.push(`${label}\n${meta.text}`.trim())
+    chunks.push(`${label}\n${text}`.trim())
 
     const url = meta.source_url || meta.video_url || ''
-    if (url && !seen.has(url)) {
-      seen.add(url)
+    if (url && !seenUrls.has(url)) {
+      seenUrls.add(url)
       sources.push({
         title: meta.source_title || 'Elijah Bryant',
         url,
         type: meta.source_type || 'video',
       })
     }
+  }
+
+  // Filtered results first, then unfiltered to fill remaining slots — cap total at 6
+  for (const m of filteredMatches) {
+    if (chunks.length >= 6) break
+    addMatch(m)
+  }
+  for (const m of unfilteredMatches) {
+    if (chunks.length >= 6) break
+    addMatch(m)
   }
 
   return { chunks, sources }
@@ -443,7 +477,7 @@ export async function POST(req: NextRequest) {
     let sources: { title: string; url: string; type: string }[] = []
     try {
       const embedding = await embedQuestion(queryForEmbedding)
-      const result = await searchPinecone(embedding)
+      const result = await searchPinecone(embedding, 5, topic)
       sources = result.sources
       if (result.chunks.length > 0) {
         hasChunks = true
