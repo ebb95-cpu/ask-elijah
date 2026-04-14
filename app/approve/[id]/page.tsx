@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 
 type QuestionRecord = {
@@ -11,21 +11,21 @@ type QuestionRecord = {
   created_at: string
 }
 
-type Stage = 'review' | 'regenerating' | 'approve' | 'sending' | 'sent'
-
 function ApprovePageInner() {
   const { id } = useParams<{ id: string }>()
   const searchParams = useSearchParams()
   const token = searchParams.get('token') || ''
 
   const [record, setRecord] = useState<QuestionRecord | null>(null)
-  const [draft, setDraft] = useState('')
-  const [context, setContext] = useState('')
-  const [finalAnswer, setFinalAnswer] = useState('')
+  const [answer, setAnswer] = useState('')
+  const [additions, setAdditions] = useState('')
   const [actionSteps, setActionSteps] = useState('')
-  const [stage, setStage] = useState<Stage>('review')
   const [loading, setLoading] = useState(true)
+  const [remixing, setRemixing] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
+  const answerRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     const fetchRecord = async () => {
@@ -34,8 +34,7 @@ function ApprovePageInner() {
         if (!res.ok) throw new Error('Not found or unauthorized')
         const data = await res.json()
         setRecord(data)
-        setDraft(data.answer)
-        setFinalAnswer(data.answer)
+        setAnswer(data.answer)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load')
       } finally {
@@ -46,38 +45,50 @@ function ApprovePageInner() {
     else { setError('Missing token'); setLoading(false) }
   }, [id, token])
 
-  const handleRegenerate = async () => {
-    if (!context.trim()) return
-    setStage('regenerating')
+  // Auto-resize answer textarea
+  useEffect(() => {
+    if (answerRef.current) {
+      answerRef.current.style.height = 'auto'
+      answerRef.current.style.height = `${answerRef.current.scrollHeight}px`
+    }
+  }, [answer])
+
+  const handleRemix = async () => {
+    if (!additions.trim() || remixing) return
+    setRemixing(true)
+    setError('')
     try {
       const res = await fetch('/api/regenerate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-token': token },
-        body: JSON.stringify({ question: record?.question, draft, context }),
+        body: JSON.stringify({ question: record?.question, draft: answer, context: additions }),
       })
-      if (!res.ok) throw new Error('Regeneration failed')
+      if (!res.ok) throw new Error('Remix failed')
       const data = await res.json()
-      setFinalAnswer(data.answer)
-      setStage('approve')
+      setAnswer(data.answer)
+      setAdditions('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed')
-      setStage('review')
+      setError(err instanceof Error ? err.message : 'Remix failed')
+    } finally {
+      setRemixing(false)
     }
   }
 
-  const handleApproveAndSend = async () => {
-    setStage('sending')
+  const handleApprove = async () => {
+    if (!answer.trim() || !actionSteps.trim() || sending) return
+    setSending(true)
+    setError('')
     try {
       const res = await fetch('/api/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-token': token },
-        body: JSON.stringify({ questionId: id, finalAnswer, actionSteps }),
+        body: JSON.stringify({ questionId: id, finalAnswer: answer, actionSteps }),
       })
       if (!res.ok) throw new Error('Failed to send')
-      setStage('sent')
+      setSent(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed')
-      setStage('approve')
+      setError(err instanceof Error ? err.message : 'Failed to send')
+      setSending(false)
     }
   }
 
@@ -89,7 +100,7 @@ function ApprovePageInner() {
     )
   }
 
-  if (error) {
+  if (error && !record) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <p className="text-red-400 text-sm">{error}</p>
@@ -97,7 +108,7 @@ function ApprovePageInner() {
     )
   }
 
-  if (stage === 'sent') {
+  if (sent) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4 text-center px-6">
         <div className="w-3 h-3 bg-white rounded-full" />
@@ -112,104 +123,115 @@ function ApprovePageInner() {
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-2xl mx-auto px-6 py-12">
 
-        <p className="text-xs text-gray-600 tracking-widest uppercase mb-8">Ask Elijah — Approval</p>
+        <p className="text-xs text-gray-600 tracking-widest uppercase mb-8">Ask Elijah — Review</p>
 
         {/* Question */}
-        <div className="border-l-2 border-gray-700 pl-4 mb-10">
-          <p className="text-xs text-gray-600 mb-2">From: {record?.email}</p>
-          <p className="text-xl font-semibold">{record?.question}</p>
+        <div className="border-l-2 border-gray-800 pl-4 mb-10">
+          <p className="text-xs text-gray-600 mb-1">From: {record?.email}</p>
+          <p className="text-lg font-semibold leading-snug">{record?.question}</p>
         </div>
 
-        {/* Stage: Review draft + add context */}
-        {(stage === 'review' || stage === 'regenerating') && (
-          <>
-            <div className="mb-8">
-              <p className="text-xs text-gray-600 tracking-widest uppercase mb-3">AI Draft</p>
-              <div className="bg-gray-950 border border-gray-800 p-4 text-gray-400 text-sm leading-relaxed">
-                {draft}
-              </div>
-            </div>
+        {/* Answer — editable */}
+        <div className="mb-2">
+          <p className="text-xs text-gray-600 tracking-widest uppercase mb-3">Answer</p>
+          <textarea
+            ref={answerRef}
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            className="w-full bg-transparent border border-gray-800 focus:border-gray-600 text-white text-base leading-relaxed p-5 outline-none resize-none transition-colors"
+            style={{ minHeight: '200px' }}
+          />
+        </div>
+        <p className="text-xs text-gray-700 mb-10">Edit directly or use Add &amp; Remix below.</p>
 
-            <div className="mb-8">
-              <p className="text-xs text-gray-600 tracking-widest uppercase mb-3">
-                Your real thoughts — add context, corrections, stories
-              </p>
-              <textarea
-                value={context}
-                onChange={(e) => setContext(e.target.value)}
-                rows={6}
-                autoFocus
-                placeholder={`What do you actually want to say about this? Write it in your own words.\n\nExamples:\n"I want to mention the time in EuroLeague when..."\n"The AI missed the point — the real issue is..."\n"I'd also add that recovery depends on..."`}
-                className="w-full bg-gray-950 border border-gray-700 focus:border-white text-white text-sm leading-relaxed p-4 outline-none resize-none transition-colors placeholder-gray-700"
-              />
-            </div>
+        {/* Add & Remix */}
+        <div className="mb-3">
+          <p className="text-xs text-gray-600 tracking-widest uppercase mb-3">Add your thoughts</p>
+          <textarea
+            value={additions}
+            onChange={(e) => setAdditions(e.target.value)}
+            rows={5}
+            placeholder={"What do you actually want to say?\n\n\"I remember when I was in EuroLeague and...\"\n\"The AI missed it — the real issue is...\"\n\"I'd add that the key is...\""}
+            className="w-full bg-transparent border border-gray-800 focus:border-gray-600 text-white text-sm leading-relaxed p-5 outline-none resize-none transition-colors placeholder-gray-800"
+          />
+        </div>
 
-            <div className="flex gap-4 items-center mb-4">
-              <button
-                onClick={handleRegenerate}
-                disabled={!context.trim() || stage === 'regenerating'}
-                className="bg-white text-black px-8 py-3 text-sm font-bold disabled:opacity-30 hover:opacity-80 transition-opacity"
-              >
-                {stage === 'regenerating' ? 'Regenerating...' : 'Regenerate with my context →'}
-              </button>
-              <button
-                onClick={() => { setFinalAnswer(draft); setStage('approve') }}
-                className="text-xs text-gray-600 hover:text-white transition-colors"
-              >
-                Skip — approve draft as-is
-              </button>
-            </div>
-            <p className="text-xs text-gray-700">
-              Claude will rewrite the answer using your real input in your voice.
-            </p>
-          </>
-        )}
+        {/* Three buttons */}
+        <div className="flex items-center gap-4 mb-12">
+          <button
+            onClick={handleRemix}
+            disabled={!additions.trim() || remixing}
+            style={{
+              background: additions.trim() && !remixing ? '#ffffff' : 'transparent',
+              color: additions.trim() && !remixing ? '#000000' : '#444444',
+              border: '1px solid ' + (additions.trim() && !remixing ? '#ffffff' : '#333333'),
+              padding: '10px 20px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: additions.trim() && !remixing ? 'pointer' : 'default',
+              fontFamily: '-apple-system, sans-serif',
+              transition: 'all 0.15s',
+            }}
+          >
+            {remixing ? 'Remixing...' : 'Add & Remix →'}
+          </button>
 
-        {/* Stage: Review regenerated answer + approve */}
-        {(stage === 'approve' || stage === 'sending') && (
-          <>
-            <div className="mb-6">
-              <p className="text-xs text-gray-600 tracking-widest uppercase mb-3">Answer — review before sending</p>
-              <textarea
-                value={finalAnswer}
-                onChange={(e) => setFinalAnswer(e.target.value)}
-                rows={12}
-                className="w-full bg-gray-950 border border-gray-700 focus:border-white text-white text-base leading-relaxed p-4 outline-none resize-none transition-colors"
-              />
-            </div>
+          <button
+            onClick={handleApprove}
+            disabled={!answer.trim() || !actionSteps.trim() || sending}
+            style={{
+              background: answer.trim() && actionSteps.trim() && !sending ? '#000000' : 'transparent',
+              color: answer.trim() && actionSteps.trim() && !sending ? '#ffffff' : '#444444',
+              border: '1px solid ' + (answer.trim() && actionSteps.trim() && !sending ? '#ffffff' : '#333333'),
+              padding: '10px 20px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: answer.trim() && actionSteps.trim() && !sending ? 'pointer' : 'default',
+              fontFamily: '-apple-system, sans-serif',
+              transition: 'all 0.15s',
+            }}
+          >
+            {sending ? 'Sending...' : `Approve & Send →`}
+          </button>
 
-            <div className="mb-8">
-              <p className="text-xs text-gray-600 tracking-widest uppercase mb-1">Action Steps</p>
-              <p className="text-xs text-gray-700 mb-3">Write 2–3 specific things they must do. These get sent in the answer email and used to hold them accountable 48 hours later.</p>
-              <textarea
-                value={actionSteps}
-                onChange={(e) => setActionSteps(e.target.value)}
-                rows={4}
-                placeholder={"1. Do 100 free throws tomorrow before practice — no music, full focus.\n2. Before your next game, write down one thing you're going to control.\n3. After the game, voice memo yourself for 60 seconds. What did you actually control?"}
-                className="w-full bg-gray-950 border border-gray-700 focus:border-white text-white text-sm leading-relaxed p-4 outline-none resize-none transition-colors placeholder-gray-800"
-              />
-            </div>
+          <button
+            onClick={() => window.history.back()}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '10px 0',
+              fontSize: '12px',
+              color: '#444444',
+              cursor: 'pointer',
+              fontFamily: '-apple-system, sans-serif',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#444444')}
+          >
+            Skip
+          </button>
+        </div>
 
-            <div className="flex gap-4 items-center mb-4">
-              <button
-                onClick={handleApproveAndSend}
-                disabled={!finalAnswer.trim() || !actionSteps.trim() || stage === 'sending'}
-                className="bg-white text-black px-8 py-3 text-sm font-bold disabled:opacity-30 hover:opacity-80 transition-opacity"
-              >
-                {stage === 'sending' ? 'Sending...' : `Approve & Send to ${record?.email} →`}
-              </button>
-              <button
-                onClick={() => setStage('review')}
-                className="text-xs text-gray-600 hover:text-white transition-colors"
-              >
-                ← Add more context
-              </button>
-            </div>
+        {/* Action Steps */}
+        <div className="border-t border-gray-900 pt-10">
+          <p className="text-xs text-gray-600 tracking-widest uppercase mb-1">Action Steps</p>
+          <p className="text-xs text-gray-700 mb-4">
+            2 to 3 things they must do. Specific enough that there is no excuse not to start today. Sent in the email and used for the 48hr follow-up.
+          </p>
+          <textarea
+            value={actionSteps}
+            onChange={(e) => setActionSteps(e.target.value)}
+            rows={4}
+            placeholder={"1. Before your next practice, write down one thing you are going to control. Just one.\n2. After the game, voice memo yourself for 60 seconds. What did you actually control?\n3. Do this for 7 days. Don't miss."}
+            className="w-full bg-transparent border border-gray-800 focus:border-gray-600 text-white text-sm leading-relaxed p-5 outline-none resize-none transition-colors placeholder-gray-800"
+          />
+          {!actionSteps.trim() && (
+            <p className="text-xs text-gray-700 mt-2">Required before you can approve.</p>
+          )}
+        </div>
 
-            <p className="text-xs text-gray-700">
-              Action steps are required. They'll be included in the email and used for the 48hr accountability follow-up.
-            </p>
-          </>
+        {error && (
+          <p className="text-red-400 text-xs mt-6">{error}</p>
         )}
 
       </div>

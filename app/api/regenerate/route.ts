@@ -15,13 +15,20 @@ export async function POST(req: NextRequest) {
 
   const prompt = `The original question was: "${question}"
 
-Here is the AI-generated draft answer:
+Here is the current draft answer:
 ${draft}
 
-Elijah has added his own real thoughts and context:
+Elijah has added his own real thoughts, stories, or corrections:
 ${context}
 
-Rewrite the answer in Elijah's voice, incorporating his personal context above. Keep it natural and human. Follow all the voice rules from your system prompt.`
+Rewrite the final answer weaving Elijah's additions into the draft. Follow this structure every time:
+1. Open by naming the exact pain or feeling they have — make them feel heard immediately
+2. Explain WHY this happens (the real mechanism — brain, body, how pressure works) in Elijah's voice, not as a fact recitation
+3. Give the solution grounded in Elijah's personal experience and what he added above
+4. End with ONE specific action they must take today — concrete enough that there is no excuse not to do it
+
+Use Elijah's real additions as the core. The draft is just scaffolding. His voice and his experience win every time.
+Keep it 4 to 8 sentences. No lists. No em dashes. First person throughout.`
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   const response = await anthropic.messages.create({
