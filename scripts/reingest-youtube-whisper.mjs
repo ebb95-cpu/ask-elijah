@@ -53,23 +53,27 @@ function chunkText(text, chunkSize = 600, overlap = 100) {
 
 // ── Whisper ─────────────────────────────────────────────────────────────────
 
+const FFMPEG = '/Users/elijahbryant/bin/ffmpeg'
+const MAX_WHISPER_BYTES = 24 * 1024 * 1024 // 24MB to stay safely under 25MB limit
+
 async function downloadAudio(videoId) {
   if (!existsSync(TMP_DIR)) mkdirSync(TMP_DIR, { recursive: true })
   const audioPath = join(TMP_DIR, `${videoId}.mp3`)
   if (existsSync(audioPath)) unlinkSync(audioPath)
 
+  // Download at low bitrate (64k) so even long videos stay small
   execSync(
-    `yt-dlp -x --audio-format mp3 --audio-quality 3 --ffmpeg-location /Users/elijahbryant/bin -o "${audioPath}" --max-filesize 25m "https://youtube.com/watch?v=${videoId}" --quiet`,
-    { timeout: 120000 }
+    `yt-dlp -x --audio-format mp3 --audio-quality 5 --postprocessor-args "ffmpeg:-ar 16000 -ac 1 -b:a 64k" --ffmpeg-location /Users/elijahbryant/bin -o "${audioPath}" "https://youtube.com/watch?v=${videoId}" --quiet`,
+    { timeout: 300000 }
   )
 
   if (!existsSync(audioPath)) throw new Error('Audio file not created')
   return audioPath
 }
 
-async function transcribeWithWhisper(audioPath) {
+async function transcribeChunk(chunkPath) {
   const form = new FormData()
-  form.append('file', createReadStream(audioPath))
+  form.append('file', createReadStream(chunkPath))
   form.append('model', 'whisper-1')
   form.append('language', 'en')
   form.append('response_format', 'text')
@@ -85,6 +89,47 @@ async function transcribeWithWhisper(audioPath) {
 
   if (!res.ok) throw new Error(`Whisper ${res.status}: ${await res.text()}`)
   return await res.text()
+}
+
+async function transcribeWithWhisper(audioPath) {
+  const { statSync } = await import('fs')
+  const fileSize = statSync(audioPath).size
+
+  // If file fits in one shot, send directly
+  if (fileSize <= MAX_WHISPER_BYTES) {
+    return await transcribeChunk(audioPath)
+  }
+
+  // Otherwise split into 10-minute chunks with ffmpeg and transcribe each
+  const chunkDir = join(TMP_DIR, `chunks_${Date.now()}`)
+  mkdirSync(chunkDir, { recursive: true })
+
+  try {
+    execSync(
+      `${FFMPEG} -i "${audioPath}" -f segment -segment_time 600 -c copy "${join(chunkDir, 'chunk_%03d.mp3')}" -y -loglevel quiet`,
+      { timeout: 120000 }
+    )
+
+    const { readdirSync } = await import('fs')
+    const chunks = readdirSync(chunkDir).filter(f => f.endsWith('.mp3')).sort()
+    const transcripts = []
+
+    for (const chunk of chunks) {
+      const chunkPath = join(chunkDir, chunk)
+      try {
+        const text = await transcribeChunk(chunkPath)
+        if (text?.trim()) transcripts.push(text.trim())
+        await sleep(500)
+      } catch (err) {
+        console.warn(`\n  ⚠️  Chunk ${chunk} failed: ${err.message}`)
+      }
+    }
+
+    return transcripts.join(' ')
+  } finally {
+    // Clean up chunks
+    try { execSync(`rm -rf "${chunkDir}"`) } catch {}
+  }
 }
 
 // ── Embed + Upsert ─────────────────────────────────────────────────────────
