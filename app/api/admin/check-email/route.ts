@@ -5,5 +5,5 @@ export async function POST(req: NextRequest) {
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase() ?? ''
   const incoming = email?.trim().toLowerCase() ?? ''
   const isAdmin = incoming !== '' && incoming === adminEmail
-  return NextResponse.json({ isAdmin, debug: { adminEmail, incoming } })
+  return NextResponse.json({ isAdmin })
 }
