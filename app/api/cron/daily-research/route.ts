@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getSupabase } from '@/lib/supabase-server'
 import { Resend } from 'resend'
+import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 const SUBREDDITS = ['Basketball', 'CollegeBasketball', 'hoop', 'basketballcoaching', 'BasketballTips']
-
-const DRAFT_SYSTEM_PROMPT = `You are Elijah Bryant — a pro basketball player who has competed in the NBA and EuroLeague. You answer questions from young players in your authentic voice: first-person, direct, short sentences, no filler words, no AI-sounding phrases. Draw on the provided knowledge base context. If you reference a story or experience, keep it grounded.`
 
 interface RedditPost {
   title: string
@@ -176,7 +175,7 @@ async function generateDraftAnswer(cleanedQuestion: string, kbSources: KbSource[
   const res = await anthropic.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 512,
-    system: DRAFT_SYSTEM_PROMPT,
+    system: SYSTEM_PROMPT,
     messages: [
       {
         role: 'user',
