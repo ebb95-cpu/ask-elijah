@@ -437,7 +437,7 @@ function AskPageInner() {
     if (mode === 'submitted') posthog?.capture('question_confirmed')
     if (mode === 'email_gate') posthog?.capture('email_gate_shown')
     if (mode === 'returning') posthog?.capture('return_visit')
-  }, [mode])
+  }, [mode, posthog])
 
   const getQuestionCount = () =>
     parseInt(localStorage.getItem('question_count') || '0', 10)

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
+import { usePostHog } from 'posthog-js/react'
 
 function Logo() {
   return (
@@ -38,7 +39,9 @@ export default function HistoryPage() {
   const [userEmail, setUserEmail] = useState('')
   const [newAnswer, setNewAnswer] = useState(false)
   const knownIdsRef = useRef<Set<string>>(new Set())
+  const readIdsRef = useRef<Set<string>>(new Set())
   const router = useRouter()
+  const posthog = usePostHog()
 
   const fetchQuestions = async () => {
     const res = await fetch('/api/history')
@@ -58,6 +61,11 @@ export default function HistoryPage() {
       }
 
       setUserEmail(user.email || '')
+
+      // Identify user in PostHog
+      if (user.email) {
+        posthog?.identify(user.email, { email: user.email })
+      }
 
       const qs = await fetchQuestions()
       setQuestions(qs)
@@ -147,7 +155,15 @@ export default function HistoryPage() {
             {questions.map((q) => (
               <div key={q.id} className="border-b border-gray-100">
                 <button
-                  onClick={() => setExpanded(expanded === q.id ? null : q.id)}
+                  onClick={() => {
+                    const next = expanded === q.id ? null : q.id
+                    setExpanded(next)
+                    // Track first-time read only
+                    if (next && !readIdsRef.current.has(q.id)) {
+                      readIdsRef.current.add(q.id)
+                      posthog?.capture('answer_read', { question_id: q.id })
+                    }
+                  }}
                   className="w-full text-left py-5 flex items-start justify-between gap-4 group"
                 >
                   <div className="flex-1 min-w-0">
