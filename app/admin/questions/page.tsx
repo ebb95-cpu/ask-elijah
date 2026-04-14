@@ -506,6 +506,13 @@ function PlayerQuestionCard({
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
+interface DashboardStats {
+  totalPlayers: number
+  questionsThisWeek: number
+  answerRate: number
+  avgResponseHours: number | null
+}
+
 export default function AdminQuestionsPage() {
   const [items, setItems] = useState<QueueItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -513,6 +520,7 @@ export default function AdminQuestionsPage() {
   const [counts, setCounts] = useState<StatusCounts>({ pending: 0, answered: 0, skipped: 0 })
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [dashStats, setDashStats] = useState<DashboardStats | null>(null)
 
   // Run research state
   const [researching, setResearching] = useState(false)
@@ -536,6 +544,41 @@ export default function AdminQuestionsPage() {
     const answered = allRows.filter((r) => r.status === 'answered' || r.status === 'approved').length
     const skipped = allRows.filter((r) => r.status === 'skipped').length
     setCounts({ pending, answered, skipped })
+  }
+
+  async function loadDashStats() {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+    const [allQ, weekQ, answeredQ] = await Promise.all([
+      supabase.from('questions').select('email, status, created_at, answered_at'),
+      supabase.from('questions').select('id').gte('created_at', weekAgo),
+      supabase.from('questions').select('created_at, answered_at').eq('status', 'approved').not('answered_at', 'is', null),
+    ])
+
+    const all = allQ.data || []
+    const uniqueEmails = new Set(all.map((r: { email: string }) => r.email?.toLowerCase()).filter(Boolean))
+    const totalPlayers = uniqueEmails.size
+
+    const questionsThisWeek = (weekQ.data || []).length
+
+    const totalAnswered = all.filter((r: { status: string }) => r.status === 'approved' || r.status === 'answered').length
+    const answerRate = all.length > 0 ? Math.round((totalAnswered / all.length) * 100) : 0
+
+    const answeredRows = answeredQ.data || []
+    let avgResponseHours: number | null = null
+    if (answeredRows.length > 0) {
+      const diffs = answeredRows
+        .filter((r: { created_at: string; answered_at: string }) => r.created_at && r.answered_at)
+        .map((r: { created_at: string; answered_at: string }) =>
+          (new Date(r.answered_at).getTime() - new Date(r.created_at).getTime()) / (1000 * 60 * 60)
+        )
+        .filter((h: number) => h > 0)
+      if (diffs.length > 0) {
+        avgResponseHours = Math.round(diffs.reduce((a: number, b: number) => a + b, 0) / diffs.length)
+      }
+    }
+
+    setDashStats({ totalPlayers, questionsThisWeek, answerRate, avgResponseHours })
   }
 
   async function load(status: StatusFilter) {
@@ -588,6 +631,11 @@ export default function AdminQuestionsPage() {
     setSearchQuery('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter])
+
+  useEffect(() => {
+    loadDashStats()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function removeItem(id: string) {
     setItems((prev) => prev.filter((i) => i.data.id !== id))
@@ -704,6 +752,59 @@ export default function AdminQuestionsPage() {
             </span>
           )}
         </div>
+      </div>
+
+      {/* Dashboard stats grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '32px' }}>
+        {[
+          {
+            label: 'Total Players',
+            value: dashStats ? dashStats.totalPlayers : '—',
+            sub: 'unique emails',
+          },
+          {
+            label: 'This Week',
+            value: dashStats ? dashStats.questionsThisWeek : '—',
+            sub: 'questions submitted',
+          },
+          {
+            label: 'Answer Rate',
+            value: dashStats ? `${dashStats.answerRate}%` : '—',
+            sub: 'questions answered',
+          },
+          {
+            label: 'Avg Response',
+            value: dashStats
+              ? dashStats.avgResponseHours === null
+                ? '—'
+                : dashStats.avgResponseHours < 24
+                ? `${dashStats.avgResponseHours}h`
+                : `${Math.round(dashStats.avgResponseHours / 24)}d`
+              : '—',
+            sub: 'time to answer',
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            style={{
+              background: '#0a0a0a',
+              border: '1px solid #1a1a1a',
+              borderRadius: '8px',
+              padding: '16px',
+              fontFamily: '-apple-system, sans-serif',
+            }}
+          >
+            <p style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>
+              {stat.label}
+            </p>
+            <p style={{ fontSize: '28px', fontWeight: 800, color: '#ffffff', margin: '0 0 4px', lineHeight: 1 }}>
+              {stat.value}
+            </p>
+            <p style={{ fontSize: '11px', color: '#444', margin: 0 }}>
+              {stat.sub}
+            </p>
+          </div>
+        ))}
       </div>
 
       {/* Stats pills */}
