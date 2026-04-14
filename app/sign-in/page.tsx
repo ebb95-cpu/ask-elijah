@@ -6,8 +6,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
 
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || ''
-
 function Logo() {
   return (
     <svg width="52" height="8" viewBox="0 0 52 8" fill="none">
@@ -31,20 +29,32 @@ export default function SignInPage() {
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const router = useRouter()
 
-  const isAdmin = email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase()
-
-  const handleEmailNext = () => {
+  const handleEmailNext = async () => {
     if (!email.trim()) return
-    if (isAdmin) {
-      setStep('password')
-    } else {
-      handleSendLink()
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+      const { isAdmin } = await res.json()
+      if (isAdmin) {
+        setStep('password')
+        setLoading(false)
+      } else {
+        await handleSendLink()
+      }
+    } catch {
+      await handleSendLink()
     }
   }
 
+  const isAdmin = step === 'password'
+
   const handleSendLink = async () => {
     setLoading(true)
-    setError('')
     try {
       const supabase = getSupabaseClient()
       const { error: authError } = await supabase.auth.signInWithOtp({
