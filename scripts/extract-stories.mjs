@@ -17,7 +17,7 @@ import { readFile } from 'fs/promises'
 import { join, basename } from 'path'
 import { tmpdir } from 'os'
 import Anthropic from '@anthropic-ai/sdk'
-import FormData from 'form-data'
+import OpenAI from 'openai'
 import { createReadStream } from 'fs'
 import { config } from 'dotenv'
 config({ path: '.env.local' })
@@ -49,22 +49,16 @@ function slugify(text) {
 
 const FFMPEG = '/Users/elijahbryant/bin/ffmpeg'
 const MAX_WHISPER_BYTES = 24 * 1024 * 1024 // 24MB
+const openai = new OpenAI({ apiKey: OPENAI_API_KEY })
 
 async function transcribeChunk(chunkPath) {
-  const form = new FormData()
-  form.append('file', createReadStream(chunkPath))
-  form.append('model', 'whisper-1')
-  form.append('language', 'en')
-  form.append('response_format', 'text')
-
-  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, ...form.getHeaders() },
-    body: form,
+  const transcription = await openai.audio.transcriptions.create({
+    file: createReadStream(chunkPath),
+    model: 'whisper-1',
+    language: 'en',
+    response_format: 'text',
   })
-
-  if (!res.ok) throw new Error(`Whisper ${res.status}: ${await res.text()}`)
-  return await res.text()
+  return typeof transcription === 'string' ? transcription : transcription.text
 }
 
 async function transcribeWithWhisper(audioPath) {

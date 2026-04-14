@@ -14,7 +14,7 @@ import { existsSync, unlinkSync, mkdirSync } from 'fs'
 import { createReadStream } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import FormData from 'form-data'
+import OpenAI from 'openai'
 import { config } from 'dotenv'
 config({ path: '.env.local' })
 
@@ -55,6 +55,7 @@ function chunkText(text, chunkSize = 600, overlap = 100) {
 
 const FFMPEG = '/Users/elijahbryant/bin/ffmpeg'
 const MAX_WHISPER_BYTES = 24 * 1024 * 1024 // 24MB to stay safely under 25MB limit
+const openai = new OpenAI({ apiKey: OPENAI_API_KEY })
 
 async function downloadAudio(videoId) {
   if (!existsSync(TMP_DIR)) mkdirSync(TMP_DIR, { recursive: true })
@@ -87,23 +88,13 @@ async function downloadAudio(videoId) {
 }
 
 async function transcribeChunk(chunkPath) {
-  const form = new FormData()
-  form.append('file', createReadStream(chunkPath))
-  form.append('model', 'whisper-1')
-  form.append('language', 'en')
-  form.append('response_format', 'text')
-
-  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      ...form.getHeaders(),
-    },
-    body: form,
+  const transcription = await openai.audio.transcriptions.create({
+    file: createReadStream(chunkPath),
+    model: 'whisper-1',
+    language: 'en',
+    response_format: 'text',
   })
-
-  if (!res.ok) throw new Error(`Whisper ${res.status}: ${await res.text()}`)
-  return await res.text()
+  return typeof transcription === 'string' ? transcription : transcription.text
 }
 
 async function transcribeWithWhisper(audioPath) {
