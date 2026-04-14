@@ -1,37 +1,12 @@
 import { redirect } from 'next/navigation'
-import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies()
+  const adminToken = cookieStore.get('admin_token')?.value
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // Server component — ignore
-          }
-        },
-      },
-    }
-  )
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user || user.email !== process.env.ADMIN_EMAIL) {
-    redirect('/sign-in')
+  if (adminToken !== process.env.CRON_SECRET) {
+    redirect('/admin/login')
   }
 
   return (
