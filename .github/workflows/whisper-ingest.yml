@@ -1,0 +1,73 @@
+name: Weekly Whisper Ingest
+
+# Runs every Monday at 4am UTC (midnight EST)
+# Also runs after the Vercel knowledge cron (which runs Mon 3am UTC)
+# Can also be triggered manually from GitHub Actions tab
+on:
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+jobs:
+  whisper-ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6 hours max — enough for full channel reingest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install yt-dlp
+        run: |
+          sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+          sudo chmod a+rx /usr/local/bin/yt-dlp
+          yt-dlp --version
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version | head -1
+
+      - name: Write .env.local
+        run: |
+          cat > .env.local << 'ENVEOF'
+          PINECONE_HOST=${{ secrets.PINECONE_HOST }}
+          PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
+          VOYAGE_API_KEY=${{ secrets.VOYAGE_API_KEY }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+          BEEHIIV_API_KEY=${{ secrets.BEEHIIV_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GDRIVE_KEY_FILE=scripts/gdrive-key.json
+          ENVEOF
+
+      - name: Write Google Drive service account key
+        run: echo '${{ secrets.GDRIVE_SERVICE_ACCOUNT }}' > scripts/gdrive-key.json
+
+      - name: Run Whisper YouTube reingest
+        run: node scripts/reingest-youtube-whisper.mjs
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+
+      - name: Extract personal stories from new content
+        run: node scripts/extract-stories.mjs --youtube
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+
+      - name: Backup Pinecone to Supabase Storage
+        run: node scripts/backup-pinecone.mjs
+
+      - name: Summary
+        if: always()
+        run: echo "Whisper ingest complete. Check logs above for per-video results."

@@ -53,7 +53,9 @@ function chunkText(text, chunkSize = 600, overlap = 100) {
 
 // ── Whisper ─────────────────────────────────────────────────────────────────
 
-const FFMPEG = '/Users/elijahbryant/bin/ffmpeg'
+// Use local install if present, otherwise fall back to system PATH
+const FFMPEG = existsSync('/Users/elijahbryant/bin/ffmpeg') ? '/Users/elijahbryant/bin/ffmpeg' : 'ffmpeg'
+const FFMPEG_LOCATION_ARG = existsSync('/Users/elijahbryant/bin') ? '${FFMPEG_LOCATION_ARG}' : ''
 const MAX_WHISPER_BYTES = 24 * 1024 * 1024 // 24MB to stay safely under 25MB limit
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY })
 
@@ -65,7 +67,7 @@ async function downloadAudio(videoId) {
   // Step 1: download raw audio in whatever format YouTube provides
   const rawPath = join(TMP_DIR, `${videoId}.raw`)
   execSync(
-    `yt-dlp -x --ffmpeg-location /Users/elijahbryant/bin -o "${rawPath}.%(ext)s" "https://youtube.com/watch?v=${videoId}" --quiet`,
+    `yt-dlp -x ${FFMPEG_LOCATION_ARG} -o "${rawPath}.%(ext)s" "https://youtube.com/watch?v=${videoId}" --quiet`,
     { timeout: 300000 }
   )
 
@@ -165,7 +167,7 @@ async function upsertVectors(vectors) {
 function getChannelVideos(handle) {
   // yt-dlp --flat-playlist gets every video ID + title with full pagination
   const output = execSync(
-    `yt-dlp --flat-playlist --print "%(id)s|%(title)s" --ffmpeg-location /Users/elijahbryant/bin "https://www.youtube.com/@${handle}/videos" 2>/dev/null`,
+    `yt-dlp --flat-playlist --print "%(id)s|%(title)s" ${FFMPEG_LOCATION_ARG} "https://www.youtube.com/@${handle}/videos" 2>/dev/null`,
     { timeout: 60000, maxBuffer: 10 * 1024 * 1024 }
   ).toString().trim()
 
