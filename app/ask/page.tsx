@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getSupabaseClient } from '@/lib/supabase-client'
+import { usePostHog } from 'posthog-js/react'
 
 function Logo({ dark = false }: { dark?: boolean }) {
   const c = dark ? '#fff' : '#000'
@@ -370,6 +371,7 @@ function AskPageInner() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
 
+  const posthog = usePostHog()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -430,6 +432,13 @@ function AskPageInner() {
       .catch(() => {})
   }, [])
 
+  // Track funnel step changes
+  useEffect(() => {
+    if (mode === 'submitted') posthog?.capture('question_confirmed')
+    if (mode === 'email_gate') posthog?.capture('email_gate_shown')
+    if (mode === 'returning') posthog?.capture('return_visit')
+  }, [mode])
+
   const getQuestionCount = () =>
     parseInt(localStorage.getItem('question_count') || '0', 10)
   const incrementQuestionCount = () =>
@@ -440,6 +449,7 @@ function AskPageInner() {
   // Step 1: question submitted → go to email gate
   const handleQuestionSubmit = () => {
     if (!question.trim()) return
+    posthog?.capture('question_drafted', { question_length: question.trim().length })
     setMode('email_gate')
     setTimeout(() => emailRef.current?.focus(), 100)
   }
@@ -453,6 +463,8 @@ function AskPageInner() {
     if (!email.trim()) { setEmailError('Email is required to get your answer.'); return }
     if (!ageConfirmed) { setEmailError('Please confirm you are 13 or older.'); return }
     setEmailError('')
+    posthog?.capture('email_submitted', { email: email.trim().toLowerCase() })
+    posthog?.identify(email.trim().toLowerCase(), { email: email.trim().toLowerCase() })
     setMode('loading')
     incrementQuestionCount()
     sessionStorage.setItem('user_email', email.trim().toLowerCase())
@@ -476,6 +488,7 @@ function AskPageInner() {
       }
 
       // Route to onboarding if profile not done, otherwise straight to submitted
+      posthog?.capture('question_sent')
       if (!hasCompletedProfile()) {
         setOnboardStep(0)
         setMode('onboarding')
