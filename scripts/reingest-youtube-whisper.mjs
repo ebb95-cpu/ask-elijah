@@ -1,8 +1,8 @@
 /**
- * Ask Elijah — Re-ingest YouTube with Whisper
+ * Ask Elijah — Re-ingest YouTube with AssemblyAI
  *
  * Replaces all existing YouTube vectors in Pinecone with accurate
- * Whisper transcriptions. Overwrites old auto-caption chunks by using
+ * AssemblyAI transcriptions. Overwrites old auto-caption chunks by using
  * the same vector IDs (yt_VIDEOID_CHUNK).
  *
  * Usage:
@@ -10,18 +10,16 @@
  */
 
 import { execSync } from 'child_process'
-import { existsSync, unlinkSync, mkdirSync } from 'fs'
-import { createReadStream } from 'fs'
+import { existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import OpenAI from 'openai'
 import { config } from 'dotenv'
 config({ path: '.env.local', override: true })
 
 const PINECONE_HOST = process.env.PINECONE_HOST
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY
 const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY
 
 const YOUTUBE_CHANNELS = [
   { handle: 'ElijahBryant3', label: 'Elijah Bryant' },
@@ -51,93 +49,36 @@ function chunkText(text, chunkSize = 600, overlap = 100) {
   return chunks
 }
 
-// ── Whisper ─────────────────────────────────────────────────────────────────
+// ── AssemblyAI ───────────────────────────────────────────────────────────────
 
-// Use local install if present, otherwise fall back to system PATH
-const FFMPEG = existsSync('/Users/elijahbryant/bin/ffmpeg') ? '/Users/elijahbryant/bin/ffmpeg' : 'ffmpeg'
-const FFMPEG_LOCATION_ARG = existsSync('/Users/elijahbryant/bin') ? '${FFMPEG_LOCATION_ARG}' : ''
-const MAX_WHISPER_BYTES = 24 * 1024 * 1024 // 24MB to stay safely under 25MB limit
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY })
-
-async function downloadAudio(videoId) {
-  if (!existsSync(TMP_DIR)) mkdirSync(TMP_DIR, { recursive: true })
-  const audioPath = join(TMP_DIR, `${videoId}.mp3`)
-  if (existsSync(audioPath)) unlinkSync(audioPath)
-
-  // Step 1: download raw audio in whatever format YouTube provides
-  const rawPath = join(TMP_DIR, `${videoId}.raw`)
-  execSync(
-    `yt-dlp -x ${FFMPEG_LOCATION_ARG} -o "${rawPath}.%(ext)s" "https://youtube.com/watch?v=${videoId}" --quiet`,
-    { timeout: 300000 }
-  )
-
-  // Find the downloaded file (extension may vary)
-  const { readdirSync: rd } = await import('fs')
-  const rawFile = rd(TMP_DIR).find(f => f.startsWith(`${videoId}.raw`) && !f.endsWith('.mp3'))
-  if (!rawFile) throw new Error('Raw audio file not found after download')
-
-  // Step 2: convert to low-bitrate mono mp3 with ffmpeg (small enough for Whisper)
-  execSync(
-    `${FFMPEG} -i "${join(TMP_DIR, rawFile)}" -ar 16000 -ac 1 -b:a 64k "${audioPath}" -y -loglevel quiet`,
-    { timeout: 120000 }
-  )
-
-  // Clean up raw file
-  try { unlinkSync(join(TMP_DIR, rawFile)) } catch {}
-
-  if (!existsSync(audioPath)) throw new Error('Audio file not created')
-  return audioPath
-}
-
-async function transcribeChunk(chunkPath) {
-  const transcription = await openai.audio.transcriptions.create({
-    file: createReadStream(chunkPath),
-    model: 'whisper-1',
-    language: 'en',
-    response_format: 'text',
+async function transcribeWithAssemblyAI(videoId) {
+  // Submit YouTube URL — AssemblyAI downloads it directly
+  const submitRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+    method: 'POST',
+    headers: {
+      Authorization: ASSEMBLYAI_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      audio_url: `https://www.youtube.com/watch?v=${videoId}`,
+      language_code: 'en',
+    }),
   })
-  return typeof transcription === 'string' ? transcription : transcription.text
-}
+  if (!submitRes.ok) throw new Error(`AssemblyAI submit ${submitRes.status}: ${await submitRes.text()}`)
+  const { id, error: submitError } = await submitRes.json()
+  if (submitError) throw new Error(submitError)
 
-async function transcribeWithWhisper(audioPath) {
-  const { statSync } = await import('fs')
-  const fileSize = statSync(audioPath).size
-
-  // If file fits in one shot, send directly
-  if (fileSize <= MAX_WHISPER_BYTES) {
-    return await transcribeChunk(audioPath)
+  // Poll until complete (max 10 min)
+  for (let i = 0; i < 120; i++) {
+    await sleep(5000)
+    const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
+      headers: { Authorization: ASSEMBLYAI_API_KEY },
+    })
+    const data = await pollRes.json()
+    if (data.status === 'completed') return data.text || ''
+    if (data.status === 'error') throw new Error(`AssemblyAI error: ${data.error}`)
   }
-
-  // Otherwise split into 10-minute chunks with ffmpeg and transcribe each
-  const chunkDir = join(TMP_DIR, `chunks_${Date.now()}`)
-  mkdirSync(chunkDir, { recursive: true })
-
-  try {
-    execSync(
-      `${FFMPEG} -i "${audioPath}" -f segment -segment_time 600 -c copy "${join(chunkDir, 'chunk_%03d.mp3')}" -y -loglevel quiet`,
-      { timeout: 120000 }
-    )
-
-    const { readdirSync } = await import('fs')
-    const chunks = readdirSync(chunkDir).filter(f => f.endsWith('.mp3')).sort()
-    const transcripts = []
-
-    for (const chunk of chunks) {
-      const chunkPath = join(chunkDir, chunk)
-      try {
-        const text = await transcribeChunk(chunkPath)
-        if (text?.trim()) transcripts.push(text.trim())
-        await sleep(500)
-      } catch (err) {
-        console.warn(`\n  ⚠️  Chunk ${chunk} failed: ${err.message}`)
-      }
-    }
-
-    return transcripts.join(' ')
-  } finally {
-    // Clean up chunks
-    try { execSync(`rm -rf "${chunkDir}"`) } catch {}
-  }
+  throw new Error('AssemblyAI timeout after 10 minutes')
 }
 
 // ── Embed + Upsert ─────────────────────────────────────────────────────────
@@ -167,7 +108,7 @@ async function upsertVectors(vectors) {
 function getChannelVideos(handle) {
   // yt-dlp --flat-playlist gets every video ID + title with full pagination
   const output = execSync(
-    `yt-dlp --flat-playlist --print "%(id)s|%(title)s" ${FFMPEG_LOCATION_ARG} "https://www.youtube.com/@${handle}/videos" 2>/dev/null`,
+    `yt-dlp --flat-playlist --print "%(id)s|%(title)s" "https://www.youtube.com/@${handle}/videos" 2>/dev/null`,
     { timeout: 60000, maxBuffer: 10 * 1024 * 1024 }
   ).toString().trim()
 
@@ -184,8 +125,8 @@ function getChannelVideos(handle) {
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
-console.log('\n🚀 Ask Elijah — Re-ingest YouTube with Whisper\n')
-console.log('  Downloads each video audio, transcribes word-for-word with Whisper,')
+console.log('\n🚀 Ask Elijah — Re-ingest YouTube with AssemblyAI\n')
+console.log('  Submits each video to AssemblyAI, transcribes word-for-word,')
 console.log('  and overwrites the existing Pinecone vectors with accurate text.\n')
 
 let totalOk = 0, totalSkipped = 0, totalErrors = 0
@@ -211,31 +152,16 @@ for (const channel of YOUTUBE_CHANNELS) {
       continue
     }
 
-    process.stdout.write(`  [${i + 1}/${videos.length}] ${label} downloading... `)
-
-    let audioPath
-    try {
-      audioPath = await downloadAudio(videoId)
-    } catch (err) {
-      process.stdout.write(`⏭️  ${err.message.slice(0, 60)}\n`)
-      totalSkipped++
-      await sleep(500)
-      continue
-    }
-
-    process.stdout.write(`transcribing... `)
+    process.stdout.write(`  [${i + 1}/${videos.length}] ${label} transcribing with AssemblyAI... `)
 
     let transcript
     try {
-      transcript = await transcribeWithWhisper(audioPath)
+      transcript = await transcribeWithAssemblyAI(videoId)
     } catch (err) {
-      process.stdout.write(`❌ Whisper failed: ${err.message.slice(0, 60)}\n`)
+      process.stdout.write(`❌ AssemblyAI failed: ${err.message.slice(0, 60)}\n`)
       totalErrors++
-      if (existsSync(audioPath)) unlinkSync(audioPath)
       await sleep(500)
       continue
-    } finally {
-      if (audioPath && existsSync(audioPath)) unlinkSync(audioPath)
     }
 
     if (!transcript || transcript.length < MIN_CHARS) {
@@ -260,7 +186,7 @@ for (const channel of YOUTUBE_CHANNELS) {
             source_url: `https://youtube.com/watch?v=${videoId}`,
             channel: channel.label,
             chunk_index: j,
-            transcription: 'whisper',
+            transcription: 'assemblyai',
           },
         })
         await sleep(100)
@@ -277,7 +203,7 @@ for (const channel of YOUTUBE_CHANNELS) {
       for (let j = 0; j < vectors.length; j += 50) {
         await upsertVectors(vectors.slice(j, j + 50))
       }
-      process.stdout.write(`✅ ${vectors.length} chunks (Whisper)\n`)
+      process.stdout.write(`✅ ${vectors.length} chunks (AssemblyAI)\n`)
       totalOk++
     } catch (err) {
       process.stdout.write(`❌ ${err.message.slice(0, 60)}\n`)
@@ -294,4 +220,4 @@ try { execSync(`rm -rf "${TMP_DIR}"`) } catch {}
 console.log(`\n  ✅ Re-ingested: ${totalOk} videos`)
 console.log(`  ⏭️  Skipped:    ${totalSkipped}`)
 console.log(`  ❌ Errors:      ${totalErrors}`)
-console.log('\n✅ Done. All YouTube vectors now use Whisper transcriptions.\n')
+console.log('\n✅ Done. All YouTube vectors now use AssemblyAI transcriptions.\n')

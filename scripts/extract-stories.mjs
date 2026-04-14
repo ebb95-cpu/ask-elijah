@@ -1,9 +1,8 @@
 /**
- * Ask Elijah — Personal Story Extraction (Whisper-powered)
+ * Ask Elijah — Personal Story Extraction (AssemblyAI-powered)
  *
- * Downloads audio from YouTube videos via yt-dlp, transcribes with
- * OpenAI Whisper (word-for-word accurate), then uses Claude to extract
- * Elijah's personal stories and upserts them to Pinecone.
+ * Transcribes YouTube videos with AssemblyAI (no download needed), then
+ * uses Claude to extract Elijah's personal stories and upserts them to Pinecone.
  *
  * Usage:
  *   node scripts/extract-stories.mjs                 — newsletters + YouTube
@@ -11,14 +10,10 @@
  *   node scripts/extract-stories.mjs --youtube       — YouTube only
  */
 
-import { execSync, exec } from 'child_process'
-import { existsSync, unlinkSync, mkdirSync } from 'fs'
+import { execSync } from 'child_process'
 import { readFile } from 'fs/promises'
 import { join, basename } from 'path'
-import { tmpdir } from 'os'
 import Anthropic from '@anthropic-ai/sdk'
-import OpenAI from 'openai'
-import { createReadStream } from 'fs'
 import { config } from 'dotenv'
 config({ path: '.env.local', override: true })
 
@@ -26,7 +21,7 @@ const PINECONE_HOST = process.env.PINECONE_HOST
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY
 const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY
 const BEEHIIV_API_KEY = process.env.BEEHIIV_API_KEY
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY
 const BEEHIIV_PUB_ID = 'pub_9471ed24-57d1-43c6-be5b-ee779941c348'
 
 const YOUTUBE_CHANNELS = [
@@ -45,90 +40,36 @@ function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 60)
 }
 
-// ── Whisper Transcription ───────────────────────────────────────────────────
-
-const FFMPEG = existsSync('/Users/elijahbryant/bin/ffmpeg') ? '/Users/elijahbryant/bin/ffmpeg' : 'ffmpeg'
-const FFMPEG_LOCATION_ARG = existsSync('/Users/elijahbryant/bin') ? '${FFMPEG_LOCATION_ARG}' : ''
-const MAX_WHISPER_BYTES = 24 * 1024 * 1024 // 24MB
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY })
-
-async function transcribeChunk(chunkPath) {
-  const transcription = await openai.audio.transcriptions.create({
-    file: createReadStream(chunkPath),
-    model: 'whisper-1',
-    language: 'en',
-    response_format: 'text',
-  })
-  return typeof transcription === 'string' ? transcription : transcription.text
-}
-
-async function transcribeWithWhisper(audioPath) {
-  const { statSync, readdirSync } = await import('fs')
-  const fileSize = statSync(audioPath).size
-
-  if (fileSize <= MAX_WHISPER_BYTES) return await transcribeChunk(audioPath)
-
-  // Split into 10-minute chunks and transcribe each
-  const chunkDir = join(TMP_DIR, `chunks_${Date.now()}`)
-  mkdirSync(chunkDir, { recursive: true })
-  try {
-    execSync(
-      `${FFMPEG} -i "${audioPath}" -f segment -segment_time 600 -c copy "${join(chunkDir, 'chunk_%03d.mp3')}" -y -loglevel quiet`,
-      { timeout: 120000 }
-    )
-    const chunks = readdirSync(chunkDir).filter(f => f.endsWith('.mp3')).sort()
-    const transcripts = []
-    for (const chunk of chunks) {
-      try {
-        const text = await transcribeChunk(join(chunkDir, chunk))
-        if (text?.trim()) transcripts.push(text.trim())
-        await sleep(500)
-      } catch { /* skip chunk */ }
-    }
-    return transcripts.join(' ')
-  } finally {
-    try { execSync(`rm -rf "${chunkDir}"`) } catch {}
-  }
-}
+// ── AssemblyAI Transcription ────────────────────────────────────────────────
 
 async function downloadAndTranscribe(videoId, title) {
-  if (!existsSync(TMP_DIR)) mkdirSync(TMP_DIR, { recursive: true })
-  const audioPath = join(TMP_DIR, `${videoId}.mp3`)
-  if (existsSync(audioPath)) unlinkSync(audioPath)
+  // Submit to AssemblyAI — no download needed
+  const submitRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+    method: 'POST',
+    headers: {
+      Authorization: ASSEMBLYAI_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      audio_url: `https://www.youtube.com/watch?v=${videoId}`,
+      language_code: 'en',
+    }),
+  })
+  if (!submitRes.ok) throw new Error(`AssemblyAI submit ${submitRes.status}`)
+  const { id, error: submitError } = await submitRes.json()
+  if (submitError) throw new Error(submitError)
 
-  try {
-    // Step 1: download raw audio in whatever format YouTube provides
-    const rawPath = join(TMP_DIR, `${videoId}.raw`)
-    execSync(
-      `yt-dlp -x ${FFMPEG_LOCATION_ARG} -o "${rawPath}.%(ext)s" "https://youtube.com/watch?v=${videoId}" --quiet`,
-      { timeout: 300000 }
-    )
-
-    // Find the downloaded file
-    const { readdirSync: rd } = await import('fs')
-    const rawFile = rd(TMP_DIR).find(f => f.startsWith(`${videoId}.raw`) && !f.endsWith('.mp3'))
-    if (!rawFile) throw new Error('Raw audio file not found after download')
-
-    // Step 2: convert to low-bitrate mono mp3
-    execSync(
-      `${FFMPEG} -i "${join(TMP_DIR, rawFile)}" -ar 16000 -ac 1 -b:a 64k "${audioPath}" -y -loglevel quiet`,
-      { timeout: 120000 }
-    )
-
-    try { unlinkSync(join(TMP_DIR, rawFile)) } catch {}
-  } catch (err) {
-    throw new Error(`download/convert failed: ${err.message?.slice(0, 100)}`)
+  // Poll until done (max 10 min)
+  for (let i = 0; i < 120; i++) {
+    await sleep(5000)
+    const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
+      headers: { Authorization: ASSEMBLYAI_API_KEY },
+    })
+    const data = await pollRes.json()
+    if (data.status === 'completed') return data.text || ''
+    if (data.status === 'error') throw new Error(`AssemblyAI: ${data.error}`)
   }
-
-  if (!existsSync(audioPath)) throw new Error('Audio file not created')
-
-  let transcript
-  try {
-    transcript = await transcribeWithWhisper(audioPath)
-  } finally {
-    if (existsSync(audioPath)) unlinkSync(audioPath)
-  }
-  return transcript
+  throw new Error('AssemblyAI timeout')
 }
 
 // ── Story Extraction via Claude ─────────────────────────────────────────────
@@ -207,7 +148,7 @@ async function upsertStory(id, story, sourceTitle, topic, trigger) {
 
 function getChannelVideos(handle) {
   const output = execSync(
-    `yt-dlp --flat-playlist --print "%(id)s|%(title)s" ${FFMPEG_LOCATION_ARG} "https://www.youtube.com/@${handle}/videos" 2>/dev/null`,
+    `yt-dlp --flat-playlist --print "%(id)s|%(title)s" "https://www.youtube.com/@${handle}/videos" 2>/dev/null`,
     { timeout: 60000, maxBuffer: 10 * 1024 * 1024 }
   ).toString().trim()
 
@@ -228,7 +169,7 @@ function isShortForm(title = '') {
 }
 
 async function processYouTube() {
-  console.log('\n📺 Extracting stories from YouTube (Whisper transcription)...\n')
+  console.log('\n📺 Extracting stories from YouTube (AssemblyAI transcription)...\n')
   let totalStories = 0
 
   for (const channel of YOUTUBE_CHANNELS) {
@@ -375,12 +316,9 @@ const args = process.argv.slice(2)
 const newslettersOnly = args.includes('--newsletters')
 const youtubeOnly = args.includes('--youtube')
 
-console.log('\n🚀 Ask Elijah — Personal Story Extraction (Whisper)\n')
+console.log('\n🚀 Ask Elijah — Personal Story Extraction (AssemblyAI)\n')
 
 if (!youtubeOnly) await processNewsletters()
 if (!newslettersOnly) await processYouTube()
-
-// Clean up temp dir
-try { execSync(`rm -rf "${TMP_DIR}"`) } catch {}
 
 console.log('\n✅ Done.\n')

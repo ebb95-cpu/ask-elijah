@@ -5,13 +5,14 @@ const require = createRequire(import.meta.url)
 const pdfParse = require('pdf-parse')
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300
+export const maxDuration = 800
 
 const PINECONE_HOST = process.env.PINECONE_HOST!
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY!
 const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY!
 const BEEHIIV_API_KEY = process.env.BEEHIIV_API_KEY!
 const BEEHIIV_PUB_ID = process.env.BEEHIIV_PUBLICATION_ID || 'pub_9471ed24-57d1-43c6-be5b-ee779941c348'
+const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY!
 
 const YOUTUBE_CHANNELS = [
   { handle: 'ElijahBryant3', label: 'Elijah Bryant' },
@@ -171,72 +172,93 @@ async function ingestLeadMagnets(): Promise<number> {
   return count
 }
 
-// ── YouTube ───────────────────────────────────────────────────────────────────
+// ── YouTube (AssemblyAI + RSS — no yt-dlp or ffmpeg needed) ──────────────────
 
-async function getChannelVideos(handle: string): Promise<{ videoId: string; title: string }[]> {
-  const res = await fetch(`https://www.youtube.com/@${handle}/videos`, { headers: HEADERS })
-  if (!res.ok) return []
-  const html = await res.text()
-
-  const match = html.match(/var ytInitialData\s*=\s*(\{.+?\});\s*<\/script>/)
-  if (match) {
-    try {
-      const ytData = JSON.parse(match[1])
-      const tabs = ytData?.contents?.twoColumnBrowseResultsRenderer?.tabs || []
-      const videosTab = tabs.find((t: any) => t?.tabRenderer?.title === 'Videos')
-      const items = videosTab?.tabRenderer?.content?.richGridRenderer?.contents || []
-      const videos = items
-        .map((item: any) => {
-          const v = item?.richItemRenderer?.content?.videoRenderer
-          if (!v?.videoId) return null
-          return { videoId: v.videoId, title: v.title?.runs?.[0]?.text || '' }
-        })
-        .filter(Boolean)
-      if (videos.length > 0) return videos.slice(0, 10)
-    } catch { /* fall through */ }
-  }
-
-  // Fallback: extract IDs from HTML
-  const rawIds = Array.from(html.matchAll(/"videoId":"([^"]{11})"/g)).map(m => m[1])
-  const ids = Array.from(new Set(rawIds))
-  return ids.slice(0, 10).map(id => ({ videoId: id, title: '' }))
+async function getChannelIdFromHandle(handle: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://www.youtube.com/@${handle}`, { headers: HEADERS })
+    if (!res.ok) return null
+    const html = await res.text()
+    const match = html.match(/"channelId":"(UC[^"]+)"/) || html.match(/"browseId":"(UC[^"]+)"/)
+    return match?.[1] ?? null
+  } catch { return null }
 }
 
-async function fetchTranscript(videoId: string): Promise<string> {
-  // Try YouTube timedtext API (works for public videos with English captions)
-  const res = await fetch(
-    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`,
-    { headers: HEADERS }
-  )
-  if (!res.ok) throw new Error(`Timedtext ${res.status}`)
-  const data = await res.json()
-  const text = (data.events || [])
-    .filter((e: any) => e.segs)
-    .map((e: any) => e.segs.map((s: any) => s.utf8 || '').join(''))
-    .join(' ')
-    .replace(/\[.*?\]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-  if (!text || text.length < 400) throw new Error('Transcript too short')
-  return text
+async function getRecentVideosFromRSS(channelId: string): Promise<{ videoId: string; title: string }[]> {
+  const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`)
+  if (!res.ok) throw new Error(`RSS ${res.status}`)
+  const xml = await res.text()
+  const videos: { videoId: string; title: string }[] = []
+  const entries = xml.match(/<entry>[\s\S]*?<\/entry>/g) || []
+  for (const entry of entries) {
+    const idMatch = entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)
+    const titleMatch = entry.match(/<media:title[^>]*>([^<]+)<\/media:title>/) || entry.match(/<title>([^<]+)<\/title>/)
+    if (idMatch) videos.push({ videoId: idMatch[1], title: titleMatch?.[1] || '' })
+  }
+  return videos
+}
+
+async function isAlreadyIngested(videoId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${PINECONE_HOST}/vectors/fetch?ids=yt_${videoId}_0`, {
+      headers: { 'Api-Key': PINECONE_API_KEY }
+    })
+    const data = await res.json()
+    return Object.keys(data.vectors || {}).length > 0
+  } catch { return false }
+}
+
+async function transcribeWithAssemblyAI(videoId: string): Promise<string> {
+  // Submit YouTube URL directly — AssemblyAI handles the download
+  const submitRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+    method: 'POST',
+    headers: { Authorization: ASSEMBLYAI_API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ audio_url: `https://www.youtube.com/watch?v=${videoId}`, language_code: 'en' }),
+  })
+  if (!submitRes.ok) throw new Error(`AssemblyAI submit ${submitRes.status}`)
+  const { id, error: submitError } = await submitRes.json()
+  if (submitError) throw new Error(submitError)
+
+  // Poll until complete (max 5 min)
+  for (let i = 0; i < 60; i++) {
+    await sleep(5000)
+    const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
+      headers: { Authorization: ASSEMBLYAI_API_KEY },
+    })
+    const data = await pollRes.json()
+    if (data.status === 'completed') return data.text || ''
+    if (data.status === 'error') throw new Error(`AssemblyAI: ${data.error}`)
+  }
+  throw new Error('AssemblyAI timeout')
 }
 
 async function ingestYouTube(): Promise<number> {
   let count = 0
 
   for (const channel of YOUTUBE_CHANNELS) {
+    const channelId = await getChannelIdFromHandle(channel.handle)
+    if (!channelId) { console.error(`Could not get channel ID for @${channel.handle}`); continue }
+
     let videos: { videoId: string; title: string }[]
     try {
-      videos = await getChannelVideos(channel.handle)
-    } catch { continue }
+      videos = await getRecentVideosFromRSS(channelId)
+    } catch (e) { console.error(`RSS failed for @${channel.handle}:`, e); continue }
 
     for (const { videoId, title } of videos) {
-      if (title.toLowerCase().includes('#short')) continue
+      // Skip Shorts
+      if (/shorts?/i.test(title) || title.startsWith('#')) continue
+
+      // Skip already ingested
+      if (await isAlreadyIngested(videoId)) continue
+
+      console.log(`Transcribing new video: ${title || videoId}`)
 
       let transcript: string
       try {
-        transcript = await fetchTranscript(videoId)
-      } catch { continue }
+        transcript = await transcribeWithAssemblyAI(videoId)
+      } catch (e) { console.error(`Transcription failed for ${videoId}:`, e); continue }
+
+      if (!transcript || transcript.length < 400) continue
 
       const chunks = chunkText(transcript, 600, 100)
       const vectors: any[] = []
@@ -254,16 +276,18 @@ async function ingestYouTube(): Promise<number> {
               source_url: `https://youtube.com/watch?v=${videoId}`,
               channel: channel.label,
               chunk_index: j,
+              transcription: 'assemblyai',
             },
           })
           await sleep(80)
-        } catch { /* skip */ }
+        } catch { /* skip chunk */ }
       }
 
       if (vectors.length) {
         try {
           for (let k = 0; k < vectors.length; k += 50) await upsertVectors(vectors.slice(k, k + 50))
           count++
+          console.log(`✅ ${title || videoId} — ${vectors.length} chunks`)
         } catch (e) { console.error('YouTube upsert error:', e) }
       }
     }
