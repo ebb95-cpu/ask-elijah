@@ -413,16 +413,18 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
             <p style="font-size:18px;font-weight:600;color:#ffffff !important;line-height:1.5;font-style:italic;margin:0;font-family:-apple-system,sans-serif;">"${question}"</p>
           </div>
 
-          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">
-            We put together a first take based on everything I've covered on the mental side of the game. I'm reviewing it personally before it hits your inbox.
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
+            You already saw the first take on screen. That's based on everything I've put out on the mental side of the game.
           </p>
 
-          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
-            Check the app now to see what we have so far. The final version comes once I've looked it over.
-          </p>
+          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
+            <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0;font-family:-apple-system,sans-serif;">
+              I'm reviewing it personally. Once I sign off, the final version lands here. It may look different. That's the point.
+            </p>
+          </div>
 
           <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
-            <a href="${siteUrl}/history" style="color:#555555;text-decoration:none;">See first take →</a>
+            <a href="${siteUrl}/history" style="color:#555555;text-decoration:none;">View your first take →</a>
           </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>

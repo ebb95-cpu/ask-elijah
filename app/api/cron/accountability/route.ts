@@ -94,8 +94,8 @@ export async function GET(req: NextRequest) {
             Most players read the answer and move on. The ones who actually get better do the steps.
           </p>
 
-          <p style="font-size:18px;font-weight:700;margin:0 0 56px;font-family:-apple-system,sans-serif;">
-            <a href="${siteUrl}/history" style="color:#ffffff !important;text-decoration:none;">Review your answer →</a>
+          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+            <a href="${siteUrl}/history" style="color:#555555;text-decoration:none;">Review your answer →</a>
           </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>

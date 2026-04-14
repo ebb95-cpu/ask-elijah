@@ -31,7 +31,7 @@ function buildEmail(
     <div style="margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid #1a1a1a;">
       <p style="font-size:16px;color:#ffffff !important;margin:0 0 16px;font-style:italic;font-family:-apple-system,sans-serif;">"${q.question}"</p>
       <p style="font-size:16px;color:#ffffff !important;line-height:1.7;margin:0 0 20px;font-family:-apple-system,sans-serif;">${q.answer.split(' ').slice(0, 40).join(' ')}...</p>
-      <p style="font-size:15px;font-weight:700;margin:0;font-family:-apple-system,sans-serif;"><a href="https://elijahbryant.pro/history" style="color:#ffffff !important;text-decoration:none;">See full answer →</a></p>
+      <p style="font-size:13px;margin:0;font-family:-apple-system,sans-serif;"><a href="https://elijahbryant.pro/history" style="color:#555555;text-decoration:none;">See full answer →</a></p>
     </div>
   `
     )
@@ -59,6 +59,10 @@ function buildEmail(
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">I answered.</p>
 
           ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${firstName}.</p>` : ''}
+
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
+            Most players never ask. They sit on the same problem for months and wonder why nothing changes. You asked. That's already different. Now read the answer like you mean it.
+          </p>
 
           <!-- Q&A blocks -->
           ${qaBlocks}

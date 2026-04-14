@@ -100,8 +100,8 @@ export async function GET(req: NextRequest) {
             I need your position and level before I write back. Two questions. Takes 30 seconds.
           </p>
 
-          <p style="font-size:18px;font-weight:700;margin:0 0 56px;font-family:-apple-system,sans-serif;">
-            <a href="${siteUrl}/profile" style="color:#ffffff !important;text-decoration:none;">Tell me who you are →</a>
+          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+            <a href="${siteUrl}/profile" style="color:#555555;text-decoration:none;">Tell me who you are →</a>
           </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
