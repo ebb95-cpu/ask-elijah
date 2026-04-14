@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       await resend.emails.send({
         from: 'Elijah Bryant <elijah@elijahbryant.pro>',
         to: entry.email,
-        subject: "You're in.",
+        subject: "Elijah opened it back up.",
         html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -60,21 +60,25 @@ export async function POST(req: NextRequest) {
             <img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:inline-block;border:0;width:52px;height:8px;" />
           </p>
 
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">A spot opened up.</p>
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">You're in.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Elijah opened it back up.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">You go first.</p>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-            You signed up to be notified when Ask Elijah opened. It just did.
+            You waited. Most people would have moved on. You didn't.
           </p>
 
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
             <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0;font-family:-apple-system,sans-serif;">
-              Ask the question you've been sitting on. I read every one personally and write back.
+              Ask the question you've been sitting on. Every question goes to Elijah. He reads it, shapes the answer, sends it back.
             </p>
           </div>
 
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
+            This won't stay open long.
+          </p>
+
           <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
-            <a href="${siteUrl}/ask" style="color:#555555;text-decoration:none;">Ask your question now →</a>
+            <a href="${siteUrl}/ask" style="color:#555555;text-decoration:none;">Ask my question →</a>
           </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>

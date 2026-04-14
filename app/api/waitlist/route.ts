@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   await resend.emails.send({
     from: 'Elijah Bryant <elijah@elijahbryant.pro>',
     to: cleanEmail,
-    subject: 'Confirm your spot.',
+    subject: 'One click and you are locked in.',
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -68,15 +68,15 @@ export async function POST(req: NextRequest) {
             <img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:inline-block;border:0;width:52px;height:8px;" />
           </p>
 
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">One click,</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Good. You showed up,</p>
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">${name.trim().split(' ')[0]}.</p>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-            Confirm your spot on the waitlist. When access opens, you'll be first.
+            Most players never ask for help. You did. Click below to lock in your place. When Elijah opens access back up, you go first.
           </p>
 
           <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
-            <a href="${confirmUrl}" style="color:#555555;text-decoration:none;">Confirm my spot →</a>
+            <a href="${confirmUrl}" style="color:#555555;text-decoration:none;">Lock in my place →</a>
           </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>

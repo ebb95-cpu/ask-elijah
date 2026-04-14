@@ -387,7 +387,7 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
     from: 'Elijah Bryant <elijah@elijahbryant.pro>',
       replyTo: 'ebb95@mac.com',
     to: userEmail,
-    subject: 'Got it. Reading it now.',
+    subject: 'Got your question. Working on it.',
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -404,21 +404,25 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
         <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
           <p style="text-align:center;margin:0 0 48px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:inline-block;border:0;width:52px;height:8px;" /></p>
 
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Got it.</p>
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Reading it now.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Got your question.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Working on it.</p>
 
           ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${firstName}.</p>` : ''}
 
-          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:48px;">
+          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
             <p style="font-size:18px;font-weight:600;color:#ffffff !important;line-height:1.5;font-style:italic;margin:0;font-family:-apple-system,sans-serif;">"${question}"</p>
           </div>
 
-          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
-            Give me some time with it. I'll write back when I have something real to say.
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 16px;font-family:-apple-system,sans-serif;">
+            We put together a first take based on everything I've covered on the mental side of the game. I'm reviewing it personally before it hits your inbox.
           </p>
 
-          <p style="font-size:18px;font-weight:700;margin:0 0 56px;font-family:-apple-system,sans-serif;">
-            <a href="${siteUrl}/history" style="color:#ffffff !important;text-decoration:none;">Track your question →</a>
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 40px;font-family:-apple-system,sans-serif;">
+            Check the app now to see what we have so far. The final version comes once I've looked it over.
+          </p>
+
+          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+            <a href="${siteUrl}/history" style="color:#555555;text-decoration:none;">See first take →</a>
           </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
@@ -512,7 +516,7 @@ export async function POST(req: NextRequest) {
           }).catch(() => {})
         }
       }).catch(() => {})
-      return NextResponse.json({ success: true, questionId: record?.id })
+      return NextResponse.json({ success: true, questionId: record?.id, draft: null })
     }
 
     // Language instruction — use detected language from question content
@@ -615,7 +619,7 @@ export async function POST(req: NextRequest) {
       }).catch(() => {})
     }
 
-    return NextResponse.json({ success: true, questionId })
+    return NextResponse.json({ success: true, questionId, draft: stripVerifyMarkers(draft) })
   } catch (err) {
     console.error('Ask API error:', err)
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })

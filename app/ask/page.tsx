@@ -357,6 +357,7 @@ function AskPageInner() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [topQuestions, setTopQuestions] = useState<{ id: string; question: string; upvote_count: number }[]>([])
   const [returnEntry, setReturnEntry] = useState<JournalEntry | null>(null)
+  const [draftAnswer, setDraftAnswer] = useState('')
   const [betaSpotsLeft, setBetaSpotsLeft] = useState<number | null>(null)
   const [waitlistEmail, setWaitlistEmail] = useState('')
   const [waitlistName, setWaitlistName] = useState('')
@@ -500,12 +501,16 @@ function AskPageInner() {
         }),
       })
 
+      const data = await res.json()
+
       if (!res.ok) {
-        const data = await res.json()
         setEmailError(data.error || 'Something went wrong.')
         setMode('email_gate')
         return
       }
+
+      // Store draft answer to show immediately
+      if (data.draft) setDraftAnswer(data.draft)
 
       // Route to onboarding if profile not done, otherwise straight to submitted
       posthog?.capture('question_sent')
@@ -642,9 +647,9 @@ function AskPageInner() {
             {!waitlistDone ? (
               <>
                 <p className="text-xs text-gray-600 tracking-widest uppercase mb-6">Beta</p>
-                <h1 className="text-3xl font-bold mb-4 leading-tight">This week&apos;s spots are full.</h1>
+                <h1 className="text-3xl font-bold mb-4 leading-tight">Access is closed right now.</h1>
                 <p className="text-gray-500 text-sm leading-relaxed mb-10">
-                  Elijah is answering questions personally. Drop your info and you&apos;ll be first when the next wave opens.
+                  Most players train their body every day and never once train their mind. That gap is why you freeze up, lose confidence, go blank under pressure. Every question goes to Elijah. He reads it, shapes the answer, sends it back. That takes real time so he controls who&apos;s in. Leave your name and what you&apos;re dealing with. When he opens it back up, you&apos;re first.
                 </p>
 
                 <div className="space-y-6 mb-8 text-left">
@@ -684,7 +689,7 @@ function AskPageInner() {
                   disabled={!waitlistEmail.trim() || !waitlistName.trim() || waitlistLoading}
                   className="w-full bg-white text-black py-3 text-sm font-semibold tracking-tight disabled:opacity-30 hover:opacity-80 transition-opacity"
                 >
-                  {waitlistLoading ? 'Saving...' : 'Get notified →'}
+                  {waitlistLoading ? 'Saving...' : "I'm ready when you are →"}
                 </button>
               </>
             ) : (
@@ -1183,34 +1188,51 @@ function AskPageInner() {
         <div className="w-16" />
       </nav>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20 text-center">
-        <div className="w-full max-w-sm">
-          <div className="w-2 h-2 bg-white rounded-full mx-auto mb-10" />
+      <div className="flex-1 flex flex-col items-center justify-start px-6 pt-12 pb-20">
+        <div className="w-full max-w-lg">
 
-          <h2 className="text-3xl font-bold mb-4">Elijah got your question.</h2>
-          <p className="text-gray-500 text-base leading-relaxed mb-3">
-            He&apos;ll review it and send the answer to
-          </p>
-          <p className="text-white font-semibold mb-10">{email}</p>
-
-          <div className="border-l-2 border-gray-800 pl-4 mb-12 text-left">
-            <p className="text-gray-600 text-sm italic">&ldquo;{question}&rdquo;</p>
+          {/* Header */}
+          <div className="text-center mb-10">
+            <div className="w-2 h-2 bg-white rounded-full mx-auto mb-8" />
+            <h2 className="text-3xl font-bold mb-3">Here&apos;s a first take.</h2>
+            <p className="text-gray-500 text-sm leading-relaxed">
+              Elijah is reviewing this personally. Once he signs off, the final answer lands in your inbox at <span className="text-white">{email}</span>
+            </p>
           </div>
 
-          <button
-            onClick={handleAskAnother}
-            className="text-sm border border-gray-700 px-6 py-3 text-gray-400 hover:border-white hover:text-white transition-colors"
-          >
-            Ask another question
-          </button>
-
-          {isLoggedIn && (
-            <div className="mt-4">
-              <Link href="/history" className="text-xs text-gray-600 hover:text-white transition-colors">
-                View my questions →
-              </Link>
+          {/* Draft answer */}
+          {draftAnswer ? (
+            <div className="mb-10">
+              <div className="border-l-2 border-gray-800 pl-4 mb-6">
+                <p className="text-gray-600 text-xs italic">&ldquo;{question}&rdquo;</p>
+              </div>
+              <div className="bg-gray-950 border border-gray-900 px-6 py-6 mb-3">
+                <p className="text-xs text-gray-600 uppercase tracking-widest mb-4">First take</p>
+                <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{draftAnswer}</p>
+              </div>
+              <p className="text-xs text-gray-700 text-center">Elijah reviews every answer before it sends. This may change.</p>
+            </div>
+          ) : (
+            <div className="border-l-2 border-gray-800 pl-4 mb-10">
+              <p className="text-gray-600 text-sm italic">&ldquo;{question}&rdquo;</p>
             </div>
           )}
+
+          {/* Actions */}
+          <div className="flex flex-col items-center gap-4">
+            <button
+              onClick={handleAskAnother}
+              className="text-sm border border-gray-700 px-6 py-3 text-gray-400 hover:border-white hover:text-white transition-colors w-full max-w-xs"
+            >
+              Ask another question
+            </button>
+            {isLoggedIn && (
+              <Link href="/history" className="text-xs text-gray-600 hover:text-white transition-colors">
+                View all my questions →
+              </Link>
+            )}
+          </div>
+
         </div>
       </div>
     </div>
