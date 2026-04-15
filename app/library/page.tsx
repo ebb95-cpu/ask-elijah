@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { getSupabaseClient } from '@/lib/supabase-client'
 
 function Logo() {
   return (
@@ -16,13 +17,15 @@ function Logo() {
   )
 }
 
-const FILTERS = ['All', 'Mental game', 'Recovery', 'Shooting', 'Nutrition', 'Explosiveness']
+// Topics come from the app/api/ask/route.ts TOPICS list.
+const FILTERS = ['All', 'confidence', 'pressure', 'consistency', 'focus', 'slump', 'coaching', 'team', 'mindset', 'motivation', 'identity']
 
 type Answer = {
   id: string
   question: string
   answer: string
   topic: string | null
+  status: string
   created_at: string
 }
 
@@ -32,21 +35,48 @@ export default function LibraryPage() {
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authed, setAuthed] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    // TODO: fetch from Supabase when auth is wired up
-    // For now, show empty state
-    setLoading(false)
-  }, [])
+    const init = async () => {
+      const supabase = getSupabaseClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/sign-in')
+        return
+      }
+      setAuthed(true)
 
-  const filtered = answers.filter(a => {
+      try {
+        const res = await fetch('/api/history')
+        if (res.ok) {
+          const data = await res.json()
+          setAnswers(data.questions || [])
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    init()
+  }, [router])
+
+  // Only show approved answers in the library — pending drafts live in /history
+  const approved = answers.filter(a => a.status === 'approved')
+
+  const filtered = approved.filter(a => {
     const matchFilter = filter === 'All' || a.topic === filter
-    const matchSearch = !search || a.question.toLowerCase().includes(search.toLowerCase())
+    const matchSearch = !search ||
+      a.question.toLowerCase().includes(search.toLowerCase()) ||
+      a.answer.toLowerCase().includes(search.toLowerCase())
     return matchFilter && matchSearch
   })
 
   const formatDate = (s: string) => new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+  if (!authed) {
+    return <div className="min-h-screen bg-white" />
+  }
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
@@ -58,7 +88,8 @@ export default function LibraryPage() {
       </nav>
 
       <main className="flex-1 px-6 py-12 max-w-3xl mx-auto w-full pb-24">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-8">Your playbook.</h1>
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">Your playbook.</h1>
+        <p className="text-sm text-gray-500 mb-8">Every answer Elijah has approved for you.</p>
 
         {/* Search */}
         <input
@@ -75,7 +106,7 @@ export default function LibraryPage() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`text-sm px-3 py-1.5 transition-colors ${
+              className={`text-sm px-3 py-1.5 transition-colors capitalize ${
                 filter === f
                   ? 'bg-black text-white'
                   : 'border border-gray-200 text-gray-500 hover:border-black hover:text-black'
@@ -97,14 +128,22 @@ export default function LibraryPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-xl font-bold tracking-tight mb-2">Your playbook starts here.</p>
-            <p className="text-gray-400 text-sm mb-8">Ask your first question to get started.</p>
-            <button
-              onClick={() => router.push('/ask')}
-              className="bg-black text-white px-6 py-3 text-sm font-semibold hover:opacity-80 transition-opacity"
-            >
-              Ask now →
-            </button>
+            <p className="text-xl font-bold tracking-tight mb-2">
+              {approved.length === 0 ? 'Your playbook starts here.' : 'No matches.'}
+            </p>
+            <p className="text-gray-400 text-sm mb-8">
+              {approved.length === 0
+                ? 'Ask your first question to get started.'
+                : 'Try a different filter or search.'}
+            </p>
+            {approved.length === 0 && (
+              <button
+                onClick={() => router.push('/ask')}
+                className="bg-black text-white px-6 py-3 text-sm font-semibold hover:opacity-80 transition-opacity"
+              >
+                Ask now →
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -118,11 +157,16 @@ export default function LibraryPage() {
                   <p className="font-bold text-sm tracking-tight flex-1">{a.question}</p>
                   <span className="text-xs text-gray-400 whitespace-nowrap mt-0.5">{formatDate(a.created_at)}</span>
                 </div>
+                {a.topic && (
+                  <span className="inline-block text-[10px] uppercase tracking-wider text-gray-400 mt-2">
+                    {a.topic}
+                  </span>
+                )}
                 {expanded !== a.id && (
                   <p className="text-gray-400 text-sm mt-2 line-clamp-2">{a.answer}</p>
                 )}
                 {expanded === a.id && (
-                  <p className="text-black text-sm mt-4 leading-relaxed">{a.answer}</p>
+                  <p className="text-black text-sm mt-4 leading-relaxed whitespace-pre-wrap">{a.answer}</p>
                 )}
               </div>
             ))}

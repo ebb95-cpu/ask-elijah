@@ -4,19 +4,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getSupabase } from '@/lib/supabase-server'
 import { Resend } from 'resend'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
-import { Ratelimit } from '@upstash/ratelimit'
-import { Redis } from '@upstash/redis'
-
-const ratelimit = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-  ? new Ratelimit({
-      redis: new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN,
-      }),
-      limiter: Ratelimit.slidingWindow(5, '1 d'),
-      prefix: 'rl:ask',
-    })
-  : null
+import { checkLimit } from '@/lib/rate-limit'
+import { logError } from '@/lib/log-error'
 
 function getAnthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -77,14 +66,14 @@ Reply with only the single tag word.`,
   }
 }
 
-async function tagTopic(question: string): Promise<Topic | null> {
+async function tagTopic(question: string): Promise<{ topic: Topic | null; confidence: number | null }> {
   try {
     const res = await getAnthropic().messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 20,
+      max_tokens: 40,
       messages: [{
         role: 'user',
-        content: `Categorize this basketball player's mental performance question with exactly one of these tags: confidence, pressure, consistency, focus, slump, coaching, team, mindset, motivation, identity.
+        content: `Categorize this basketball player's mental performance question with exactly one of these tags: confidence, pressure, consistency, focus, slump, coaching, team, mindset, motivation, identity. If none fit well, return "none".
 
 confidence = self-belief, fear of failure, imposter syndrome
 pressure = big game nerves, performance anxiety, clutch moments
@@ -99,13 +88,20 @@ identity = who am I as a player, position change, role, purpose
 
 Question: "${question}"
 
-Reply with only the single tag word.`,
+Return JSON only: {"tag": "<tag>", "confidence": <0-1>}. Use confidence < 0.6 if the question is ambiguous or off-topic.`,
       }],
     })
-    const tag = res.content[0].type === 'text' ? res.content[0].text.trim().toLowerCase() : ''
-    return (TOPICS as readonly string[]).includes(tag) ? tag as Topic : null
+    const raw = res.content[0].type === 'text' ? res.content[0].text.trim() : '{}'
+    const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    const parsed = JSON.parse(clean) as { tag?: string; confidence?: number }
+    const tag = (parsed.tag || '').toLowerCase()
+    const confidence = typeof parsed.confidence === 'number' ? parsed.confidence : null
+    const valid = (TOPICS as readonly string[]).includes(tag) ? (tag as Topic) : null
+    // Only use as filter if confidence is high enough
+    const filterable = confidence !== null && confidence < 0.6 ? null : valid
+    return { topic: filterable, confidence }
   } catch {
-    return null
+    return { topic: null, confidence: null }
   }
 }
 
@@ -447,13 +443,11 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
-    if (ratelimit) {
-      try {
-        const { success } = await ratelimit.limit(ip)
-        if (!success) return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 })
-      } catch (rlErr) {
-        console.warn('Rate limiter unavailable, allowing request:', rlErr)
-      }
+
+    // Throttle 1: IP-based — protect against anonymous floods (5/day)
+    const ipLimit = await checkLimit('rl:ask:ip', ip, 5, '1 d')
+    if (!ipLimit.success) {
+      return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 })
     }
 
     const { question, email, previewAnswer, newsletterOptIn, utm_source, utm_medium, utm_campaign } = await req.json()
@@ -470,13 +464,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email required' }, { status: 400 })
     }
 
+    // Minimal email shape check
+    const cleanEmailEarly = email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmailEarly)) {
+      return NextResponse.json({ error: 'Enter a valid email' }, { status: 400 })
+    }
+
+    // Throttle 2: Email-based — protect our API budget (10/day per email).
+    // This is the real cost guard: even behind rotating IPs, a single user
+    // can't drain Claude/Voyage/Pinecone spend for a whole day.
+    const emailLimit = await checkLimit('rl:ask:email', cleanEmailEarly, 10, '1 d')
+    if (!emailLimit.success) {
+      return NextResponse.json(
+        { error: "You've hit today's limit. Come back tomorrow — Elijah will still be here." },
+        { status: 429 }
+      )
+    }
+
     // Duplicate submission guard — same email within 2 minutes
     const supabaseCheck = getSupabase()
     const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString()
     const { data: recentQ } = await supabaseCheck
       .from('questions')
       .select('id')
-      .eq('email', email.trim().toLowerCase())
+      .eq('email', cleanEmailEarly)
       .gte('created_at', twoMinsAgo)
       .limit(1)
       .single()
@@ -494,12 +505,20 @@ export async function POST(req: NextRequest) {
 
     // ip already declared above for rate limiting
 
-    // Detect language + tag topic + tag trigger in parallel
-    const [{ language: detectedLanguage, englishTranslation }, topic, trigger] = await Promise.all([
+    // Detect language + tag topic + tag trigger + fetch player context in parallel.
+    // Starting playerContext NOW (not later) so it's ready before Claude draft generation
+    // without blocking the request path.
+    const playerContextPromise = getPlayerContext(email).catch((err) => {
+      logError('ask:player-context', err, { email: cleanEmailEarly })
+      return ''
+    })
+
+    const [{ language: detectedLanguage, englishTranslation }, topicResult, trigger] = await Promise.all([
       detectLanguage(question).catch(() => ({ language: 'English', englishTranslation: null })),
       tagTopic(question),
       tagTrigger(question),
     ])
+    const { topic, confidence: topicConfidence } = topicResult
     const queryForEmbedding = englishTranslation || question
 
     // RAG lookup
@@ -515,11 +534,8 @@ export async function POST(req: NextRequest) {
         ragContext = `Here is relevant content from Elijah's YouTube videos and newsletters:\n\n${result.chunks.join('\n\n---\n\n')}\n\n`
       }
     } catch (ragErr) {
-      console.warn('RAG lookup failed:', ragErr)
+      logError('ask:rag-lookup', ragErr, { email: cleanEmailEarly })
     }
-
-    // Fetch player context early so it's ready for Claude draft generation
-    const playerContextPromise = getPlayerContext(email).catch(() => '')
 
     // If no relevant chunks and no preview answer, use fallback
     const FALLBACK = "I want to make sure I give you something real on this one. Try asking me again with a bit more detail about your situation and I'll find the right angle."
@@ -527,22 +543,24 @@ export async function POST(req: NextRequest) {
       const supabase = getSupabase()
       const { data: record } = await supabase
         .from('questions')
-        .insert({ question, answer: FALLBACK, sources: [], ip, email: email.trim().toLowerCase(), status: 'pending', topic: topic ?? null, trigger: trigger ?? null, language_detected: detectedLanguage !== 'English' ? detectedLanguage : null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null })
+        .insert({ question, answer: FALLBACK, ai_draft: FALLBACK, sources: [], ip, email: cleanEmailEarly, status: 'pending', topic: topic ?? null, topic_confidence: topicConfidence, trigger: trigger ?? null, language_detected: detectedLanguage !== 'English' ? detectedLanguage : null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null })
         .select('id').single()
       const playerContext = await playerContextPromise
-      if (record?.id) await notifyElijah(record.id, question, FALLBACK, email, playerContext).catch(console.error)
-      await sendConfirmation(question, email, !!newsletterOptIn).catch(console.error)
-      if (newsletterOptIn) await addToBeehiiv(email.trim().toLowerCase()).catch(console.error)
+      if (record?.id) await notifyElijah(record.id, question, FALLBACK, email, playerContext).catch((e) => logError('ask:notify-elijah', e, { questionId: record.id }))
+      await sendConfirmation(question, email, !!newsletterOptIn).catch((e) => logError('ask:send-confirmation', e, { email: cleanEmailEarly }))
+      if (newsletterOptIn) await addToBeehiiv(cleanEmailEarly).catch((e) => logError('ask:beehiiv', e, { email: cleanEmailEarly }))
       // Fire-and-forget memory extraction
       extractMemories(question).then(memories => {
         if (memories.length && record?.id) {
           fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'}/api/memories`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email.trim().toLowerCase(), memories, source_question_id: record.id }),
-          }).catch(() => {})
+            body: JSON.stringify({ email: cleanEmailEarly, memories, source_question_id: record.id }),
+          }).catch((e) => logError('ask:memories-post', e, { questionId: record.id }))
         }
-      }).catch(() => {})
+      }).catch((e) => logError('ask:extract-memories', e, { email: cleanEmailEarly }))
+      // Fire-and-forget founding-member check for new profiles
+      void maybeMarkFoundingMember(cleanEmailEarly)
       return NextResponse.json({ success: true, questionId: record?.id, draft: null })
     }
 
@@ -590,16 +608,19 @@ export async function POST(req: NextRequest) {
 
     // Save to Supabase as pending — strip verify markers from stored answer
     const supabase = getSupabase()
+    const cleanDraft = stripVerifyMarkers(draft)
     const { data: record, error: insertError } = await supabase
       .from('questions')
       .insert({
         question,
-        answer: stripVerifyMarkers(draft),
+        answer: cleanDraft,
+        ai_draft: cleanDraft,
         sources,
         ip,
-        email: email.trim().toLowerCase(),
+        email: cleanEmailEarly,
         status: 'pending',
         topic: topic ?? null,
+        topic_confidence: topicConfidence,
         trigger: trigger ?? null,
         language_detected: detectedLanguage !== 'English' ? detectedLanguage : null,
         utm_source: utm_source || null,
@@ -609,22 +630,20 @@ export async function POST(req: NextRequest) {
       .select('id')
       .single()
 
-    const cleanEmail = email.trim().toLowerCase()
-
     if (insertError) {
-      console.error('Supabase insert error:', insertError)
+      await logError('ask:supabase-insert', insertError, { email: cleanEmailEarly })
       const { data: fallback } = await supabase
         .from('questions')
-        .insert({ question, answer: draft, sources, ip, email: cleanEmail })
+        .insert({ question, answer: draft, ai_draft: draft, sources, ip, email: cleanEmailEarly })
         .select('id')
         .single()
 
       const questionId = fallback?.id ?? null
       if (questionId) {
-        await notifyElijah(questionId, question, draft, email, playerContext).catch(console.error)
+        await notifyElijah(questionId, question, draft, email, playerContext).catch((e) => logError('ask:notify-elijah', e, { questionId }))
       }
-        await sendConfirmation(question, email, !!newsletterOptIn).catch(console.error)
-      if (newsletterOptIn) await addToBeehiiv(cleanEmail).catch(console.error)
+      await sendConfirmation(question, email, !!newsletterOptIn).catch((e) => logError('ask:send-confirmation', e, { email: cleanEmailEarly }))
+      if (newsletterOptIn) await addToBeehiiv(cleanEmailEarly).catch((e) => logError('ask:beehiiv', e, { email: cleanEmailEarly }))
       return NextResponse.json({ success: true, questionId })
     }
 
@@ -632,10 +651,10 @@ export async function POST(req: NextRequest) {
 
     // Notify Elijah + confirm to user
     if (questionId) {
-      await notifyElijah(questionId, question, draft, email, playerContext).catch(console.error)
+      await notifyElijah(questionId, question, draft, email, playerContext).catch((e) => logError('ask:notify-elijah', e, { questionId }))
     }
-    await sendConfirmation(question, email, !!newsletterOptIn).catch(console.error)
-    if (newsletterOptIn) await addToBeehiiv(cleanEmail).catch(console.error)
+    await sendConfirmation(question, email, !!newsletterOptIn).catch((e) => logError('ask:send-confirmation', e, { email: cleanEmailEarly }))
+    if (newsletterOptIn) await addToBeehiiv(cleanEmailEarly).catch((e) => logError('ask:beehiiv', e, { email: cleanEmailEarly }))
 
     // Fire-and-forget memory extraction
     if (questionId) {
@@ -644,15 +663,47 @@ export async function POST(req: NextRequest) {
           fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'}/api/memories`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email.trim().toLowerCase(), memories, source_question_id: questionId }),
-          }).catch(() => {})
+            body: JSON.stringify({ email: cleanEmailEarly, memories, source_question_id: questionId }),
+          }).catch((e) => logError('ask:memories-post', e, { questionId }))
         }
-      }).catch(() => {})
+      }).catch((e) => logError('ask:extract-memories', e, { email: cleanEmailEarly }))
     }
 
-    return NextResponse.json({ success: true, questionId, draft: stripVerifyMarkers(draft) })
+    // Auto-flag first 30 signups as founding members (fire-and-forget)
+    void maybeMarkFoundingMember(cleanEmailEarly)
+
+    return NextResponse.json({ success: true, questionId, draft: cleanDraft })
   } catch (err) {
-    console.error('Ask API error:', err)
+    await logError('ask:unexpected', err)
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
+  }
+}
+
+/**
+ * If fewer than 30 profiles have `is_founding_member=true`, flag this email's
+ * profile. Fire-and-forget, never throws.
+ */
+async function maybeMarkFoundingMember(email: string): Promise<void> {
+  try {
+    const supabase = getSupabase()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_founding_member')
+      .eq('email', email)
+      .single()
+    if (!profile || profile.is_founding_member) return
+
+    const { count } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_founding_member', true)
+    if ((count ?? 0) >= 30) return
+
+    await supabase
+      .from('profiles')
+      .update({ is_founding_member: true })
+      .eq('email', email)
+  } catch (e) {
+    await logError('ask:founding-member', e, { email })
   }
 }

@@ -181,9 +181,12 @@ function PainPointCard({
   }
 
   const kbSources: KbSource[] = Array.isArray(item.kb_sources) ? item.kb_sources : []
+  const ppDirty = draft.trim() !== ((item.draft_answer || item.final_answer || '').trim())
 
   return (
     <div
+      data-card-id={`pp-${item.id}`}
+      data-dirty={ppDirty ? 'true' : 'false'}
       onClick={onFocus}
       style={{
         border: `1px solid ${focused ? '#444' : '#222'}`,
@@ -459,8 +462,12 @@ function PlayerQuestionCard({
     )
   }
 
+  const isDirty = draft.trim() !== (originalDraft || '').trim()
+
   return (
     <div
+      data-card-id={`pq-${item.id}`}
+      data-dirty={isDirty ? 'true' : 'false'}
       onClick={onFocus}
       style={{
         border: `1px solid ${focused ? '#2d3a6b' : '#1a2040'}`,
@@ -497,9 +504,14 @@ function PlayerQuestionCard({
             return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
           })()}
         </span>
+        {isDirty && (
+          <span style={{ fontSize: '10px', color: '#f59e0b', fontFamily: '-apple-system, sans-serif' }}>
+            ● unsaved
+          </span>
+        )}
         {focused && (
           <span style={{ fontSize: '10px', color: '#333', marginLeft: 'auto', fontFamily: '-apple-system, sans-serif' }}>
-            ⌘↵ approve · S skip
+            ⌘↵ approve · S skip · J/K navigate
           </span>
         )}
       </div>
@@ -836,6 +848,47 @@ export default function AdminQuestionsPage() {
     setSearchQuery('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter])
+
+  // Global j/k navigation between queue cards
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      // Ignore when typing in a textarea/input
+      const target = e.target as HTMLElement | null
+      if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable)) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key !== 'j' && e.key !== 'k') return
+      if (items.length === 0) return
+
+      const ids = items.map((it) => (it.kind === 'pain_point' ? `pp-${it.data.id}` : `pq-${it.data.id}`))
+      const currentIdx = focusedId ? ids.indexOf(focusedId) : -1
+      const nextIdx = e.key === 'j' ? Math.min(ids.length - 1, currentIdx + 1) : Math.max(0, currentIdx - 1)
+      const nextId = ids[nextIdx === -1 ? 0 : nextIdx]
+      if (nextId) {
+        setFocusedId(nextId)
+        // Scroll into view
+        requestAnimationFrame(() => {
+          document.querySelector(`[data-card-id="${nextId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        })
+      }
+      e.preventDefault()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [items, focusedId])
+
+  // Unsaved-changes warning: if any card's textarea is dirty, warn on navigate-away
+  useEffect(() => {
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (typeof window === 'undefined') return
+      const dirty = document.querySelector('[data-dirty="true"]')
+      if (dirty) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [])
 
   useEffect(() => {
     loadDashStats()

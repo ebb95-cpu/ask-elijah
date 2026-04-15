@@ -26,12 +26,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    // Fetch their questions by email, newest first
+    // Fetch their questions by email, newest first. Exclude soft-deleted.
     const supabase = getSupabase()
     const { data, error } = await supabase
       .from('questions')
-      .select('id, question, answer, sources, created_at')
+      .select('id, question, answer, sources, created_at, status, topic, approved_at')
       .eq('email', user.email)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(50)
 

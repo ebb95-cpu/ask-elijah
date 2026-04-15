@@ -493,7 +493,9 @@ function AskPageInner() {
     posthog?.capture('email_submitted', { email: email.trim().toLowerCase() })
     posthog?.identify(email.trim().toLowerCase(), { email: email.trim().toLowerCase() })
 
-    // Check if we need clarification before submitting
+    // Check if we need clarification before submitting.
+    // If clarify API fails, we proceed without it — but track the event so we
+    // know when answer quality is dropping because the classifier is down.
     try {
       const clarRes = await fetch('/api/clarify', {
         method: 'POST',
@@ -501,7 +503,9 @@ function AskPageInner() {
         body: JSON.stringify({ question, conversation: [] }),
       })
       const clarData = await clarRes.json()
-      if (!clarData.done && clarData.followUp) {
+      if (clarData.fallback) {
+        posthog?.capture('clarify_fallback', { reason: clarData.reason })
+      } else if (!clarData.done && clarData.followUp) {
         setClarifyQuestion(clarData.followUp)
         setClarifyConversation([])
         setClarifyAnswer('')
@@ -509,7 +513,9 @@ function AskPageInner() {
         setTimeout(() => clarifyInputRef.current?.focus(), 100)
         return
       }
-    } catch { /* fail-open — skip clarification on error */ }
+    } catch (err) {
+      posthog?.capture('clarify_error', { error: String(err) })
+    }
 
     setMode('loading')
     incrementQuestionCount()
@@ -651,6 +657,10 @@ function AskPageInner() {
       })
       const data = await res.json()
 
+      if (data.fallback) {
+        posthog?.capture('clarify_fallback', { reason: data.reason, round: updatedConversation.length })
+      }
+
       if (!data.done && data.followUp) {
         // Another follow-up needed
         setClarifyQuestion(data.followUp)
@@ -663,8 +673,9 @@ function AskPageInner() {
         sessionStorage.setItem('user_email', email.trim().toLowerCase())
         await submitToApi(question, email.trim().toLowerCase(), updatedConversation)
       }
-    } catch {
-      // On error, just submit what we have
+    } catch (err) {
+      // On error, proceed with what we have but record it
+      posthog?.capture('clarify_error', { error: String(err), round: updatedConversation.length })
       setMode('loading')
       incrementQuestionCount()
       sessionStorage.setItem('user_email', email.trim().toLowerCase())

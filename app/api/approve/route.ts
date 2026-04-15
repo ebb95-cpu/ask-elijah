@@ -2,6 +2,7 @@ import { escapeHtml } from '@/lib/escape-html'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 import { Resend } from 'resend'
+import { logError } from '@/lib/log-error'
 
 async function embedText(text: string): Promise<number[]> {
   const res = await fetch('https://api.voyageai.com/v1/embeddings', {
@@ -54,64 +55,6 @@ async function saveToPinecone(
   })
 }
 
-async function backupPineconeLatest(): Promise<void> {
-  const pineconeHost = process.env.PINECONE_HOST!
-  const pineconeKey = process.env.PINECONE_API_KEY!
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-  // List all vector IDs with pagination
-  const allIds: string[] = []
-  let paginationToken: string | undefined
-
-  do {
-    const url = new URL(`${pineconeHost}/vectors/list`)
-    if (paginationToken) url.searchParams.set('paginationToken', paginationToken)
-
-    const res = await fetch(url.toString(), {
-      headers: { 'Api-Key': pineconeKey },
-    })
-    if (!res.ok) throw new Error(`Pinecone list failed: ${res.status}`)
-    const data = await res.json()
-
-    const ids: string[] = (data.vectors || []).map((v: { id: string }) => v.id)
-    allIds.push(...ids)
-    paginationToken = data.pagination?.next
-  } while (paginationToken)
-
-  // Fetch vectors in batches of 100
-  const allVectors: unknown[] = []
-  for (let i = 0; i < allIds.length; i += 100) {
-    const batch = allIds.slice(i, i + 100)
-    const params = batch.map(id => `ids=${encodeURIComponent(id)}`).join('&')
-    const res = await fetch(`${pineconeHost}/vectors/fetch?${params}`, {
-      headers: { 'Api-Key': pineconeKey },
-    })
-    if (!res.ok) throw new Error(`Pinecone fetch failed: ${res.status}`)
-    const data = await res.json()
-    allVectors.push(...Object.values(data.vectors || {}))
-  }
-
-  // Upload to Supabase Storage as latest.json
-  const body = JSON.stringify({ backedUpAt: new Date().toISOString(), vectors: allVectors })
-  const uploadRes = await fetch(
-    `${supabaseUrl}/storage/v1/object/pinecone-backups/latest.json`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${supabaseServiceKey}`,
-        'Content-Type': 'application/json',
-        'x-upsert': 'true',
-      },
-      body,
-    }
-  )
-  if (!uploadRes.ok) {
-    const text = await uploadRes.text()
-    throw new Error(`Supabase upload failed: ${uploadRes.status} ${text}`)
-  }
-}
-
 export async function POST(req: NextRequest) {
   const token = req.headers.get('x-token')
   if (!token || token !== process.env.CRON_SECRET) {
@@ -125,10 +68,10 @@ export async function POST(req: NextRequest) {
 
   const supabase = getSupabase()
 
-  // Fetch question record
+  // Fetch question record — include ai_draft + edit_count for audit tracking
   const { data: record, error: fetchError } = await supabase
     .from('questions')
-    .select('question, email, sources, topic, trigger')
+    .select('question, email, sources, topic, trigger, ai_draft, answer, edit_count')
     .eq('id', questionId)
     .single()
 
@@ -144,10 +87,20 @@ export async function POST(req: NextRequest) {
     .single()
   const firstName = profile?.first_name || null
 
+  // Track edit distance: if Elijah changed the draft, bump edit_count so we can
+  // see later how much the model drifts from his voice
+  const draftChanged = (record.ai_draft || record.answer || '').trim() !== finalAnswer.trim()
+
   // Update in Supabase
   await supabase
     .from('questions')
-    .update({ answer: finalAnswer, status: 'approved', action_steps: actionSteps || null })
+    .update({
+      answer: finalAnswer,
+      status: 'approved',
+      action_steps: actionSteps || null,
+      approved_at: new Date().toISOString(),
+      edit_count: draftChanged ? (record.edit_count || 0) + 1 : (record.edit_count || 0),
+    })
     .eq('id', questionId)
 
   // Send email to user
@@ -215,11 +168,12 @@ export async function POST(req: NextRequest) {
       age_range: profile?.age_range ?? null,
     })
   } catch (err) {
-    console.warn('Pinecone save failed (non-fatal):', err)
+    await logError('approve:pinecone-save', err, { questionId })
   }
 
-  // Fire-and-forget backup
-  void backupPineconeLatest().catch(e => console.warn('Backup failed (non-fatal):', e))
+  // Note: Pinecone backup is now a nightly cron job (app/api/cron/backup-pinecone)
+  // instead of firing on every approval — the old behavior meant a full-index
+  // export per question approval.
 
   return NextResponse.json({ success: true })
 }

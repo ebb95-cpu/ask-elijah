@@ -24,6 +24,8 @@ type Question = {
   answer: string
   sources: { title: string; url: string; type: string }[]
   created_at: string
+  status?: 'pending' | 'approved' | 'skipped'
+  approved_at?: string | null
 }
 
 function formatDate(iso: string) {
@@ -75,19 +77,27 @@ export default function HistoryPage() {
     init()
   }, [router])
 
-  // Poll every 30 seconds for new answers
+  // Poll every 30 seconds. Trigger the "Elijah wrote back" banner when either:
+  // 1. a new question id appears, OR
+  // 2. an existing pending question transitions to approved.
   useEffect(() => {
     const interval = setInterval(async () => {
       const qs = await fetchQuestions()
-      const newIds = qs.filter((q: Question) => !knownIdsRef.current.has(q.id))
-      if (newIds.length > 0) {
+      const existingMap = new Map(questions.map((q) => [q.id, q.status]))
+      const hasNew = qs.some((q: Question) => !knownIdsRef.current.has(q.id))
+      const hasNewlyApproved = qs.some((q: Question) =>
+        q.status === 'approved' && existingMap.get(q.id) === 'pending'
+      )
+      if (hasNew || hasNewlyApproved) {
         setNewAnswer(true)
         setQuestions(qs)
-        newIds.forEach((q: Question) => knownIdsRef.current.add(q.id))
+        qs.forEach((q: Question) => knownIdsRef.current.add(q.id))
+      } else if (qs.length !== questions.length) {
+        setQuestions(qs)
       }
     }, 30000)
     return () => clearInterval(interval)
-  }, [])
+  }, [questions])
 
   const handleSignOut = async () => {
     const supabase = getSupabaseClient()
@@ -170,7 +180,18 @@ export default function HistoryPage() {
                     <p className="text-black font-medium text-sm leading-snug group-hover:opacity-70 transition-opacity">
                       {q.question}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">{formatDate(q.created_at)}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-gray-400">{formatDate(q.created_at)}</p>
+                      {q.status === 'approved' ? (
+                        <span className="text-[10px] uppercase tracking-wider text-green-600 font-semibold">
+                          Elijah approved
+                        </span>
+                      ) : q.status === 'pending' ? (
+                        <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                          First take · awaiting review
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <span className="text-gray-300 text-lg mt-0.5 flex-shrink-0">
                     {expanded === q.id ? '−' : '+'}

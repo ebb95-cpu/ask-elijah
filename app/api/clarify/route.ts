@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
+import { logError } from '@/lib/log-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,10 @@ async function getKnowledgeContext(question: string): Promise<string> {
       },
       body: JSON.stringify({ input: [question], model: 'voyage-3-lite' }),
     })
-    if (!embedRes.ok) return ''
+    if (!embedRes.ok) {
+      await logError('clarify:voyage', `status ${embedRes.status}`)
+      return ''
+    }
     const embedData = await embedRes.json()
     const embedding = embedData.data[0].embedding
 
@@ -30,7 +34,10 @@ async function getKnowledgeContext(question: string): Promise<string> {
       },
       body: JSON.stringify({ vector: embedding, topK: 3, includeMetadata: true }),
     })
-    if (!pineconeRes.ok) return ''
+    if (!pineconeRes.ok) {
+      await logError('clarify:pinecone', `status ${pineconeRes.status}`)
+      return ''
+    }
     const pineconeData = await pineconeRes.json()
     const matches = pineconeData.matches || []
 
@@ -41,7 +48,8 @@ async function getKnowledgeContext(question: string): Promise<string> {
       .join('\n\n')
 
     return chunks
-  } catch {
+  } catch (err) {
+    await logError('clarify:knowledge-context', err)
     return ''
   }
 }
@@ -108,7 +116,10 @@ Format: {"done": true} OR {"done": false, "followUp": "your question here"}`
     }
 
     return NextResponse.json({ done: false, followUp: parsed.followUp })
-  } catch {
-    return NextResponse.json({ done: true })
+  } catch (err) {
+    await logError('clarify:anthropic', err, { question: question.slice(0, 80) })
+    // Signal failure explicitly so the frontend can show a toast AND still
+    // let the user proceed rather than looping forever.
+    return NextResponse.json({ done: true, fallback: true, reason: 'clarify_failed' }, { status: 200 })
   }
 }
