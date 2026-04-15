@@ -1,9 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 
 export const dynamic = 'force-dynamic'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+async function getKnowledgeContext(question: string): Promise<string> {
+  try {
+    // Embed the question
+    const embedRes = await fetch('https://api.voyageai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ input: [question], model: 'voyage-3-lite' }),
+    })
+    if (!embedRes.ok) return ''
+    const embedData = await embedRes.json()
+    const embedding = embedData.data[0].embedding
+
+    // Query Pinecone for top 3 relevant chunks
+    const pineconeRes = await fetch(`${process.env.PINECONE_HOST}/query`, {
+      method: 'POST',
+      headers: {
+        'Api-Key': process.env.PINECONE_API_KEY!,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ vector: embedding, topK: 3, includeMetadata: true }),
+    })
+    if (!pineconeRes.ok) return ''
+    const pineconeData = await pineconeRes.json()
+    const matches = pineconeData.matches || []
+
+    const chunks = matches
+      .filter((m: { score: number; metadata: Record<string, string> }) => m.score > 0.5)
+      .map((m: { metadata: Record<string, string> }) => m.metadata?.text || '')
+      .filter(Boolean)
+      .join('\n\n')
+
+    return chunks
+  } catch {
+    return ''
+  }
+}
 
 export async function POST(req: NextRequest) {
   const { question, conversation } = await req.json()
@@ -18,23 +59,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ done: true })
   }
 
+  // Fetch knowledge base context in parallel with building conversation text
+  const [knowledgeContext] = await Promise.all([
+    getKnowledgeContext(question),
+  ])
+
   const conversationText = (conversation || [])
-    .map((c: { q: string; a: string }) => `Elijah asked: "${c.q}"\nPlayer answered: "${c.a}"`)
+    .map((c: { q: string; a: string }) => `You asked: "${c.q}"\nThey said: "${c.a}"`)
     .join('\n\n')
 
-  const prompt = `You are Elijah Bryant — NBA player, EuroLeague champion, mental performance coach. A basketball player just asked you a question. You need to decide: do you have enough context to give a genuinely useful, specific answer? Or do you need to ask one more follow-up question first?
+  const knowledgeSection = knowledgeContext
+    ? `Here is what you know and have said about this topic from your own content:\n\n${knowledgeContext}\n\n`
+    : ''
+
+  const prompt = `A basketball player just sent you this question. You need to decide: do you have enough to give them a real, specific answer? Or is there one more thing you need to know first?
 
 Player's question: "${question}"
-${conversationText ? `\nConversation so far:\n${conversationText}` : ''}
+${conversationText ? `\nConversation so far:\n${conversationText}\n` : ''}
+${knowledgeSection}
+Your job: figure out what specific detail about THEIR situation would let you give the most targeted answer possible. Not general info — the one thing that changes how you'd respond.
 
 Rules:
-- If the question is specific enough to answer well, return done: true
-- If you need more context, ask ONE short, direct follow-up question in your voice — conversational, like you're texting them, not formal
-- Never ask more than one question at a time
-- Focus on the most important missing piece of information
-- After 2 rounds of good answers, lean toward done: true unless you're genuinely missing something critical
-- Questions like "what position do you play" or "what level" are NOT worth asking — you can answer without that
-- DO ask about: specific situations, what they've already tried, what their relationship with the coach/team is like, what "bad" means to them specifically
+- If you have enough context, return done: true
+- If you need one more thing, ask it in your natural voice — short, conversational, like a text
+- Never ask more than one question
+- Ask about their specific situation, not generic things like position or level
+- Ask about: what exactly happened, what they felt, what they tried, what the relationship is like, what "bad" means to them
+- Use your knowledge above to ask smarter questions — if you know your answer branches based on something specific, ask about that thing
+- After 2 good rounds of answers, lean toward done: true
 
 Return ONLY valid JSON. No other text.
 Format: {"done": true} OR {"done": false, "followUp": "your question here"}`
@@ -43,11 +95,11 @@ Format: {"done": true} OR {"done": false, "followUp": "your question here"}`
     const res = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 200,
+      system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: prompt }],
     })
 
     const raw = res.content[0].type === 'text' ? res.content[0].text.trim() : '{}'
-    // Strip any markdown code fences if present
     const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
     const parsed = JSON.parse(clean)
 
@@ -57,7 +109,6 @@ Format: {"done": true} OR {"done": false, "followUp": "your question here"}`
 
     return NextResponse.json({ done: false, followUp: parsed.followUp })
   } catch {
-    // On any error, just proceed with what we have
     return NextResponse.json({ done: true })
   }
 }
