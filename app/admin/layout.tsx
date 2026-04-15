@@ -1,12 +1,22 @@
-import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 
+/**
+ * Auth gating for /admin/* lives in middleware.ts — that runs before any
+ * layout/page and can cleanly exempt /admin/login without a redirect loop.
+ * This layout just applies the admin chrome to every admin page EXCEPT
+ * the login page itself (the login page renders bare).
+ *
+ * Note: middleware has already guaranteed the cookie is valid for any page
+ * under this layout other than /admin/login; we rely on that invariant.
+ */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies()
-  const adminToken = cookieStore.get('admin_token')?.value
+  const hasAdmin = cookieStore.get('admin_token')?.value === process.env.ADMIN_PASSWORD
 
-  if (adminToken !== process.env.ADMIN_PASSWORD) {
-    redirect('/admin/login')
+  // If there's no cookie, we're rendering /admin/login (middleware allowed
+  // it through). Don't wrap it in admin chrome.
+  if (!hasAdmin) {
+    return <>{children}</>
   }
 
   return (
