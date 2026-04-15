@@ -124,7 +124,7 @@ function useIsTouchDevice(): boolean {
  * Everything gets chunked, embedded, and pushed into Pinecone so future
  * questions can retrieve from it. This is the "feed the AI" input.
  */
-function UploadPanel() {
+function UploadPanel({ onIngested }: { onIngested?: () => void }) {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<'text' | 'url' | 'file'>('text')
   const [title, setTitle] = useState('')
@@ -141,6 +141,16 @@ function UploadPanel() {
     (mode === 'url' && /^https?:\/\//i.test(url)) ||
     (mode === 'file' && !!file)
   )
+
+  const isPlainTextFile = (f: File): boolean => {
+    const name = f.name.toLowerCase()
+    return (
+      f.type.startsWith('text/') ||
+      name.endsWith('.txt') ||
+      name.endsWith('.md') ||
+      name.endsWith('.markdown')
+    )
+  }
 
   const reset = () => {
     setText('')
@@ -163,16 +173,22 @@ function UploadPanel() {
       } else if (mode === 'url') {
         body = { ...body, type: 'url', content: url, source_url: url }
       } else if (mode === 'file' && file) {
-        // Base64-encode the file. Chunked to avoid call-stack overflow for
-        // large PDFs (apply/spread has a ~100k argument limit).
-        const buf = new Uint8Array(await file.arrayBuffer())
-        let binary = ''
-        const chunk = 0x8000
-        for (let i = 0; i < buf.length; i += chunk) {
-          binary += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + chunk)))
+        if (isPlainTextFile(file)) {
+          // Plain text / markdown — just read as UTF-8 and ship as text
+          const plain = await file.text()
+          body = { ...body, type: 'text', content: plain }
+        } else {
+          // PDF (or anything binary we treat as PDF) — base64, chunked to
+          // avoid call-stack overflow for large files.
+          const buf = new Uint8Array(await file.arrayBuffer())
+          let binary = ''
+          const chunk = 0x8000
+          for (let i = 0; i < buf.length; i += chunk) {
+            binary += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + chunk)))
+          }
+          const b64 = btoa(binary)
+          body = { ...body, type: 'pdf_base64', content: b64 }
         }
-        const b64 = btoa(binary)
-        body = { ...body, type: 'pdf_base64', content: b64 }
       }
 
       const res = await fetch('/api/admin/ingest', {
@@ -186,6 +202,7 @@ function UploadPanel() {
       } else {
         setResult({ ok: true, msg: `Added ${data.chunks} chunk${data.chunks === 1 ? '' : 's'} from "${data.source_title}"` })
         reset()
+        onIngested?.()
       }
     } catch (err) {
       setResult({ ok: false, msg: err instanceof Error ? err.message : 'Upload failed' })
@@ -196,8 +213,8 @@ function UploadPanel() {
 
   const TABS: { id: typeof mode; label: string }[] = [
     { id: 'text', label: 'Paste text' },
-    { id: 'url', label: 'URL' },
-    { id: 'file', label: 'PDF' },
+    { id: 'url', label: 'URL / YouTube / Podcast' },
+    { id: 'file', label: 'File' },
   ]
 
   return (
@@ -242,7 +259,7 @@ function UploadPanel() {
             Knowledge Base
           </span>
           <span style={{ fontSize: '14px', fontWeight: 600 }}>Feed the AI</span>
-          <span style={{ fontSize: '12px', color: '#666' }}>Paste text, drop a PDF, or give it a URL</span>
+          <span style={{ fontSize: '12px', color: '#666' }}>Paste text · drop a file · or URL (YouTube + podcasts auto-transcribe)</span>
         </div>
         <span style={{ fontSize: '18px', color: '#666' }}>{open ? '−' : '+'}</span>
       </button>
@@ -290,7 +307,7 @@ function UploadPanel() {
               border: '1px solid #333',
               borderRadius: '6px',
               padding: '10px',
-              fontSize: '13px',
+              fontSize: '16px',
               fontFamily: '-apple-system, sans-serif',
               marginBottom: '12px',
               boxSizing: 'border-box',
@@ -312,7 +329,7 @@ function UploadPanel() {
                 border: '1px solid #333',
                 borderRadius: '6px',
                 padding: '10px',
-                fontSize: '13px',
+                fontSize: '16px',
                 lineHeight: '1.6',
                 fontFamily: '-apple-system, sans-serif',
                 marginBottom: '12px',
@@ -324,25 +341,30 @@ function UploadPanel() {
           )}
 
           {mode === 'url' && (
-            <input
-              type="url"
-              placeholder="https://example.com/article"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              style={{
-                width: '100%',
-                background: '#0a0a0a',
-                color: '#ffffff',
-                border: '1px solid #333',
-                borderRadius: '6px',
-                padding: '10px',
-                fontSize: '13px',
-                fontFamily: '-apple-system, sans-serif',
-                marginBottom: '12px',
-                boxSizing: 'border-box',
-                outline: 'none',
-              }}
-            />
+            <>
+              <input
+                type="url"
+                placeholder="https://youtube.com/... · https://podcast.com/...mp3 · https://article.com"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: '#0a0a0a',
+                  color: '#ffffff',
+                  border: '1px solid #333',
+                  borderRadius: '6px',
+                  padding: '10px',
+                  fontSize: '16px',
+                  fontFamily: '-apple-system, sans-serif',
+                  marginBottom: '6px',
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                }}
+              />
+              <p style={{ fontSize: '11px', color: '#666', margin: '0 0 12px', fontFamily: '-apple-system, sans-serif' }}>
+                YouTube and audio URLs auto-transcribe (takes 1-3 min). Websites scrape in seconds.
+              </p>
+            </>
           )}
 
           {mode === 'file' && (
@@ -359,7 +381,7 @@ function UploadPanel() {
               <input
                 id="kb-file-input"
                 type="file"
-                accept="application/pdf,.pdf"
+                accept="application/pdf,.pdf,.txt,.md,.markdown,text/plain,text/markdown"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
                 style={{ display: 'none' }}
               />
@@ -367,16 +389,18 @@ function UploadPanel() {
                 htmlFor="kb-file-input"
                 style={{
                   display: 'inline-block',
-                  padding: '8px 16px',
+                  padding: '10px 18px',
                   background: '#1a2040',
                   color: '#93c5fd',
                   borderRadius: '4px',
-                  fontSize: '12px',
+                  fontSize: '13px',
                   fontFamily: '-apple-system, sans-serif',
                   cursor: 'pointer',
+                  minHeight: '44px',
+                  lineHeight: '24px',
                 }}
               >
-                {file ? `Selected: ${file.name}` : 'Choose a PDF'}
+                {file ? `Selected: ${file.name}` : 'Choose a file (PDF, TXT, MD)'}
               </label>
               {file && (
                 <p style={{ fontSize: '11px', color: '#666', marginTop: '8px', fontFamily: '-apple-system, sans-serif' }}>
@@ -468,6 +492,197 @@ function UploadPanel() {
               </span>
             )}
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Sources List ──────────────────────────────────────────────────────────────
+
+type KbInventoryRow = {
+  id: string
+  source_title: string
+  source_type: string
+  source_url: string | null
+  topic: string | null
+  level: string | null
+  chunk_count: number
+  created_at: string
+}
+
+type KbSourcesPayload = {
+  sources: KbInventoryRow[]
+  totals: Record<string, { sources: number; chunks: number }>
+  totalSources: number
+  totalChunks: number
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  upload_text: 'Text',
+  upload_pdf: 'PDF',
+  upload_url: 'Web',
+  upload_youtube: 'YouTube',
+  upload_audio: 'Audio',
+  youtube: 'YouTube (cron)',
+  newsletter: 'Newsletter',
+  drive_pdf: 'Drive PDF',
+}
+
+function KbSourcesPanel({ refreshKey }: { refreshKey: number }) {
+  const [open, setOpen] = useState(false)
+  const [data, setData] = useState<KbSourcesPayload | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setErr(null)
+    try {
+      const res = await fetch('/api/admin/kb-sources')
+      if (!res.ok) throw new Error(`${res.status}`)
+      const payload = (await res.json()) as KbSourcesPayload
+      setData(payload)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to load')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (open) load()
+  }, [open, load, refreshKey])
+
+  return (
+    <div
+      style={{
+        border: '1px solid #1a2040',
+        borderRadius: '8px',
+        background: '#080b14',
+        marginBottom: '24px',
+        overflow: 'hidden',
+      }}
+    >
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          width: '100%',
+          padding: '14px 18px',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          color: '#ffffff',
+          fontFamily: '-apple-system, sans-serif',
+          textAlign: 'left',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{
+            background: '#064e3b', color: '#6ee7b7', fontSize: '10px', fontWeight: 700,
+            letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: '4px',
+          }}>
+            Inventory
+          </span>
+          <span style={{ fontSize: '14px', fontWeight: 600 }}>What's in the KB</span>
+          {data && (
+            <span style={{ fontSize: '12px', color: '#666' }}>
+              {data.totalSources} sources · {data.totalChunks.toLocaleString()} chunks
+            </span>
+          )}
+        </div>
+        <span style={{ fontSize: '18px', color: '#666' }}>{open ? '−' : '+'}</span>
+      </button>
+
+      {open && (
+        <div style={{ padding: '0 18px 18px', borderTop: '1px solid #1a2040' }}>
+          {loading && (
+            <p style={{ color: '#666', fontSize: '13px', margin: '16px 0', fontFamily: '-apple-system, sans-serif' }}>
+              Loading…
+            </p>
+          )}
+          {err && (
+            <p style={{ color: '#ef4444', fontSize: '13px', margin: '16px 0', fontFamily: '-apple-system, sans-serif' }}>
+              {err}
+            </p>
+          )}
+          {!loading && !err && data && (
+            <>
+              {/* Totals by type */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', margin: '16px 0' }}>
+                {Object.entries(data.totals).map(([type, t]) => (
+                  <span key={type} style={{
+                    background: '#0a1a0a', border: '1px solid #1a3a1a',
+                    color: '#6ee7b7', fontSize: '11px', padding: '4px 10px',
+                    borderRadius: '4px', fontFamily: '-apple-system, sans-serif',
+                  }}>
+                    {TYPE_LABELS[type] || type}: {t.sources} ({t.chunks} chunks)
+                  </span>
+                ))}
+              </div>
+
+              {data.sources.length === 0 ? (
+                <p style={{ color: '#666', fontSize: '13px', fontFamily: '-apple-system, sans-serif' }}>
+                  No sources ingested yet. Use Feed the AI above.
+                </p>
+              ) : (
+                <div style={{ borderTop: '1px solid #1a2040' }}>
+                  {data.sources.map((s) => (
+                    <div
+                      key={s.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 0',
+                        borderBottom: '1px solid #111',
+                        fontFamily: '-apple-system, sans-serif',
+                        gap: '12px',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: '200px' }}>
+                        <div style={{ fontSize: '13px', color: '#fff', fontWeight: 500 }}>
+                          {s.source_url ? (
+                            <a
+                              href={s.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#fff', textDecoration: 'none' }}
+                            >
+                              {s.source_title}
+                            </a>
+                          ) : (
+                            s.source_title
+                          )}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#555', marginTop: '2px' }}>
+                          {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {s.topic ? ` · ${s.topic}` : ''}
+                          {s.level ? ` · ${s.level}` : ''}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+                        <span style={{
+                          background: '#0a0a0a', border: '1px solid #222',
+                          color: '#888', fontSize: '10px', padding: '3px 8px',
+                          borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.06em',
+                        }}>
+                          {TYPE_LABELS[s.source_type] || s.source_type}
+                        </span>
+                        <span style={{ fontSize: '11px', color: '#666' }}>
+                          {s.chunk_count} chunks
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -1166,6 +1381,9 @@ export default function AdminQuestionsPage() {
   const [notifying, setNotifying] = useState(false)
   const [notifyResult, setNotifyResult] = useState<string | null>(null)
 
+  // Bump after each successful KB upload so the inventory refetches
+  const [kbRefreshKey, setKbRefreshKey] = useState(0)
+
   const supabase = getSupabaseClient()
 
   async function loadCounts() {
@@ -1477,8 +1695,9 @@ export default function AdminQuestionsPage() {
         </div>{/* end action buttons */}
       </div>
 
-      {/* Knowledge-base upload bar */}
-      <UploadPanel />
+      {/* Knowledge-base upload + inventory */}
+      <UploadPanel onIngested={() => setKbRefreshKey((k) => k + 1)} />
+      <KbSourcesPanel refreshKey={kbRefreshKey} />
 
       {/* Dashboard stats grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginBottom: '24px' }}>

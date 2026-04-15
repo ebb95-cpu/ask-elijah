@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { ingestText, fetchUrlText, type IngestMetadata } from '@/lib/ingest'
+import {
+  ingestText,
+  fetchUrlText,
+  classifyUrl,
+  extractYouTubeId,
+  transcribeAudioUrl,
+  type IngestMetadata,
+} from '@/lib/ingest'
 import { logError } from '@/lib/log-error'
+import { getSupabase } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -51,9 +59,27 @@ export async function POST(req: NextRequest) {
       text = content
       inferredType = 'upload_text'
     } else if (type === 'url') {
-      text = await fetchUrlText(content)
-      inferredType = 'upload_url'
+      // Auto-route based on URL kind: YouTube + audio get transcribed via
+      // AssemblyAI; anything else gets HTML-scraped.
+      const kind = classifyUrl(content)
       finalSourceUrl = finalSourceUrl || content
+
+      if (kind === 'youtube') {
+        const videoId = extractYouTubeId(content)
+        if (!videoId) {
+          return NextResponse.json({ error: 'Could not parse YouTube URL' }, { status: 400 })
+        }
+        // AssemblyAI accepts the YouTube URL directly and handles the download
+        text = await transcribeAudioUrl(`https://www.youtube.com/watch?v=${videoId}`)
+        inferredType = 'upload_youtube'
+      } else if (kind === 'audio') {
+        // Direct audio URL — podcast MP3, Spotify episode audio, etc.
+        text = await transcribeAudioUrl(content)
+        inferredType = 'upload_audio'
+      } else {
+        text = await fetchUrlText(content)
+        inferredType = 'upload_url'
+      }
     } else if (type === 'pdf_base64') {
       // pdf-parse requires a Buffer
       const buf = Buffer.from(content, 'base64')
@@ -80,6 +106,23 @@ export async function POST(req: NextRequest) {
     }
 
     const chunks = await ingestText(text, metadata, idPrefix)
+
+    // Record the source in the inventory table so the admin can see what's
+    // already in the KB. Fire-and-forget — if this fails, the ingest still
+    // succeeded and we just lose a row in the inventory.
+    try {
+      await getSupabase().from('kb_sources').insert({
+        source_title,
+        source_type: inferredType,
+        source_url: finalSourceUrl || null,
+        topic: topic || null,
+        level: level || null,
+        chunk_count: chunks,
+        id_prefix: idPrefix,
+      })
+    } catch (e) {
+      await logError('admin:ingest:inventory', e, { source_title })
+    }
 
     return NextResponse.json({ chunks, source_title, source_type: inferredType })
   } catch (err) {

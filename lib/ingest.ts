@@ -5,7 +5,15 @@
 
 export type IngestMetadata = {
   source_title: string
-  source_type: 'upload_text' | 'upload_pdf' | 'upload_url' | 'youtube' | 'newsletter' | 'drive_pdf'
+  source_type:
+    | 'upload_text'
+    | 'upload_pdf'
+    | 'upload_url'
+    | 'upload_youtube'
+    | 'upload_audio'
+    | 'youtube'
+    | 'newsletter'
+    | 'drive_pdf'
   source_url?: string
   topic?: string | null
   level?: string | null
@@ -142,6 +150,91 @@ export async function ingestText(
   if (chunks.length === 0) return 0
   const embeddings = await embedBatch(chunks)
   return upsertToPinecone(chunks, embeddings, metadata, idPrefix)
+}
+
+/**
+ * Detect what kind of URL this is so we can route it to the right ingester.
+ * - youtube: youtube.com/watch, youtu.be, youtube.com/shorts
+ * - audio: anything ending in .mp3/.m4a/.wav/.ogg, or a /feed.mp3 style path
+ * - html: everything else (blog posts, Substack, docs, podcast show pages)
+ */
+export type UrlKind = 'youtube' | 'audio' | 'html'
+
+export function classifyUrl(url: string): UrlKind {
+  try {
+    const u = new URL(url)
+    const host = u.hostname.toLowerCase().replace(/^www\./, '')
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtu.be') return 'youtube'
+    if (/\.(mp3|m4a|wav|ogg|aac|flac|mp4|webm)(\?|$)/i.test(u.pathname)) return 'audio'
+    return 'html'
+  } catch {
+    return 'html'
+  }
+}
+
+/**
+ * Extract the canonical YouTube video ID from any supported URL shape.
+ * Returns null if it doesn't look like YouTube.
+ */
+export function extractYouTubeId(url: string): string | null {
+  try {
+    const u = new URL(url)
+    const host = u.hostname.toLowerCase().replace(/^www\./, '')
+    if (host === 'youtu.be') {
+      return u.pathname.slice(1).split('/')[0] || null
+    }
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      if (u.pathname === '/watch') return u.searchParams.get('v')
+      const m = u.pathname.match(/^\/(shorts|embed|v)\/([^/]+)/)
+      if (m) return m[2]
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Transcribe any audio-or-video URL via AssemblyAI. Same mechanism the
+ * nightly YouTube ingestion cron uses — AssemblyAI can ingest YouTube URLs,
+ * podcast MP3 URLs, or any direct media URL. Polls for up to ~5 minutes.
+ */
+export async function transcribeAudioUrl(audioUrl: string): Promise<string> {
+  if (!process.env.ASSEMBLYAI_API_KEY) {
+    throw new Error('ASSEMBLYAI_API_KEY not configured')
+  }
+
+  const submitRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+    method: 'POST',
+    headers: {
+      Authorization: process.env.ASSEMBLYAI_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ audio_url: audioUrl, language_code: 'en' }),
+  })
+  if (!submitRes.ok) {
+    const body = await submitRes.text().catch(() => '')
+    throw new Error(`AssemblyAI submit failed: ${submitRes.status} ${body}`)
+  }
+  const submitData = await submitRes.json()
+  const id = submitData.id
+  if (submitData.error) throw new Error(submitData.error)
+  if (!id) throw new Error('AssemblyAI returned no transcript id')
+
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+  for (let i = 0; i < 60; i++) {
+    await sleep(5000)
+    const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
+      headers: { Authorization: process.env.ASSEMBLYAI_API_KEY },
+    })
+    if (!pollRes.ok) continue
+    const data = await pollRes.json()
+    if (data.status === 'completed') return data.text || ''
+    if (data.status === 'error') throw new Error(`AssemblyAI error: ${data.error}`)
+  }
+
+  throw new Error('AssemblyAI timeout after 5 minutes')
 }
 
 /**
