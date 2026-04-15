@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import NewAnswerNotification from "@/components/NewAnswerNotification";
 import PostHogProvider from "@/components/PostHogProvider";
@@ -12,6 +12,21 @@ export const metadata: Metadata = {
     type: "website",
     images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
   },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "Ask Elijah",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
+  // Allow zoom for accessibility — we fix iOS auto-zoom by using 16px inputs
+  maximumScale: 5,
+  userScalable: true,
 };
 
 export default function RootLayout({

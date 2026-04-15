@@ -84,8 +84,9 @@ function AutoResizeTextarea({
         border: '1px solid #333',
         borderRadius: '6px',
         padding: '12px',
-        fontSize: '14px',
-        lineHeight: '1.7',
+        // 16px on textareas prevents iOS Safari's auto-zoom on focus.
+        fontSize: '16px',
+        lineHeight: '1.6',
         resize: 'none',
         outline: 'none',
         fontFamily: '-apple-system, sans-serif',
@@ -94,6 +95,26 @@ function AutoResizeTextarea({
       }}
     />
   )
+}
+
+// ── Hooks ─────────────────────────────────────────────────────────────────────
+
+/**
+ * True if the primary input is coarse (finger) — covers iOS + Android, and
+ * excludes touchscreen laptops that also have a mouse. Used to hide
+ * keyboard-shortcut hints on phones.
+ */
+function useIsTouchDevice(): boolean {
+  const [isTouch, setIsTouch] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(pointer: coarse)')
+    setIsTouch(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsTouch(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+  return isTouch
 }
 
 // ── Upload Panel ──────────────────────────────────────────────────────────────
@@ -468,6 +489,7 @@ function PainPointCard({
   onPublished: (id: string) => void
   onSkipped: (id: string) => void
 }) {
+  const isTouch = useIsTouchDevice()
   const [draft, setDraft] = useState(item.draft_answer || item.final_answer || '')
   const [expanded, setExpanded] = useState(false)
   const [publishing, setPublishing] = useState(false)
@@ -574,7 +596,7 @@ function PainPointCard({
             View post →
           </a>
         )}
-        {focused && (
+        {focused && !isTouch && (
           <span style={{ fontSize: '10px', color: '#333', marginLeft: item.source_url ? '0' : 'auto', fontFamily: '-apple-system, sans-serif' }}>
             ⌘↵ publish · S skip
           </span>
@@ -652,13 +674,14 @@ function PainPointCard({
       )}
 
       {/* Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
         <button
           onClick={(e) => { e.stopPropagation(); handlePublish() }}
           disabled={publishing || !draft.trim()}
           style={{
             background: publishing ? '#ccc' : '#ffffff', color: '#000000', border: 'none',
-            borderRadius: '6px', padding: '10px 20px', fontSize: '14px', fontWeight: 700,
+            borderRadius: '6px', padding: '14px 24px', fontSize: '15px', fontWeight: 700,
+            minHeight: '44px', // iOS touch target
             cursor: publishing ? 'wait' : 'pointer', fontFamily: '-apple-system, sans-serif',
             opacity: !draft.trim() ? 0.5 : 1,
           }}
@@ -669,7 +692,8 @@ function PainPointCard({
           onClick={(e) => { e.stopPropagation(); handleSkip() }}
           disabled={skipping}
           style={{
-            background: 'none', border: 'none', color: '#555', fontSize: '14px',
+            background: 'none', border: 'none', color: '#555', fontSize: '15px',
+            minHeight: '44px', padding: '10px 12px',
             cursor: skipping ? 'wait' : 'pointer', fontFamily: '-apple-system, sans-serif',
           }}
         >
@@ -697,6 +721,7 @@ function PlayerQuestionCard({
   onSkipped: (id: string) => void
   onToast?: (msg: string) => void
 }) {
+  const isTouch = useIsTouchDevice()
   const [draft, setDraft] = useState(item.answer || '')
   const [approving, setApproving] = useState(false)
   const [skipping, setSkipping] = useState(false)
@@ -866,7 +891,7 @@ function PlayerQuestionCard({
             ● unsaved
           </span>
         )}
-        {focused && (
+        {focused && !isTouch && (
           <span style={{ fontSize: '10px', color: '#333', marginLeft: 'auto', fontFamily: '-apple-system, sans-serif' }}>
             ⌘↵ approve · S skip · J/K navigate
           </span>
