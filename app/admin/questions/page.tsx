@@ -1003,7 +1003,97 @@ function PlayerQuestionCard({
   const [showRegenBanner, setShowRegenBanner] = useState(false)
   const [undoDraft, setUndoDraft] = useState<string | null>(null)
 
+  // Refine (multi-turn Q&A): AI reads draft + your notes and asks YOU
+  // follow-up questions to pull out richer detail. Finalizes when it
+  // either decides it has enough or hits the max round cap.
+  const [refineOpen, setRefineOpen] = useState(false)
+  const [refineRunning, setRefineRunning] = useState(false)
+  const [refineQuestion, setRefineQuestion] = useState('')
+  const [refineAnswer, setRefineAnswer] = useState('')
+  const [refineConversation, setRefineConversation] = useState<{ q: string; a: string }[]>([])
+  const [refineError, setRefineError] = useState<string | null>(null)
+  const [lastPushbacks, setLastPushbacks] = useState<string[] | null>(null)
+
   const supabase = getSupabaseClient()
+
+  // Kick off the refine flow using the current textarea contents as "notes"
+  const startRefine = async () => {
+    setRefineOpen(true)
+    setRefineError(null)
+    setRefineRunning(true)
+    setRefineConversation([])
+    setRefineAnswer('')
+    setRefineQuestion('')
+    try {
+      const res = await fetch('/api/admin/refine-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: item.question,
+          draft: originalDraft,
+          notes: draft !== originalDraft ? draft : '',
+          conversation: [],
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setRefineError(data.error || 'Refine failed')
+      } else if (data.done && data.draft) {
+        setUndoDraft(draft)
+        setDraft(data.draft)
+        setRefineOpen(false)
+        if (Array.isArray(data.pushbacksAnticipated)) setLastPushbacks(data.pushbacksAnticipated)
+      } else if (data.followUp) {
+        setRefineQuestion(data.followUp)
+      }
+    } catch {
+      setRefineError('Request failed')
+    } finally {
+      setRefineRunning(false)
+    }
+  }
+
+  const submitRefineAnswer = async (finalize = false) => {
+    if (!finalize && !refineAnswer.trim()) return
+    setRefineRunning(true)
+    setRefineError(null)
+    const nextConvo = finalize
+      ? refineConversation
+      : [...refineConversation, { q: refineQuestion, a: refineAnswer.trim() }]
+    try {
+      const res = await fetch('/api/admin/refine-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: item.question,
+          draft: originalDraft,
+          notes: draft !== originalDraft ? draft : '',
+          conversation: nextConvo,
+          forceFinal: finalize,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setRefineError(data.error || 'Refine failed')
+      } else if (data.done && data.draft) {
+        setUndoDraft(draft)
+        setDraft(data.draft)
+        setRefineOpen(false)
+        setRefineConversation([])
+        setRefineQuestion('')
+        setRefineAnswer('')
+        if (Array.isArray(data.pushbacksAnticipated)) setLastPushbacks(data.pushbacksAnticipated)
+      } else if (data.followUp) {
+        setRefineConversation(nextConvo)
+        setRefineQuestion(data.followUp)
+        setRefineAnswer('')
+      }
+    } catch {
+      setRefineError('Request failed')
+    } finally {
+      setRefineRunning(false)
+    }
+  }
 
   const handleApprove = useCallback(async () => {
     if (!draft.trim()) return
@@ -1257,6 +1347,198 @@ function PlayerQuestionCard({
                 }}
               >
                 {regenerating ? 'Rewriting...' : 'Regenerate draft →'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Anticipated pushbacks — shown once after the final is generated, so
+            Elijah can see what objections the AI proactively addressed. */}
+        {lastPushbacks && lastPushbacks.length > 0 && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              marginTop: '10px', background: '#1a1208', border: '1px solid #4a2c10',
+              borderRadius: '6px', padding: '12px 14px', fontFamily: '-apple-system, sans-serif',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+              <p style={{ fontSize: '11px', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>
+                Answer anticipates these pushbacks
+              </p>
+              <button
+                onClick={() => setLastPushbacks(null)}
+                style={{ background: 'none', border: 'none', color: '#666', fontSize: '12px', cursor: 'pointer', padding: 0 }}
+              >
+                ✕
+              </button>
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '16px', color: '#d4b896', fontSize: '12px', lineHeight: 1.5 }}>
+              {lastPushbacks.map((p, i) => <li key={i}>"{p}"</li>)}
+            </ul>
+          </div>
+        )}
+
+        {/* Refine button — always visible. Starts a multi-turn Q&A where
+            the AI asks Elijah follow-ups to pull out richer detail. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); startRefine() }}
+            disabled={refineRunning}
+            style={{
+              background: 'none',
+              border: '1px solid #3b3f6b',
+              color: refineRunning ? '#555' : '#a5b4fc',
+              borderRadius: '6px',
+              padding: '8px 14px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: refineRunning ? 'wait' : 'pointer',
+              fontFamily: '-apple-system, sans-serif',
+              minHeight: '36px',
+            }}
+          >
+            {refineRunning && !refineOpen ? 'Thinking...' : '✨ Refine with AI Q&A'}
+          </button>
+          <span style={{ fontSize: '11px', color: '#555', fontFamily: '-apple-system, sans-serif' }}>
+            AI keeps asking follow-ups (different angle each time) until you say enough. Then it anticipates player pushback before writing the final.
+          </span>
+        </div>
+
+        {/* Refine Q&A panel */}
+        {refineOpen && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              marginTop: '12px',
+              background: '#0a0d1e',
+              border: '1px solid #3b3f6b',
+              borderRadius: '8px',
+              padding: '16px',
+            }}
+          >
+            {/* History of prior rounds */}
+            {refineConversation.length > 0 && (
+              <div style={{ marginBottom: '14px' }}>
+                {refineConversation.map((c, i) => (
+                  <div key={i} style={{ marginBottom: '10px', fontFamily: '-apple-system, sans-serif' }}>
+                    <p style={{ fontSize: '11px', color: '#6b7280', margin: '0 0 2px' }}>AI asked</p>
+                    <p style={{ fontSize: '13px', color: '#a5b4fc', margin: '0 0 6px' }}>{c.q}</p>
+                    <p style={{ fontSize: '11px', color: '#6b7280', margin: '0 0 2px' }}>You said</p>
+                    <p style={{ fontSize: '13px', color: '#e5e7eb', margin: 0, whiteSpace: 'pre-wrap' }}>{c.a}</p>
+                  </div>
+                ))}
+                <div style={{ height: 1, background: '#1a2040', margin: '12px 0' }} />
+              </div>
+            )}
+
+            {/* Current question + input */}
+            {refineQuestion && (
+              <>
+                <p style={{ fontSize: '11px', color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px', fontFamily: '-apple-system, sans-serif' }}>
+                  AI asks {refineConversation.length > 0 ? `· round ${refineConversation.length + 1}` : ''}
+                </p>
+                <p style={{ fontSize: '15px', color: '#fff', margin: '0 0 12px', lineHeight: 1.5, fontFamily: '-apple-system, sans-serif' }}>
+                  {refineQuestion}
+                </p>
+                <textarea
+                  value={refineAnswer}
+                  onChange={(e) => setRefineAnswer(e.target.value)}
+                  rows={3}
+                  placeholder="Type your answer — rough is fine, the AI will polish."
+                  style={{
+                    width: '100%',
+                    background: '#0a0a0a',
+                    color: '#fff',
+                    border: '1px solid #333',
+                    borderRadius: '6px',
+                    padding: '10px',
+                    fontSize: '16px',
+                    lineHeight: '1.5',
+                    fontFamily: '-apple-system, sans-serif',
+                    resize: 'vertical',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    marginBottom: '10px',
+                  }}
+                />
+              </>
+            )}
+
+            {refineRunning && !refineQuestion && (
+              <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, fontFamily: '-apple-system, sans-serif' }}>
+                AI thinking...
+              </p>
+            )}
+
+            {refineError && (
+              <p style={{ fontSize: '12px', color: '#ef4444', margin: '0 0 10px', fontFamily: '-apple-system, sans-serif' }}>
+                {refineError}
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {refineQuestion && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); submitRefineAnswer(false) }}
+                  disabled={refineRunning || !refineAnswer.trim()}
+                  style={{
+                    background: refineRunning || !refineAnswer.trim() ? '#222' : '#6366f1',
+                    color: refineRunning || !refineAnswer.trim() ? '#555' : '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '10px 16px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: refineRunning || !refineAnswer.trim() ? 'not-allowed' : 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                    minHeight: '40px',
+                  }}
+                >
+                  {refineRunning ? 'Thinking...' : 'Next →'}
+                </button>
+              )}
+              {(refineConversation.length > 0 || refineQuestion) && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); submitRefineAnswer(true) }}
+                  disabled={refineRunning}
+                  style={{
+                    background: 'none',
+                    border: '1px solid #3b3f6b',
+                    color: '#a5b4fc',
+                    borderRadius: '6px',
+                    padding: '10px 14px',
+                    fontSize: '12px',
+                    cursor: refineRunning ? 'wait' : 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                    minHeight: '40px',
+                  }}
+                >
+                  {refineRunning ? 'Finalizing...' : 'Enough — write the final now'}
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setRefineOpen(false)
+                  setRefineConversation([])
+                  setRefineQuestion('')
+                  setRefineAnswer('')
+                  setRefineError(null)
+                }}
+                disabled={refineRunning}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#6b7280',
+                  fontSize: '12px',
+                  padding: '10px 8px',
+                  cursor: 'pointer',
+                  fontFamily: '-apple-system, sans-serif',
+                  textDecoration: 'underline',
+                }}
+              >
+                Cancel
               </button>
             </div>
           </div>
