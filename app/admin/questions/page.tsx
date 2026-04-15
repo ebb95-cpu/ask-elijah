@@ -424,7 +424,7 @@ function PlayerQuestionCard({
       }}
     >
       {/* Source badge */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
         <span style={{
           background: '#3730a3', color: '#a5b4fc', fontSize: '10px', fontWeight: 700,
           letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: '4px',
@@ -433,6 +433,26 @@ function PlayerQuestionCard({
         </span>
         <span style={{ fontSize: '12px', color: '#4a5180', fontFamily: '-apple-system, sans-serif' }}>
           From your site
+        </span>
+        <span style={{ fontSize: '12px', color: '#2d3a6b', fontFamily: '-apple-system, sans-serif' }}>
+          ·
+        </span>
+        <span style={{ fontSize: '11px', color: '#3a4570', fontFamily: '-apple-system, sans-serif' }}>
+          {item.email}
+        </span>
+        <span style={{ fontSize: '11px', color: '#2d3a6b', fontFamily: '-apple-system, sans-serif' }}>
+          ·
+        </span>
+        <span style={{ fontSize: '11px', color: '#3a4570', fontFamily: '-apple-system, sans-serif' }} title={new Date(item.created_at).toLocaleString()}>
+          {(() => {
+            const diff = Date.now() - new Date(item.created_at).getTime()
+            const mins = Math.floor(diff / 60000)
+            const hours = Math.floor(diff / 3600000)
+            const days = Math.floor(diff / 86400000)
+            if (mins < 60) return `${mins}m ago`
+            if (hours < 24) return `${hours}h ago`
+            return `${days}d ago`
+          })()}
         </span>
         {focused && (
           <span style={{ fontSize: '10px', color: '#333', marginLeft: 'auto', fontFamily: '-apple-system, sans-serif' }}>
