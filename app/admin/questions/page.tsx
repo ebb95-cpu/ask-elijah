@@ -755,89 +755,37 @@ export default function AdminQuestionsPage() {
 
   const supabase = getSupabaseClient()
 
-  // Load counts for all statuses
   async function loadCounts() {
-    const [pp, pq] = await Promise.all([
-      supabase.from('pain_points').select('status'),
-      supabase.from('questions').select('status'),
-    ])
-
-    const allRows = [
-      ...(pp.data || []),
-      ...(pq.data || []),
-    ]
-
-    const pending = allRows.filter((r) => r.status === 'pending').length
-    const answered = allRows.filter((r) => r.status === 'answered' || r.status === 'approved').length
-    const skipped = allRows.filter((r) => r.status === 'skipped').length
-    setCounts({ pending, answered, skipped })
+    // handled by loadDashStats via /api/admin/stats
   }
 
   async function loadDashStats() {
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-
-    const [allQ, weekQ, answeredQ] = await Promise.all([
-      supabase.from('questions').select('email, status, created_at, answered_at'),
-      supabase.from('questions').select('id').gte('created_at', weekAgo),
-      supabase.from('questions').select('created_at, answered_at').eq('status', 'approved').not('answered_at', 'is', null),
-    ])
-
-    const all = allQ.data || []
-    const uniqueEmails = new Set(all.map((r: { email: string }) => r.email?.toLowerCase()).filter(Boolean))
-    const totalPlayers = uniqueEmails.size
-
-    const questionsThisWeek = (weekQ.data || []).length
-
-    const totalAnswered = all.filter((r: { status: string }) => r.status === 'approved' || r.status === 'answered').length
-    const answerRate = all.length > 0 ? Math.round((totalAnswered / all.length) * 100) : 0
-
-    const answeredRows = answeredQ.data || []
-    let avgResponseHours: number | null = null
-    if (answeredRows.length > 0) {
-      const diffs = answeredRows
-        .filter((r: { created_at: string; answered_at: string }) => r.created_at && r.answered_at)
-        .map((r: { created_at: string; answered_at: string }) =>
-          (new Date(r.answered_at).getTime() - new Date(r.created_at).getTime()) / (1000 * 60 * 60)
-        )
-        .filter((h: number) => h > 0)
-      if (diffs.length > 0) {
-        avgResponseHours = Math.round(diffs.reduce((a: number, b: number) => a + b, 0) / diffs.length)
-      }
-    }
-
-    setDashStats({ totalPlayers, questionsThisWeek, answerRate, avgResponseHours })
+    try {
+      const res = await fetch('/api/admin/stats')
+      if (!res.ok) return
+      const data = await res.json()
+      setCounts(data.counts)
+      setDashStats(data.dash)
+    } catch { /* fail silently */ }
   }
 
   async function load(status: StatusFilter) {
     setLoading(true)
 
-    const ppStatus = status === 'answered' ? ['answered'] : [status]
-    const pqStatus = status === 'answered' ? ['approved', 'answered'] : [status]
+    try {
+      const res = await fetch(`/api/admin/queue?status=${status}`)
+      if (!res.ok) { setLoading(false); return }
+      const data = await res.json()
 
-    const [ppRes, pqRes] = await Promise.all([
-      supabase
-        .from('pain_points')
-        .select('*')
-        .in('status', ppStatus)
-        .order('created_at', { ascending: false })
-        .limit(50),
-      supabase
-        .from('questions')
-        .select('*')
-        .in('status', pqStatus)
-        .order('created_at', { ascending: false })
-        .limit(50),
-    ])
+      const painPoints: QueueItem[] = ((data.painPoints as PainPoint[]) || []).map((d) => ({
+        kind: 'pain_point',
+        data: d,
+      }))
 
-    const painPoints: QueueItem[] = ((ppRes.data as PainPoint[]) || []).map((d) => ({
-      kind: 'pain_point',
-      data: d,
-    }))
-
-    const playerQuestions: QueueItem[] = ((pqRes.data as PlayerQuestion[]) || []).map((d) => ({
-      kind: 'player_question',
-      data: d,
-    }))
+      const playerQuestions: QueueItem[] = ((data.questions as PlayerQuestion[]) || []).map((d) => ({
+        kind: 'player_question',
+        data: d,
+      }))
 
     // Deduplicate player questions by question text — keep the most recent per unique (email, question) pair
     const seenPQ = new Map<string, QueueItem>()
@@ -857,6 +805,9 @@ export default function AdminQuestionsPage() {
 
     setItems(merged)
     setLoading(false)
+    } catch {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
