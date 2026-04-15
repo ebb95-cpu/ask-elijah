@@ -19,8 +19,15 @@ export function middleware(req: NextRequest) {
   // Only guard the admin surface. Everything else passes through.
   if (!pathname.startsWith('/admin')) return NextResponse.next()
 
-  // The login page is public.
-  if (pathname === '/admin/login' || pathname.startsWith('/admin/login/')) {
+  // The login page and the direct-login endpoint are both public. /admin/direct
+  // is a GET endpoint that sets the admin cookie and redirects; it must not
+  // be gated by this middleware or the cookie never gets a chance to land.
+  if (
+    pathname === '/admin/login' ||
+    pathname.startsWith('/admin/login/') ||
+    pathname === '/admin/direct' ||
+    pathname.startsWith('/admin/direct/')
+  ) {
     return NextResponse.next()
   }
 
