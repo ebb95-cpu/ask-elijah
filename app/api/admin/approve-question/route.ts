@@ -2,20 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { getSupabase } from '@/lib/supabase-server'
 import { logError } from '@/lib/log-error'
+import { approveAnswer } from '@/lib/approve-answer'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-function getSiteUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-  return 'https://ask-the-pro.vercel.app'
-}
-
 export async function POST(req: NextRequest) {
   const cookieStore = cookies()
   const adminToken = cookieStore.get('admin_token')?.value
-
   if (!adminToken || adminToken !== process.env.ADMIN_PASSWORD) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -32,39 +26,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing questionId or finalAnswer' }, { status: 400 })
   }
 
-  // Persist scorecard directly on the question row BEFORE calling /api/approve.
-  // We want the scorecard on the record even if the downstream approve call
-  // has any hiccups — it's independent of the email/Pinecone path.
+  // Persist scorecard on the row first so it's saved even if the approve
+  // flow has a hiccup downstream.
   if (scorecard && Array.isArray(scorecard) && scorecard.length > 0) {
     try {
       await getSupabase()
         .from('questions')
-        .update({
-          scorecard,
-          scorecard_overall: scorecardOverall ?? null,
-        })
+        .update({ scorecard, scorecard_overall: scorecardOverall ?? null })
         .eq('id', questionId)
     } catch (e) {
       await logError('admin:approve:scorecard', e, { questionId })
     }
   }
 
-  const siteUrl = getSiteUrl()
+  // Call the shared approve pipeline directly in-process. No more HTTP
+  // proxy — that pattern was the source of the double-timeout and the
+  // trailing-newline-in-env-var URL bugs.
+  const result = await approveAnswer({ questionId, finalAnswer, actionSteps: '' })
 
-  const res = await fetch(`${siteUrl}/api/approve`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-token': process.env.CRON_SECRET!,
-    },
-    body: JSON.stringify({ questionId, finalAnswer, actionSteps: '' }),
-  })
-
-  const data = await res.json()
-
-  if (!res.ok) {
-    return NextResponse.json({ error: data.error || 'Approval failed' }, { status: res.status })
+  if (!result.ok) {
+    await logError('admin:approve:pipeline', new Error(result.error), { questionId })
+    return NextResponse.json({ error: result.error }, { status: result.status })
   }
 
-  return NextResponse.json(data)
+  return NextResponse.json({ success: true })
 }
