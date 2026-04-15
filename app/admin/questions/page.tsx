@@ -347,6 +347,9 @@ function PlayerQuestionCard({
   const [showSimilarModal, setShowSimilarModal] = useState(false)
   const [selectedSimilar, setSelectedSimilar] = useState<Set<string>>(new Set())
   const [bulkApproving, setBulkApproving] = useState(false)
+  const [originalDraft] = useState(item.answer || '')
+  const [regenerating, setRegenerating] = useState(false)
+  const [showRegenBanner, setShowRegenBanner] = useState(false)
 
   const supabase = getSupabaseClient()
 
@@ -502,7 +505,7 @@ function PlayerQuestionCard({
 
       {/* Question text */}
       <p style={{
-        fontSize: '20px', fontWeight: 700, color: '#ffffff', lineHeight: '1.4',
+        fontSize: 'clamp(16px, 4vw, 20px)', fontWeight: 700, color: '#ffffff', lineHeight: '1.4',
         margin: '0 0 16px', fontFamily: '-apple-system, sans-serif',
       }}>
         {item.question}
@@ -525,10 +528,60 @@ function PlayerQuestionCard({
         </p>
         <AutoResizeTextarea
           value={draft}
-          onChange={setDraft}
+          onChange={(val) => {
+            setDraft(val)
+            const added = val.replace(originalDraft, '').trim()
+            setShowRegenBanner(added.length > 15)
+          }}
           onFocus={() => setTypingInTextarea(true)}
           onBlur={() => setTypingInTextarea(false)}
         />
+
+        {/* Regenerate banner — appears when Elijah adds new context */}
+        {showRegenBanner && (
+          <div style={{
+            marginTop: '10px', background: '#0f1f35', border: '1px solid #1e3a5f',
+            borderRadius: '6px', padding: '12px 16px', display: 'flex',
+            alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap',
+          }}>
+            <p style={{ fontSize: '13px', color: '#93c5fd', margin: 0, fontFamily: '-apple-system, sans-serif', lineHeight: 1.4 }}>
+              You added context. Want Claude to rewrite the draft with it?
+            </p>
+            <button
+              onClick={async (e) => {
+                e.stopPropagation()
+                setRegenerating(true)
+                try {
+                  const res = await fetch('/api/admin/regenerate-draft', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      question: item.question,
+                      currentDraft: originalDraft,
+                      notes: draft.replace(originalDraft, '').trim(),
+                    }),
+                  })
+                  const data = await res.json()
+                  if (data.draft) {
+                    setDraft(data.draft)
+                    setShowRegenBanner(false)
+                  }
+                } catch { /* fail silently */ }
+                setRegenerating(false)
+              }}
+              disabled={regenerating}
+              style={{
+                background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px',
+                padding: '10px 16px', fontSize: '13px', fontWeight: 700,
+                cursor: regenerating ? 'wait' : 'pointer', whiteSpace: 'nowrap',
+                flexShrink: 0, opacity: regenerating ? 0.7 : 1,
+                fontFamily: '-apple-system, sans-serif', minHeight: '40px',
+              }}
+            >
+              {regenerating ? 'Rewriting...' : 'Regenerate draft →'}
+            </button>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -538,15 +591,15 @@ function PlayerQuestionCard({
       )}
 
       {/* Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
         <button
           onClick={(e) => { e.stopPropagation(); handleApprove() }}
           disabled={approving || !draft.trim()}
           style={{
             background: approving ? '#ccc' : '#6366f1', color: '#ffffff', border: 'none',
-            borderRadius: '6px', padding: '10px 20px', fontSize: '14px', fontWeight: 700,
+            borderRadius: '6px', padding: '14px 24px', fontSize: '15px', fontWeight: 700,
             cursor: approving ? 'wait' : 'pointer', fontFamily: '-apple-system, sans-serif',
-            opacity: !draft.trim() ? 0.5 : 1,
+            opacity: !draft.trim() ? 0.5 : 1, minHeight: '48px',
           }}
         >
           {approving ? 'Sending...' : 'Approve →'}
@@ -555,7 +608,8 @@ function PlayerQuestionCard({
           onClick={(e) => { e.stopPropagation(); handleSkip() }}
           disabled={skipping}
           style={{
-            background: 'none', border: 'none', color: '#555', fontSize: '14px',
+            background: 'none', border: '1px solid #2a2a2a', borderRadius: '6px',
+            color: '#555', fontSize: '14px', padding: '14px 20px', minHeight: '48px',
             cursor: skipping ? 'wait' : 'pointer', fontFamily: '-apple-system, sans-serif',
           }}
         >
@@ -928,16 +982,16 @@ export default function AdminQuestionsPage() {
   }
 
   return (
-    <div style={{ maxWidth: '760px', margin: '0 auto', padding: '40px 24px' }}>
+    <div style={{ maxWidth: '760px', margin: '0 auto', padding: 'clamp(20px, 4vw, 40px) clamp(16px, 4vw, 24px)' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#ffffff', margin: 0, fontFamily: '-apple-system, sans-serif', flex: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, color: '#ffffff', margin: 0, fontFamily: '-apple-system, sans-serif', flex: 1, minWidth: '160px' }}>
           Question Queue
         </h1>
 
         {/* Action buttons */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
 
         {/* Notify waitlist button */}
         {waitlistCount !== null && waitlistCount > 0 && (
@@ -1009,7 +1063,7 @@ export default function AdminQuestionsPage() {
       </div>
 
       {/* Dashboard stats grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginBottom: '24px' }}>
         {[
           {
             label: 'Total Players',
@@ -1058,7 +1112,7 @@ export default function AdminQuestionsPage() {
               background: '#0a0a0a',
               border: '1px solid #1a1a1a',
               borderRadius: '8px',
-              padding: '16px',
+              padding: 'clamp(12px, 3vw, 16px)',
               fontFamily: '-apple-system, sans-serif',
               cursor: stat.onClick ? 'pointer' : 'default',
               transition: 'border-color 0.15s',
@@ -1069,7 +1123,7 @@ export default function AdminQuestionsPage() {
             <p style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>
               {stat.label}
             </p>
-            <p style={{ fontSize: '28px', fontWeight: 800, color: '#ffffff', margin: '0 0 4px', lineHeight: 1 }}>
+            <p style={{ fontSize: 'clamp(20px, 5vw, 28px)', fontWeight: 800, color: '#ffffff', margin: '0 0 4px', lineHeight: 1 }}>
               {stat.value}
             </p>
             <p style={{ fontSize: '11px', color: '#444', margin: 0 }}>
