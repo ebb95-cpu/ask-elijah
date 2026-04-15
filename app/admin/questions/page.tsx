@@ -350,6 +350,7 @@ function PlayerQuestionCard({
   const [originalDraft] = useState(item.answer || '')
   const [regenerating, setRegenerating] = useState(false)
   const [showRegenBanner, setShowRegenBanner] = useState(false)
+  const [undoDraft, setUndoDraft] = useState<string | null>(null)
 
   const supabase = getSupabaseClient()
 
@@ -546,38 +547,58 @@ function PlayerQuestionCard({
             <p style={{ fontSize: '13px', color: '#93c5fd', margin: 0, fontFamily: '-apple-system, sans-serif', lineHeight: 1.4 }}>
               You edited the draft. Want Claude to clean it up with your notes?
             </p>
-            <button
-              onClick={async (e) => {
-                e.stopPropagation()
-                setRegenerating(true)
-                try {
-                  const res = await fetch('/api/admin/regenerate-draft', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      question: item.question,
-                      context: draft,
-                    }),
-                  })
-                  const data = await res.json()
-                  if (data.draft) {
-                    setDraft(data.draft)
-                    setShowRegenBanner(false)
-                  }
-                } catch { /* fail silently */ }
-                setRegenerating(false)
-              }}
-              disabled={regenerating}
-              style={{
-                background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px',
-                padding: '10px 16px', fontSize: '13px', fontWeight: 700,
-                cursor: regenerating ? 'wait' : 'pointer', whiteSpace: 'nowrap',
-                flexShrink: 0, opacity: regenerating ? 0.7 : 1,
-                fontFamily: '-apple-system, sans-serif', minHeight: '40px',
-              }}
-            >
-              {regenerating ? 'Rewriting...' : 'Regenerate draft →'}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+              {undoDraft !== null && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDraft(undoDraft)
+                    setUndoDraft(null)
+                    setShowRegenBanner(undoDraft !== originalDraft)
+                  }}
+                  style={{
+                    background: 'none', border: 'none', color: '#6b7280', fontSize: '13px',
+                    cursor: 'pointer', fontFamily: '-apple-system, sans-serif', textDecoration: 'underline',
+                    padding: 0,
+                  }}
+                >
+                  Undo
+                </button>
+              )}
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  setUndoDraft(draft)
+                  setRegenerating(true)
+                  try {
+                    const res = await fetch('/api/admin/regenerate-draft', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        question: item.question,
+                        context: draft,
+                      }),
+                    })
+                    const data = await res.json()
+                    if (data.draft) {
+                      setDraft(data.draft)
+                      setShowRegenBanner(false)
+                    }
+                  } catch { /* fail silently */ }
+                  setRegenerating(false)
+                }}
+                disabled={regenerating}
+                style={{
+                  background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px',
+                  padding: '10px 16px', fontSize: '13px', fontWeight: 700,
+                  cursor: regenerating ? 'wait' : 'pointer', whiteSpace: 'nowrap',
+                  opacity: regenerating ? 0.7 : 1,
+                  fontFamily: '-apple-system, sans-serif', minHeight: '40px',
+                }}
+              >
+                {regenerating ? 'Rewriting...' : 'Regenerate draft →'}
+              </button>
+            </div>
           </div>
         )}
       </div>

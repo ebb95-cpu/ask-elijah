@@ -31,7 +31,7 @@ Write the full answer from scratch now:`
 
   const res = await anthropic.messages.create({
     model: 'claude-haiku-4-5',
-    max_tokens: 1024,
+    max_tokens: 1500,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
   })
