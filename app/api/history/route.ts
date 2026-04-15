@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const supabase = getSupabase()
     const { data, error } = await supabase
       .from('questions')
-      .select('id, question, answer, sources, created_at, status, topic, approved_at')
+      .select('id, question, answer, sources, created_at, status, topic, approved_at, mode')
       .eq('email', user.email)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })

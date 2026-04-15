@@ -20,6 +20,8 @@ function Logo() {
 // Topics come from the app/api/ask/route.ts TOPICS list.
 const FILTERS = ['All', 'confidence', 'pressure', 'consistency', 'focus', 'slump', 'coaching', 'team', 'mindset', 'motivation', 'identity']
 
+type Source = { title: string; url: string; type: string }
+
 type Answer = {
   id: string
   question: string
@@ -27,6 +29,7 @@ type Answer = {
   topic: string | null
   status: string
   created_at: string
+  sources?: Source[]
 }
 
 export default function LibraryPage() {
@@ -166,7 +169,28 @@ export default function LibraryPage() {
                   <p className="text-gray-400 text-sm mt-2 line-clamp-2">{a.answer}</p>
                 )}
                 {expanded === a.id && (
-                  <p className="text-black text-sm mt-4 leading-relaxed whitespace-pre-wrap">{a.answer}</p>
+                  <>
+                    <p className="text-black text-sm mt-4 leading-relaxed whitespace-pre-wrap">{a.answer}</p>
+                    {a.sources && a.sources.length > 0 && (
+                      <div className="mt-5 pt-4 border-t border-gray-100">
+                        <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-2">This answer drew from</p>
+                        <div className="flex flex-col gap-1">
+                          {a.sources.slice(0, 3).map((s, i) => (
+                            <a
+                              key={i}
+                              href={s.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-xs text-gray-500 hover:text-black transition-colors underline underline-offset-2"
+                            >
+                              {s.type === 'newsletter' ? '✉' : '▶'}&nbsp;&nbsp;{s.title}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))}

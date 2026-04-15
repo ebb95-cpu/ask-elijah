@@ -22,7 +22,14 @@ async function saveToPinecone(
   questionId: string,
   question: string,
   answer: string,
-  opts?: { topic?: string | null; trigger?: string | null; level?: string | null; age_range?: string | null; helpful_count?: number }
+  opts?: {
+    topic?: string | null
+    trigger?: string | null
+    level?: string | null
+    age_range?: string | null
+    helpful_count?: number
+    has_corrections?: boolean
+  }
 ) {
   const combined = `Q: ${question}\n\nA: ${answer}`
   const embedding = await embedText(combined)
@@ -33,6 +40,9 @@ async function saveToPinecone(
     source_title: 'Elijah Bryant — Approved Answer',
     question,
     helpful_count: opts?.helpful_count ?? 0,
+    // Corrections are high-signal: Elijah personally fixed an AI claim.
+    // Flagging them lets retrieval boost these in the future.
+    has_corrections: opts?.has_corrections ? 1 : 0,
   }
   if (opts?.topic) metadata.topic = opts.topic
   if (opts?.trigger) metadata.trigger = opts.trigger
@@ -53,6 +63,32 @@ async function saveToPinecone(
       }],
     }),
   })
+}
+
+/**
+ * Extract the <<VERIFY: ...>> claims from the AI draft so we can record
+ * what Elijah was asked to verify. We pair each flag with what likely
+ * replaced it in the final answer (best-effort — the exact mapping is
+ * usually lost during edit, so we store the flagged claims alongside the
+ * final answer and let future analysis correlate).
+ */
+function extractCorrections(aiDraft: string, finalAnswer: string): {
+  hadCorrections: boolean
+  flaggedClaims: string[]
+  finalAnswer: string
+} {
+  if (!aiDraft) return { hadCorrections: false, flaggedClaims: [], finalAnswer }
+  const re = /<<VERIFY:\s*([^>]+)>>/g
+  const matches: string[] = []
+  let m: RegExpExecArray | null
+  while ((m = re.exec(aiDraft)) !== null) {
+    matches.push(m[1].trim())
+  }
+  return {
+    hadCorrections: matches.length > 0,
+    flaggedClaims: matches,
+    finalAnswer,
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -91,6 +127,15 @@ export async function POST(req: NextRequest) {
   // see later how much the model drifts from his voice
   const draftChanged = (record.ai_draft || record.answer || '').trim() !== finalAnswer.trim()
 
+  // Detect VERIFY-flag corrections: if the AI draft flagged any claims and
+  // Elijah edited the answer, the flagged claims were reviewed. Store them
+  // so we have a record of what the model got wrong, and flag the Pinecone
+  // vector so future retrievals can prefer reviewed answers.
+  const { hadCorrections, flaggedClaims } = extractCorrections(record.ai_draft || '', finalAnswer)
+  const corrections = hadCorrections && draftChanged
+    ? { flagged: flaggedClaims, corrected_at: new Date().toISOString() }
+    : null
+
   // Update in Supabase
   await supabase
     .from('questions')
@@ -100,6 +145,7 @@ export async function POST(req: NextRequest) {
       action_steps: actionSteps || null,
       approved_at: new Date().toISOString(),
       edit_count: draftChanged ? (record.edit_count || 0) + 1 : (record.edit_count || 0),
+      corrections,
     })
     .eq('id', questionId)
 
@@ -143,9 +189,23 @@ export async function POST(req: NextRequest) {
 
           <div style="font-size:16px;line-height:1.8;color:#ffffff !important;white-space:pre-wrap;margin-bottom:32px;font-family:-apple-system,sans-serif;">${finalAnswer.split(' ').slice(0, 40).join(' ')}...</div>
 
-          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+          <p style="font-size:13px;margin:0 0 32px;font-family:-apple-system,sans-serif;">
             <a href="${siteUrl}/history" style="color:#555555;text-decoration:none;">Read his full answer →</a>
           </p>
+
+          ${(() => {
+            const srcs = Array.isArray(record.sources) ? record.sources as { title: string; url: string; type: string }[] : []
+            if (srcs.length === 0) return ''
+            const items = srcs.slice(0, 3).map((s) => {
+              const icon = s.type === 'newsletter' ? '✉' : '▶'
+              return `<a href="${escapeHtml(s.url)}" style="display:block;font-size:13px;color:#777;text-decoration:none;padding:4px 0;font-family:-apple-system,sans-serif;">${icon}&nbsp;&nbsp;${escapeHtml(s.title)}</a>`
+            }).join('')
+            return `
+          <div style="border-top:1px solid #222;padding-top:20px;margin-bottom:32px;">
+            <p style="font-size:10px;color:#444;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">This answer drew from</p>
+            ${items}
+          </div>`
+          })()}
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
           <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
@@ -159,13 +219,15 @@ export async function POST(req: NextRequest) {
     `,
   })
 
-  // Save to Pinecone knowledge base
+  // Save to Pinecone knowledge base, flagging corrections so they get
+  // priority in future retrieval (Elijah personally reviewed these).
   try {
     await saveToPinecone(questionId, record.question, finalAnswer, {
       topic: record.topic,
       trigger: record.trigger,
       level: profile?.level ?? null,
       age_range: profile?.age_range ?? null,
+      has_corrections: !!corrections,
     })
   } catch (err) {
     await logError('approve:pinecone-save', err, { questionId })

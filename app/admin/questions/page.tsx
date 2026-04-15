@@ -1366,9 +1366,17 @@ export default function AdminQuestionsPage() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, color: '#ffffff', margin: 0, fontFamily: '-apple-system, sans-serif', flex: 1, minWidth: '160px' }}>
-          Question Queue
-        </h1>
+        <div style={{ flex: 1, minWidth: '160px' }}>
+          <h1 style={{ fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, color: '#ffffff', margin: 0, fontFamily: '-apple-system, sans-serif' }}>
+            Question Queue
+          </h1>
+          <a
+            href="/admin/signals"
+            style={{ fontSize: '12px', color: '#888', textDecoration: 'none', fontFamily: '-apple-system, sans-serif', display: 'inline-block', marginTop: '6px' }}
+          >
+            View signals →
+          </a>
+        </div>
 
         {/* Action buttons */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>

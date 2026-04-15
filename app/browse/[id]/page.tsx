@@ -11,7 +11,7 @@ async function fetchQuestion(id: string) {
   const supabase = getSupabase()
   const { data } = await supabase
     .from('questions')
-    .select('id, question, answer, topic, created_at, status')
+    .select('id, question, answer, topic, created_at, status, sources')
     .eq('id', id)
     .eq('status', 'approved')
     .is('deleted_at', null)
@@ -96,12 +96,31 @@ export default async function BrowseAnswerPage({ params }: { params: Params }) {
           &ldquo;{q.question}&rdquo;
         </h1>
 
-        <div className="border-l-2 border-white pl-6 mb-12">
+        <div className="border-l-2 border-white pl-6 mb-10">
           <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Elijah's answer</p>
           <div className="text-gray-200 leading-relaxed text-base whitespace-pre-wrap">
             {q.answer}
           </div>
         </div>
+
+        {Array.isArray(q.sources) && q.sources.length > 0 && (
+          <div className="border-t border-gray-900 pt-6 mb-12">
+            <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-3">This answer drew from</p>
+            <div className="flex flex-col gap-2">
+              {(q.sources as { title: string; url: string; type: string }[]).slice(0, 4).map((s, i) => (
+                <a
+                  key={i}
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  {s.type === 'newsletter' ? '✉' : '▶'}&nbsp;&nbsp;{s.title}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="border-t border-gray-900 pt-8 mt-12">
           <p className="text-sm text-gray-500 mb-4">Got a different situation on your mind?</p>
