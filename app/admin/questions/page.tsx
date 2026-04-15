@@ -343,6 +343,10 @@ function PlayerQuestionCard({
   const [approved, setApproved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [typingInTextarea, setTypingInTextarea] = useState(false)
+  const [similarQuestions, setSimilarQuestions] = useState<{ id: string; question: string; email: string; similarity: number }[]>([])
+  const [showSimilarModal, setShowSimilarModal] = useState(false)
+  const [selectedSimilar, setSelectedSimilar] = useState<Set<string>>(new Set())
+  const [bulkApproving, setBulkApproving] = useState(false)
 
   const supabase = getSupabaseClient()
 
@@ -357,15 +361,33 @@ function PlayerQuestionCard({
         body: JSON.stringify({ questionId: item.id, finalAnswer: draft }),
       })
       if (!res.ok) throw new Error('Failed to approve')
-      setApproved(true)
       onToast?.(`Email sent to ${item.email}`)
+
+      // After approving, look for similar pending questions
+      try {
+        const simRes = await fetch('/api/admin/find-similar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questionId: item.id, questionText: item.question }),
+        })
+        const simData = await simRes.json()
+        if (simData.similar?.length > 0) {
+          setSimilarQuestions(simData.similar)
+          // Pre-select all by default
+          setSelectedSimilar(new Set(simData.similar.map((q: { id: string }) => q.id)))
+          setShowSimilarModal(true)
+          return // Don't auto-dismiss — wait for modal action
+        }
+      } catch { /* fail silently — similarity check is best-effort */ }
+
+      setApproved(true)
       setTimeout(() => onApproved(item.id), 800)
     } catch {
       setError('Failed to approve. Try again.')
     } finally {
       setApproving(false)
     }
-  }, [draft, item.id, onApproved])
+  }, [draft, item.id, item.question, onApproved])
 
   const handleSkip = useCallback(async () => {
     setSkipping(true)
@@ -399,6 +421,28 @@ function PlayerQuestionCard({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [focused, typingInTextarea, handleApprove, handleSkip])
+
+  const handleBulkApprove = async () => {
+    if (selectedSimilar.size === 0) {
+      setShowSimilarModal(false)
+      setApproved(true)
+      setTimeout(() => onApproved(item.id), 800)
+      return
+    }
+    setBulkApproving(true)
+    try {
+      await fetch('/api/admin/bulk-approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionIds: Array.from(selectedSimilar), finalAnswer: draft }),
+      })
+      onToast?.(`Answer sent to ${selectedSimilar.size + 1} players`)
+    } catch { /* fail silently */ }
+    setBulkApproving(false)
+    setShowSimilarModal(false)
+    setApproved(true)
+    setTimeout(() => onApproved(item.id), 800)
+  }
 
   if (approved) {
     return (
@@ -505,7 +549,7 @@ function PlayerQuestionCard({
             opacity: !draft.trim() ? 0.5 : 1,
           }}
         >
-          {approving ? 'Approving...' : 'Approve →'}
+          {approving ? 'Sending...' : 'Approve →'}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); handleSkip() }}
@@ -518,6 +562,97 @@ function PlayerQuestionCard({
           {skipping ? 'Skipping...' : 'Skip'}
         </button>
       </div>
+
+      {/* Similar questions modal */}
+      {showSimilarModal && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+          }}
+        >
+          <div style={{
+            background: '#0d1117', border: '1px solid #1e2d40', borderRadius: '12px',
+            padding: '32px', maxWidth: '560px', width: '100%', fontFamily: '-apple-system, sans-serif',
+          }}>
+            <p style={{ fontSize: '11px', color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>
+              Your answer applies to more players
+            </p>
+            <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#ffffff', margin: '0 0 6px' }}>
+              Send to {similarQuestions.length} similar question{similarQuestions.length !== 1 ? 's' : ''}?
+            </h3>
+            <p style={{ fontSize: '13px', color: '#555', margin: '0 0 24px', lineHeight: 1.6 }}>
+              These players asked essentially the same thing. Deselect any that don&apos;t fit.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
+              {similarQuestions.map((q) => {
+                const selected = selectedSimilar.has(q.id)
+                return (
+                  <button
+                    key={q.id}
+                    onClick={() => {
+                      const next = new Set(selectedSimilar)
+                      selected ? next.delete(q.id) : next.add(q.id)
+                      setSelectedSimilar(next)
+                    }}
+                    style={{
+                      textAlign: 'left', background: selected ? '#0f1f35' : '#080b14',
+                      border: `1px solid ${selected ? '#3b82f6' : '#1a2040'}`,
+                      borderRadius: '8px', padding: '14px 16px', cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <span style={{
+                        width: '18px', height: '18px', borderRadius: '4px', border: `2px solid ${selected ? '#3b82f6' : '#333'}`,
+                        background: selected ? '#3b82f6' : 'transparent', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', flexShrink: 0, marginTop: '2px',
+                      }}>
+                        {selected && <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>✓</span>}
+                      </span>
+                      <div>
+                        <p style={{ fontSize: '14px', color: '#d1d5db', margin: '0 0 4px', lineHeight: 1.4 }}>{q.question}</p>
+                        <p style={{ fontSize: '11px', color: '#374151', margin: 0 }}>
+                          {q.email} · {Math.round(q.similarity * 100)}% match
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={handleBulkApprove}
+                disabled={bulkApproving}
+                style={{
+                  background: '#6366f1', color: '#fff', border: 'none', borderRadius: '6px',
+                  padding: '12px 24px', fontSize: '14px', fontWeight: 700, cursor: bulkApproving ? 'wait' : 'pointer',
+                  opacity: bulkApproving ? 0.7 : 1,
+                }}
+              >
+                {bulkApproving
+                  ? 'Sending...'
+                  : selectedSimilar.size > 0
+                    ? `Send to ${selectedSimilar.size} more player${selectedSimilar.size !== 1 ? 's' : ''} →`
+                    : 'Done, skip others →'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowSimilarModal(false)
+                  setApproved(true)
+                  setTimeout(() => onApproved(item.id), 800)
+                }}
+                style={{ background: 'none', border: 'none', color: '#555', fontSize: '14px', cursor: 'pointer' }}
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
