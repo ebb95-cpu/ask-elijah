@@ -484,29 +484,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You just sent a question. Give Elijah a moment to work on it.' }, { status: 429 })
     }
 
-    // Free tier enforcement — 1 question per week
-    const userEmail = email.trim().toLowerCase()
-    const { data: profile } = await supabaseCheck
-      .from('profiles')
-      .select('subscription_status')
-      .eq('email', userEmail)
-      .single()
-    const isSubscribed =
-      profile?.subscription_status === 'active' ||
-      profile?.subscription_status === 'past_due'
-
-    if (!isSubscribed) {
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-      const { count } = await supabaseCheck
-        .from('questions')
-        .select('id', { count: 'exact', head: true })
-        .eq('email', userEmail)
-        .gte('created_at', weekAgo)
-      if ((count ?? 0) >= 1) {
-        return NextResponse.json({ error: 'free_limit_reached' }, { status: 402 })
-      }
-    }
-
     // Content moderation
     if (BLOCKED.some((p) => p.test(question))) {
       return NextResponse.json(
