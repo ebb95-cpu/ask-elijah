@@ -31,6 +31,52 @@ function highlightVerifyMarkers(text: string): string {
 
 const MIN_PINECONE_SCORE = 0.35
 
+/**
+ * Self-critique the draft before returning it. One Haiku call grading
+ * voice, grounding, and action. If the grader flags issues, the caller
+ * regenerates once with those issues injected as additional constraints.
+ * Capped at a single retry so latency stays bounded.
+ */
+async function critiqueDraft(draft: string, question: string, hadContext: boolean): Promise<{ ok: boolean; issues: string[] }> {
+  try {
+    const res = await getAnthropic().messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 250,
+      messages: [{
+        role: 'user',
+        content: `You are grading a draft answer written for basketball player Elijah Bryant to send to a player.
+
+Question from player: "${question}"
+
+Draft answer:
+"""
+${draft}
+"""
+
+Grade on three criteria. Return JSON only.
+
+1. Voice: first person, short sentences, no em-dashes or en-dashes, no AI-sounding words (crucial, vital, pivotal, delve, leverage, game-changer, at the end of the day, in conclusion, boundaries, foster, elevate), contractions (don't, you're, I'm), conversational like a text.
+2. Grounded: ${hadContext ? 'uses the specific situation the player described, does not give generic tips' : 'does not invent experiences or science claims (no context was provided, so must be honest about that)'}.
+3. Action: ends with ONE specific concrete thing the player can do today, not vague.
+
+Return JSON:
+{"ok": true} if all three pass.
+{"ok": false, "issues": ["what's wrong with voice/grounded/action in one short sentence each"]} if not.
+
+No preamble.`,
+      }],
+    })
+    const raw = res.content[0].type === 'text' ? res.content[0].text.trim() : '{}'
+    const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    const parsed = JSON.parse(clean) as { ok?: boolean; issues?: string[] }
+    if (parsed.ok === true) return { ok: true, issues: [] }
+    return { ok: false, issues: Array.isArray(parsed.issues) ? parsed.issues.slice(0, 3) : [] }
+  } catch {
+    // Don't block the draft on a critic failure — just let it through
+    return { ok: true, issues: [] }
+  }
+}
+
 type EntryMode = 'bad_game' | 'coach' | 'playing_time' | 'parent' | 'general' | null
 
 /**
@@ -271,42 +317,52 @@ Text: "${text.replace(/"/g, '\\"')}"`,
 }
 
 /**
- * Rewrite the raw player question into a search-optimized version before
- * embedding. Players phrase things in first-person emotional language
- * ("idk why I suck under pressure"), while Elijah's indexed content uses
- * terminology ("performance anxiety", "pressure response"). This bridges
- * the vocabulary gap and materially lifts RAG recall.
+ * Multi-query rewrite. Players phrase things in first-person emotional
+ * language; Elijah's content uses different terminology. We generate
+ * multiple reformulations so RAG can match on different angles:
+ *   - narrow: the most specific terminology-aligned version
+ *   - broad: a wider conceptual framing to catch adjacent content
+ *   - keyword: bare nouns/phrases (acts like a sparse-ish match)
  *
- * Returns the rewritten query, or the original if rewrite fails.
+ * This is a pragmatic substitute for true Pinecone hybrid sparse-dense
+ * retrieval — three semantic queries merged catches most of what a
+ * sparse keyword index would add, without reindexing everything.
  */
-async function rewriteQuery(question: string): Promise<string> {
+async function rewriteQueryMulti(question: string): Promise<{ narrow: string; broad: string; keyword: string }> {
   try {
     const res = await getAnthropic().messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 120,
+      max_tokens: 300,
       messages: [{
         role: 'user',
-        content: `You are rewriting a basketball player's question to retrieve the most relevant material from Elijah Bryant's knowledge base of videos and newsletters about mental performance, confidence, pressure, and basketball improvement.
+        content: `A basketball player asked: "${question}"
 
-The player's raw question:
-"${question}"
+Generate three reformulations for searching Elijah Bryant's knowledge base (videos and newsletters about mental performance, confidence, pressure, and basketball improvement).
 
-Rewrite this as a search query that:
-- Uses the vocabulary Elijah uses (mental performance, pre-game routine, pressure response, identity, task-driven, confidence, slump, mindset, etc.)
-- Preserves the specific situation (is it a slump? a coach conflict? pre-game nerves?)
-- Strips filler and emotion words
-- Is ONE sentence, 15 words or fewer
+Return valid JSON only:
+{
+  "narrow": "<15 words or less, uses Elijah's exact vocabulary like pre-game routine, pressure response, identity, task-driven, confidence, slump, mindset>",
+  "broad": "<15 words or less, a wider conceptual framing of the same issue>",
+  "keyword": "<just 3-6 key nouns/phrases separated by spaces, no filler>"
+}
 
-Return ONLY the rewritten query. No preamble, no quotes, no explanation.`,
+No preamble, no prose, only JSON.`,
       }],
     })
-    const out = res.content[0].type === 'text' ? res.content[0].text.trim() : ''
-    // Guard against the model refusing or returning garbage
-    if (!out || out.length < 5 || out.length > 200) return question
-    // Strip trailing punctuation and quotes
-    return out.replace(/^["']+|["']+$/g, '').replace(/[.!?]+$/, '').trim()
+    const raw = res.content[0].type === 'text' ? res.content[0].text.trim() : '{}'
+    const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    const parsed = JSON.parse(clean) as { narrow?: string; broad?: string; keyword?: string }
+    const safe = (s: string | undefined, fallback: string) => {
+      if (!s || s.length < 5 || s.length > 200) return fallback
+      return s.replace(/^["']+|["']+$/g, '').replace(/[.!?]+$/, '').trim()
+    }
+    return {
+      narrow: safe(parsed.narrow, question),
+      broad: safe(parsed.broad, question),
+      keyword: safe(parsed.keyword, question),
+    }
   } catch {
-    return question
+    return { narrow: question, broad: question, keyword: question }
   }
 }
 
@@ -324,7 +380,14 @@ async function embedQuestion(question: string): Promise<number[]> {
   return data.data[0].embedding
 }
 
-async function searchPinecone(embedding: number[], topK = 5, topic?: string | null, level?: string | null): Promise<{
+type PineconeMatch = { id?: string; score: number; metadata: Record<string, string> }
+
+async function searchPinecone(
+  embeddings: number[][],
+  topK = 5,
+  topic?: string | null,
+  level?: string | null
+): Promise<{
   chunks: string[]
   sources: { title: string; url: string; type: string }[]
 }> {
@@ -338,45 +401,58 @@ async function searchPinecone(embedding: number[], topK = 5, topic?: string | nu
       body: JSON.stringify(body),
     })
 
-  let filteredMatches: { score: number; metadata: Record<string, string> }[] = []
-  let unfilteredMatches: { score: number; metadata: Record<string, string> }[] = []
-  let levelMatches: { score: number; metadata: Record<string, string> }[] = []
-
-  // Kick off a level-specific query in parallel when we have a level. These get
-  // a boost over generic matches because answers for a D1 player shouldn't
-  // sound identical to answers for a 14-year-old.
-  const levelQuery = level
-    ? pineconeFetch({ vector: embedding, topK, includeMetadata: true, filter: { level: { $eq: level } } })
-    : null
-
-  if (topic) {
-    const [filteredRes, unfilteredRes, levelRes] = await Promise.all([
-      pineconeFetch({ vector: embedding, topK, includeMetadata: true, filter: { topic: { $eq: topic } } }),
-      pineconeFetch({ vector: embedding, topK, includeMetadata: true }),
-      levelQuery,
-    ])
-    if (!filteredRes.ok) throw new Error(`Pinecone filtered query failed: ${filteredRes.status}`)
-    if (!unfilteredRes.ok) throw new Error(`Pinecone unfiltered query failed: ${unfilteredRes.status}`)
-    const [filteredData, unfilteredData] = await Promise.all([filteredRes.json(), unfilteredRes.json()])
-    filteredMatches = filteredData.matches || []
-    unfilteredMatches = unfilteredData.matches || []
-    if (levelRes && levelRes.ok) {
-      const lvl = await levelRes.json()
-      levelMatches = lvl.matches || []
+  // Run every query across every embedding in parallel — topic + level + unfiltered
+  // for each of narrow/broad/keyword. ~9 small Pinecone calls, all concurrent.
+  const queryPromises: Promise<{ bucket: 'filtered' | 'unfiltered' | 'level'; res: Response }>[] = []
+  for (const embedding of embeddings) {
+    if (topic) {
+      queryPromises.push(
+        pineconeFetch({ vector: embedding, topK, includeMetadata: true, filter: { topic: { $eq: topic } } })
+          .then((res) => ({ bucket: 'filtered' as const, res }))
+      )
     }
-  } else {
-    const [res, levelRes] = await Promise.all([
-      pineconeFetch({ vector: embedding, topK, includeMetadata: true }),
-      levelQuery,
-    ])
-    if (!res.ok) throw new Error(`Pinecone query failed: ${res.status}`)
-    const data = await res.json()
-    unfilteredMatches = data.matches || []
-    if (levelRes && levelRes.ok) {
-      const lvl = await levelRes.json()
-      levelMatches = lvl.matches || []
+    queryPromises.push(
+      pineconeFetch({ vector: embedding, topK, includeMetadata: true })
+        .then((res) => ({ bucket: 'unfiltered' as const, res }))
+    )
+    if (level) {
+      queryPromises.push(
+        pineconeFetch({ vector: embedding, topK, includeMetadata: true, filter: { level: { $eq: level } } })
+          .then((res) => ({ bucket: 'level' as const, res }))
+      )
     }
   }
+
+  const responses = await Promise.all(queryPromises)
+
+  const filteredMatches: PineconeMatch[] = []
+  const unfilteredMatches: PineconeMatch[] = []
+  const levelMatches: PineconeMatch[] = []
+
+  for (const { bucket, res } of responses) {
+    if (!res.ok) continue
+    const data = await res.json()
+    const matches: PineconeMatch[] = data.matches || []
+    if (bucket === 'filtered') filteredMatches.push(...matches)
+    else if (bucket === 'level') levelMatches.push(...matches)
+    else unfilteredMatches.push(...matches)
+  }
+
+  // De-dupe each bucket by vector id (or text fallback), keeping the highest
+  // score. This is the "merge" step of multi-query retrieval — without it,
+  // the same chunk would appear 3 times from 3 queries.
+  const dedupe = (matches: PineconeMatch[]): PineconeMatch[] => {
+    const best = new Map<string, PineconeMatch>()
+    for (const m of matches) {
+      const key = m.id || m.metadata?.text || JSON.stringify(m.metadata)
+      const existing = best.get(key)
+      if (!existing || m.score > existing.score) best.set(key, m)
+    }
+    return Array.from(best.values()).sort((a, b) => b.score - a.score)
+  }
+  const dedupedFiltered = dedupe(filteredMatches)
+  const dedupedUnfiltered = dedupe(unfilteredMatches)
+  const dedupedLevel = dedupe(levelMatches)
 
   const chunks: string[] = []
   const sources: { title: string; url: string; type: string }[] = []
@@ -406,15 +482,15 @@ async function searchPinecone(embedding: number[], topK = 5, topic?: string | nu
   }
 
   // Priority order: topic-filtered → level-matched → unfiltered. Cap at 6.
-  for (const m of filteredMatches) {
+  for (const m of dedupedFiltered) {
     if (chunks.length >= 6) break
     addMatch(m)
   }
-  for (const m of levelMatches) {
+  for (const m of dedupedLevel) {
     if (chunks.length >= 6) break
     addMatch(m)
   }
-  for (const m of unfilteredMatches) {
+  for (const m of dedupedUnfiltered) {
     if (chunks.length >= 6) break
     addMatch(m)
   }
@@ -578,12 +654,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 })
     }
 
-    const { question, email, previewAnswer, newsletterOptIn, utm_source, utm_medium, utm_campaign, mode: rawMode, askerType: rawAskerType } = await req.json()
+    const { question, email, previewAnswer, newsletterOptIn, utm_source, utm_medium, utm_campaign, mode: rawMode, askerType: rawAskerType, level: rawLevel } = await req.json()
 
     const mode: EntryMode = (['bad_game', 'coach', 'playing_time', 'parent', 'general'] as const).includes(rawMode)
       ? (rawMode as EntryMode)
       : null
     const askerType: string | null = rawAskerType === 'parent' ? 'parent' : rawAskerType === 'player' ? 'player' : null
+    const VALID_LEVELS = ['middle_school', 'jv', 'varsity', 'aau', 'college', 'pro', 'rec'] as const
+    const clientLevel: string | null = typeof rawLevel === 'string' && (VALID_LEVELS as readonly string[]).includes(rawLevel)
+      ? rawLevel
+      : null
 
     if (!question?.trim()) {
       return NextResponse.json({ error: 'Question required' }, { status: 400 })
@@ -646,9 +726,34 @@ export async function POST(req: NextRequest) {
       return ''
     })
 
-    // Also fetch level separately so we can use it for Pinecone boosting and
-    // for the mode preamble ("at your level..."). Fast single-row lookup.
+    // Determine level: prefer what the client sent (fresh from the chooser),
+    // fall back to what's on the profile. If the client provided one and it
+    // differs from profile, update the profile so it persists.
     const levelPromise = (async () => {
+      if (clientLevel) {
+        // Fire-and-forget upsert of level on the profile so subsequent asks
+        // have it on hand without the client re-sending.
+        void (async () => {
+          try {
+            const supabase = getSupabase()
+            const { data: existing } = await supabase
+              .from('profiles')
+              .select('email, level')
+              .eq('email', cleanEmailEarly)
+              .single()
+            if (existing) {
+              if (existing.level !== clientLevel) {
+                await supabase.from('profiles').update({ level: clientLevel }).eq('email', cleanEmailEarly)
+              }
+            } else {
+              await supabase.from('profiles').insert({ email: cleanEmailEarly, level: clientLevel })
+            }
+          } catch (e) {
+            await logError('ask:level-persist', e, { email: cleanEmailEarly })
+          }
+        })()
+        return clientLevel
+      }
       try {
         const { data } = await getSupabase()
           .from('profiles')
@@ -674,11 +779,13 @@ export async function POST(req: NextRequest) {
     let hasChunks = false
     let sources: { title: string; url: string; type: string }[] = []
     try {
-      // Rewrite the query into Elijah's vocabulary before embedding
-      const rewritten = await rewriteQuery(queryForEmbedding)
-      const embedding = await embedQuestion(rewritten)
+      // Multi-query rewrite → three semantic angles → embed each in parallel.
+      // Hybrid-style retrieval without the reindex cost of true Pinecone sparse.
+      const variants = await rewriteQueryMulti(queryForEmbedding)
+      const toEmbed = Array.from(new Set([variants.narrow, variants.broad, variants.keyword]))
+      const embeddings = await Promise.all(toEmbed.map((q) => embedQuestion(q)))
       const level = await levelPromise
-      const result = await searchPinecone(embedding, 5, topic, level)
+      const result = await searchPinecone(embeddings, 5, topic, level)
       sources = result.sources
       if (result.chunks.length > 0) {
         hasChunks = true
@@ -738,23 +845,41 @@ export async function POST(req: NextRequest) {
     if (previewAnswer?.trim()) {
       draft = previewAnswer.trim()
     } else {
-      try {
-        const response = await getAnthropic().messages.create({
-          model: 'claude-haiku-4-5',
-          max_tokens: 1024,
-          system: SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: userMessage + langInstruction }],
-        })
-        draft = response.content[0].type === 'text' ? response.content[0].text : ''
-      } catch {
-        const response = await getAnthropic().messages.create({
-          model: 'claude-sonnet-4-5',
-          max_tokens: 1024,
-          system: SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: userMessage + langInstruction }],
-        })
-        draft = response.content[0].type === 'text' ? response.content[0].text : ''
+      const generate = async (extraInstructions: string) => {
+        const message = userMessage + langInstruction + extraInstructions
+        try {
+          const response = await getAnthropic().messages.create({
+            model: 'claude-haiku-4-5',
+            max_tokens: 1024,
+            system: SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: message }],
+          })
+          return response.content[0].type === 'text' ? response.content[0].text : ''
+        } catch {
+          const response = await getAnthropic().messages.create({
+            model: 'claude-sonnet-4-5',
+            max_tokens: 1024,
+            system: SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: message }],
+          })
+          return response.content[0].type === 'text' ? response.content[0].text : ''
+        }
       }
+
+      draft = await generate('')
+
+      // If the draft came back valid, run it through the self-critique pass.
+      // If the critic flags issues, regenerate once with those issues injected
+      // as additional constraints. Capped at one retry to keep latency bounded.
+      if (draft.trim() && draft.trim().length >= 30) {
+        const critique = await critiqueDraft(stripVerifyMarkers(draft), question, hasChunks)
+        if (!critique.ok && critique.issues.length > 0) {
+          const issuesText = critique.issues.map((i) => `- ${i}`).join('\n')
+          const retry = await generate(`\n\nYour first attempt had these specific issues — fix them in the rewrite:\n${issuesText}\n\nWrite the answer again addressing each.`)
+          if (retry.trim() && retry.trim().length >= 30) draft = retry
+        }
+      }
+
       // If Claude returned empty for any reason, use the fallback
       if (!draft.trim() || draft.trim().length < 30) {
         draft = FALLBACK

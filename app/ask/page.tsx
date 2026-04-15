@@ -378,6 +378,17 @@ function AskPageInner() {
   type EntryMode = 'bad_game' | 'coach' | 'playing_time' | 'parent' | null
   const [entryMode, setEntryMode] = useState<EntryMode>(null)
 
+  // Level on the asker — drives level-filtered RAG retrieval. Persisted to
+  // profile on submit so it's remembered for next time.
+  type Level = 'middle_school' | 'jv' | 'varsity' | 'aau' | 'college' | 'pro' | 'rec' | null
+  const [askerLevel, setAskerLevel] = useState<Level>(null)
+
+  // Hydrate level from localStorage so returning users don't have to re-pick
+  useEffect(() => {
+    const stored = localStorage.getItem('asker_level')
+    if (stored) setAskerLevel(stored as Level)
+  }, [])
+
   // Onboarding state
   const [onboardStep, setOnboardStep] = useState(0)
   const [onboardName, setOnboardName] = useState('')
@@ -552,6 +563,7 @@ function AskPageInner() {
           language: detectedLang,
           mode: entryMode,
           askerType: entryMode === 'parent' ? 'parent' : 'player',
+          level: askerLevel,
         }),
       })
 
@@ -1036,6 +1048,16 @@ function AskPageInner() {
 
     const activePlaceholder = entryMode ? modePlaceholders[entryMode] : 'Ask anything.'
 
+    const levelOptions: { id: NonNullable<Level>; label: string }[] = [
+      { id: 'middle_school', label: 'Middle school' },
+      { id: 'jv', label: 'JV' },
+      { id: 'varsity', label: 'Varsity' },
+      { id: 'aau', label: 'AAU' },
+      { id: 'college', label: 'College' },
+      { id: 'pro', label: 'Pro' },
+      { id: 'rec', label: 'Rec / adult' },
+    ]
+
     const entryChooser = (
       <div className="w-full mb-4">
         <div className="flex flex-wrap gap-2">
@@ -1065,6 +1087,37 @@ function AskPageInner() {
             {entryOptions.find((o) => o.id === entryMode)?.hint}
           </p>
         )}
+
+        {/* Level row — feeds level-filtered RAG so a JV answer doesn't match a pro's context */}
+        <div className="mt-4">
+          <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-2">
+            {askerLevel ? 'Your level' : 'Pick your level (helps Elijah tune the answer)'}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {levelOptions.map((opt) => {
+              const active = askerLevel === opt.id
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => {
+                    const next = active ? null : opt.id
+                    setAskerLevel(next)
+                    if (next) localStorage.setItem('asker_level', next)
+                    else localStorage.removeItem('asker_level')
+                    posthog?.capture('asker_level_selected', { level: next })
+                  }}
+                  className={`text-[11px] px-2.5 py-1 border transition-colors ${
+                    active
+                      ? 'border-white text-white bg-white/5'
+                      : 'border-gray-900 text-gray-600 hover:border-gray-700 hover:text-gray-400'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
     )
 
