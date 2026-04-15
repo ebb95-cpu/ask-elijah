@@ -556,8 +556,7 @@ function PlayerQuestionCard({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       question: item.question,
-                      currentDraft: originalDraft,
-                      notes: draft,
+                      context: draft,
                     }),
                   })
                   const data = await res.json()

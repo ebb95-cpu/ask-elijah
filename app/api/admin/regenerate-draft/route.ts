@@ -12,25 +12,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { question, currentDraft, notes } = await req.json()
-  if (!question || !currentDraft) {
-    return NextResponse.json({ error: 'question and currentDraft required' }, { status: 400 })
+  const { question, context } = await req.json()
+  if (!question || !context) {
+    return NextResponse.json({ error: 'question and context required' }, { status: 400 })
   }
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-  const prompt = `You wrote a draft answer to a player's question. Elijah has now edited your draft — he may have added notes, changed wording, or mixed in new context. Use his edited version as input and write a clean, polished final answer that incorporates everything he added. Same voice, same directness, same format. Do not mention that you're rewriting or that anything was added. Just write the improved answer.
+  const prompt = `Write a completely new answer from scratch to this player's question. Use the context below as your raw material — it may contain a previous draft, notes Elijah jotted in, or a mix of both. Weave it all together into one cohesive, polished answer. Do not append or reference anything. Just write a single complete answer as if you knew all of this from the start. Same voice, same directness as Elijah.
 
 Player's question:
 "${question}"
 
-Your original draft:
-${currentDraft}
+Context and notes to work from:
+${context}
 
-Elijah's edited version (incorporate all of this):
-${notes}
-
-Write the final polished answer now:`
+Write the full answer from scratch now:`
 
   const res = await anthropic.messages.create({
     model: 'claude-haiku-4-5',
