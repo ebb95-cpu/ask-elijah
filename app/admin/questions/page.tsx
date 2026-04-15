@@ -96,6 +96,363 @@ function AutoResizeTextarea({
   )
 }
 
+// ── Upload Panel ──────────────────────────────────────────────────────────────
+
+/**
+ * Knowledge base upload: paste text, drop a PDF, or give it a URL.
+ * Everything gets chunked, embedded, and pushed into Pinecone so future
+ * questions can retrieve from it. This is the "feed the AI" input.
+ */
+function UploadPanel() {
+  const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState<'text' | 'url' | 'file'>('text')
+  const [title, setTitle] = useState('')
+  const [text, setText] = useState('')
+  const [url, setUrl] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [topic, setTopic] = useState('')
+  const [level, setLevel] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  const canSubmit = !!title.trim() && (
+    (mode === 'text' && text.trim().length > 50) ||
+    (mode === 'url' && /^https?:\/\//i.test(url)) ||
+    (mode === 'file' && !!file)
+  )
+
+  const reset = () => {
+    setText('')
+    setUrl('')
+    setFile(null)
+    setTitle('')
+    setTopic('')
+    setLevel('')
+  }
+
+  const submit = async () => {
+    if (!canSubmit) return
+    setSubmitting(true)
+    setResult(null)
+    try {
+      let body: Record<string, unknown> = { source_title: title, topic: topic || undefined, level: level || undefined }
+
+      if (mode === 'text') {
+        body = { ...body, type: 'text', content: text }
+      } else if (mode === 'url') {
+        body = { ...body, type: 'url', content: url, source_url: url }
+      } else if (mode === 'file' && file) {
+        // Base64-encode the file. Chunked to avoid call-stack overflow for
+        // large PDFs (apply/spread has a ~100k argument limit).
+        const buf = new Uint8Array(await file.arrayBuffer())
+        let binary = ''
+        const chunk = 0x8000
+        for (let i = 0; i < buf.length; i += chunk) {
+          binary += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + chunk)))
+        }
+        const b64 = btoa(binary)
+        body = { ...body, type: 'pdf_base64', content: b64 }
+      }
+
+      const res = await fetch('/api/admin/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setResult({ ok: false, msg: data.error || 'Upload failed' })
+      } else {
+        setResult({ ok: true, msg: `Added ${data.chunks} chunk${data.chunks === 1 ? '' : 's'} from "${data.source_title}"` })
+        reset()
+      }
+    } catch (err) {
+      setResult({ ok: false, msg: err instanceof Error ? err.message : 'Upload failed' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const TABS: { id: typeof mode; label: string }[] = [
+    { id: 'text', label: 'Paste text' },
+    { id: 'url', label: 'URL' },
+    { id: 'file', label: 'PDF' },
+  ]
+
+  return (
+    <div
+      style={{
+        border: '1px solid #1a2040',
+        borderRadius: '8px',
+        background: '#080b14',
+        marginBottom: '24px',
+        overflow: 'hidden',
+      }}
+    >
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          width: '100%',
+          padding: '14px 18px',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          color: '#ffffff',
+          fontFamily: '-apple-system, sans-serif',
+          textAlign: 'left',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span
+            style={{
+              background: '#1e3a8a',
+              color: '#93c5fd',
+              fontSize: '10px',
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              padding: '3px 8px',
+              borderRadius: '4px',
+            }}
+          >
+            Knowledge Base
+          </span>
+          <span style={{ fontSize: '14px', fontWeight: 600 }}>Feed the AI</span>
+          <span style={{ fontSize: '12px', color: '#666' }}>Paste text, drop a PDF, or give it a URL</span>
+        </div>
+        <span style={{ fontSize: '18px', color: '#666' }}>{open ? '−' : '+'}</span>
+      </button>
+
+      {open && (
+        <div style={{ padding: '0 18px 18px', borderTop: '1px solid #1a2040' }}>
+          {/* Mode tabs */}
+          <div style={{ display: 'flex', gap: '6px', marginTop: '16px', marginBottom: '16px' }}>
+            {TABS.map((t) => {
+              const active = mode === t.id
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setMode(t.id)}
+                  style={{
+                    fontSize: '12px',
+                    padding: '6px 12px',
+                    background: active ? '#1e3a8a' : 'transparent',
+                    border: `1px solid ${active ? '#1e3a8a' : '#1a2040'}`,
+                    color: active ? '#93c5fd' : '#666',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                  }}
+                >
+                  {t.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Title */}
+          <label style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: '-apple-system, sans-serif', display: 'block', marginBottom: '6px' }}>
+            Source title (how this will appear in citations)
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. Kobe 24-hour rule, How I handled my rookie year"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={{
+              width: '100%',
+              background: '#0a0a0a',
+              color: '#ffffff',
+              border: '1px solid #333',
+              borderRadius: '6px',
+              padding: '10px',
+              fontSize: '13px',
+              fontFamily: '-apple-system, sans-serif',
+              marginBottom: '12px',
+              boxSizing: 'border-box',
+              outline: 'none',
+            }}
+          />
+
+          {/* Mode-specific input */}
+          {mode === 'text' && (
+            <textarea
+              placeholder="Paste transcript, newsletter, notes, or anything Elijah has said…"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={8}
+              style={{
+                width: '100%',
+                background: '#0a0a0a',
+                color: '#ffffff',
+                border: '1px solid #333',
+                borderRadius: '6px',
+                padding: '10px',
+                fontSize: '13px',
+                lineHeight: '1.6',
+                fontFamily: '-apple-system, sans-serif',
+                marginBottom: '12px',
+                boxSizing: 'border-box',
+                outline: 'none',
+                resize: 'vertical',
+              }}
+            />
+          )}
+
+          {mode === 'url' && (
+            <input
+              type="url"
+              placeholder="https://example.com/article"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              style={{
+                width: '100%',
+                background: '#0a0a0a',
+                color: '#ffffff',
+                border: '1px solid #333',
+                borderRadius: '6px',
+                padding: '10px',
+                fontSize: '13px',
+                fontFamily: '-apple-system, sans-serif',
+                marginBottom: '12px',
+                boxSizing: 'border-box',
+                outline: 'none',
+              }}
+            />
+          )}
+
+          {mode === 'file' && (
+            <div
+              style={{
+                border: '1px dashed #333',
+                borderRadius: '6px',
+                padding: '24px',
+                textAlign: 'center',
+                marginBottom: '12px',
+                background: '#0a0a0a',
+              }}
+            >
+              <input
+                id="kb-file-input"
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                style={{ display: 'none' }}
+              />
+              <label
+                htmlFor="kb-file-input"
+                style={{
+                  display: 'inline-block',
+                  padding: '8px 16px',
+                  background: '#1a2040',
+                  color: '#93c5fd',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontFamily: '-apple-system, sans-serif',
+                  cursor: 'pointer',
+                }}
+              >
+                {file ? `Selected: ${file.name}` : 'Choose a PDF'}
+              </label>
+              {file && (
+                <p style={{ fontSize: '11px', color: '#666', marginTop: '8px', fontFamily: '-apple-system, sans-serif' }}>
+                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Optional tags */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '140px' }}>
+              <label style={{ fontSize: '10px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: '-apple-system, sans-serif', display: 'block', marginBottom: '4px' }}>Topic (optional)</label>
+              <select
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: '#0a0a0a',
+                  color: '#ffffff',
+                  border: '1px solid #333',
+                  borderRadius: '4px',
+                  padding: '8px',
+                  fontSize: '12px',
+                  fontFamily: '-apple-system, sans-serif',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <option value="">—</option>
+                {['confidence', 'pressure', 'consistency', 'focus', 'slump', 'coaching', 'team', 'mindset', 'motivation', 'identity'].map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: '140px' }}>
+              <label style={{ fontSize: '10px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: '-apple-system, sans-serif', display: 'block', marginBottom: '4px' }}>Level (optional)</label>
+              <select
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: '#0a0a0a',
+                  color: '#ffffff',
+                  border: '1px solid #333',
+                  borderRadius: '4px',
+                  padding: '8px',
+                  fontSize: '12px',
+                  fontFamily: '-apple-system, sans-serif',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <option value="">—</option>
+                {['middle_school', 'jv', 'varsity', 'aau', 'college', 'pro', 'rec'].map((l) => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={submit}
+              disabled={!canSubmit || submitting}
+              style={{
+                background: canSubmit && !submitting ? '#1e3a8a' : '#222',
+                color: canSubmit && !submitting ? '#ffffff' : '#666',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '10px 18px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: canSubmit && !submitting ? 'pointer' : 'not-allowed',
+                fontFamily: '-apple-system, sans-serif',
+              }}
+            >
+              {submitting ? 'Ingesting…' : 'Add to knowledge base →'}
+            </button>
+            {result && (
+              <span
+                style={{
+                  fontSize: '12px',
+                  color: result.ok ? '#4ade80' : '#ef4444',
+                  fontFamily: '-apple-system, sans-serif',
+                }}
+              >
+                {result.msg}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Pain Point Card ───────────────────────────────────────────────────────────
 
 function PainPointCard({
@@ -1084,6 +1441,9 @@ export default function AdminQuestionsPage() {
 
         </div>{/* end action buttons */}
       </div>
+
+      {/* Knowledge-base upload bar */}
+      <UploadPanel />
 
       {/* Dashboard stats grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginBottom: '24px' }}>
