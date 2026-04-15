@@ -443,15 +443,10 @@ function PlayerQuestionCard({
         <span style={{ fontSize: '11px', color: '#2d3a6b', fontFamily: '-apple-system, sans-serif' }}>
           ·
         </span>
-        <span style={{ fontSize: '11px', color: '#3a4570', fontFamily: '-apple-system, sans-serif' }} title={new Date(item.created_at).toLocaleString()}>
+        <span style={{ fontSize: '11px', color: '#3a4570', fontFamily: '-apple-system, sans-serif' }}>
           {(() => {
-            const diff = Date.now() - new Date(item.created_at).getTime()
-            const mins = Math.floor(diff / 60000)
-            const hours = Math.floor(diff / 3600000)
-            const days = Math.floor(diff / 86400000)
-            if (mins < 60) return `${mins}m ago`
-            if (hours < 24) return `${hours}h ago`
-            return `${days}d ago`
+            const d = new Date(item.created_at)
+            return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
           })()}
         </span>
         {focused && (
