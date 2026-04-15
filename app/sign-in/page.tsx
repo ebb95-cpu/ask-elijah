@@ -84,7 +84,9 @@ export default function SignInPage() {
         body: JSON.stringify({ password }),
       })
       if (!res.ok) throw new Error('Wrong password')
-      router.push('/admin/questions')
+      // Hard-navigate so middleware re-evaluates with the fresh cookie.
+      // router.push can be cached by mobile Safari and bounce you back to /sign-in.
+      window.location.href = '/admin/questions'
     } catch {
       setError('Wrong password.')
       setLoading(false)
