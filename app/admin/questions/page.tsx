@@ -530,8 +530,7 @@ function PlayerQuestionCard({
           value={draft}
           onChange={(val) => {
             setDraft(val)
-            const added = val.replace(originalDraft, '').trim()
-            setShowRegenBanner(added.length > 15)
+            setShowRegenBanner(val !== originalDraft)
           }}
           onFocus={() => setTypingInTextarea(true)}
           onBlur={() => setTypingInTextarea(false)}
@@ -545,7 +544,7 @@ function PlayerQuestionCard({
             alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap',
           }}>
             <p style={{ fontSize: '13px', color: '#93c5fd', margin: 0, fontFamily: '-apple-system, sans-serif', lineHeight: 1.4 }}>
-              You added context. Want Claude to rewrite the draft with it?
+              You edited the draft. Want Claude to clean it up with your notes?
             </p>
             <button
               onClick={async (e) => {
@@ -558,7 +557,7 @@ function PlayerQuestionCard({
                     body: JSON.stringify({
                       question: item.question,
                       currentDraft: originalDraft,
-                      notes: draft.replace(originalDraft, '').trim(),
+                      notes: draft,
                     }),
                   })
                   const data = await res.json()

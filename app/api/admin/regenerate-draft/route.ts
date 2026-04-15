@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-  const prompt = `You wrote a draft answer to a player's question. Now you have additional context or notes to incorporate. Rewrite the answer weaving in the new information naturally — same voice, same directness, same format. Do not mention that you're rewriting or that notes were added. Just write the improved answer.
+  const prompt = `You wrote a draft answer to a player's question. Elijah has now edited your draft — he may have added notes, changed wording, or mixed in new context. Use his edited version as input and write a clean, polished final answer that incorporates everything he added. Same voice, same directness, same format. Do not mention that you're rewriting or that anything was added. Just write the improved answer.
 
 Player's question:
 "${question}"
@@ -27,10 +27,10 @@ Player's question:
 Your original draft:
 ${currentDraft}
 
-Additional context / notes to incorporate:
+Elijah's edited version (incorporate all of this):
 ${notes}
 
-Write the updated answer now:`
+Write the final polished answer now:`
 
   const res = await anthropic.messages.create({
     model: 'claude-haiku-4-5',
