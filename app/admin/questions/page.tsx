@@ -650,11 +650,19 @@ export default function AdminQuestionsPage() {
       data: d,
     }))
 
+    // Deduplicate player questions by question text — keep the most recent per unique (email, question) pair
+    const seenPQ = new Map<string, QueueItem>()
+    for (const item of playerQuestions) {
+      const key = `${(item.data as PlayerQuestion).email}::${(item.data as PlayerQuestion).question.toLowerCase().trim()}`
+      if (!seenPQ.has(key)) seenPQ.set(key, item)
+    }
+    const dedupedQuestions = Array.from(seenPQ.values())
+
     // Interleave: player questions first (they're real humans), then pain points
     const merged: QueueItem[] = []
-    const maxLen = Math.max(painPoints.length, playerQuestions.length)
+    const maxLen = Math.max(painPoints.length, dedupedQuestions.length)
     for (let i = 0; i < maxLen; i++) {
-      if (i < playerQuestions.length) merged.push(playerQuestions[i])
+      if (i < dedupedQuestions.length) merged.push(dedupedQuestions[i])
       if (i < painPoints.length) merged.push(painPoints[i])
     }
 
