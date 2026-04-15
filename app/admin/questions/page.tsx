@@ -1014,6 +1014,85 @@ function PlayerQuestionCard({
   const [refineError, setRefineError] = useState<string | null>(null)
   const [lastPushbacks, setLastPushbacks] = useState<string[] | null>(null)
 
+  // Rubric scorecard — honest grading of voice, specificity, emotional hit,
+  // whether the player will feel heard, action clarity, pushback coverage.
+  type ScoreRow = { key: string; label: string; score: number; reason: string }
+  const [scores, setScores] = useState<ScoreRow[] | null>(null)
+  const [overallScore, setOverallScore] = useState<number | null>(null)
+  const [topWeakness, setTopWeakness] = useState<string | null>(null)
+  const [scoring, setScoring] = useState(false)
+  const [scoreError, setScoreError] = useState<string | null>(null)
+  const [scoreStale, setScoreStale] = useState(false)
+
+  const runScore = async () => {
+    setScoring(true)
+    setScoreError(null)
+    try {
+      const res = await fetch('/api/admin/score-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: item.question, draft }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setScoreError(data.error || 'Scoring failed')
+      } else {
+        setScores(data.scores)
+        setOverallScore(data.overall ?? null)
+        setTopWeakness(data.topWeakness ?? null)
+        setScoreStale(false)
+      }
+    } catch {
+      setScoreError('Request failed')
+    } finally {
+      setScoring(false)
+    }
+  }
+
+  // Start a refine round seeded with a specific weakness — clicking a weak
+  // row on the scorecard jumps straight into "pull more out of Elijah on
+  // this exact dimension."
+  const refineTargetedAt = async (dimensionKey: string, dimensionLabel: string) => {
+    setRefineOpen(true)
+    setRefineError(null)
+    setRefineRunning(true)
+    setRefineConversation([])
+    setRefineAnswer('')
+    setRefineQuestion('')
+    try {
+      // Seed the conversation with an explicit framing so the AI's first
+      // follow-up targets the weak dimension.
+      const seededNotes = draft !== originalDraft
+        ? `${draft}\n\n---\n\nFOCUS: The current answer is weak on ${dimensionLabel}. Pull a detail out of Elijah that strengthens this specific dimension.`
+        : `FOCUS: The current draft is weak on ${dimensionLabel}. Pull a detail out of Elijah that strengthens this specific dimension.`
+      const res = await fetch('/api/admin/refine-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: item.question,
+          draft: originalDraft,
+          notes: seededNotes,
+          conversation: [],
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setRefineError(data.error || 'Refine failed')
+      } else if (data.done && data.draft) {
+        setUndoDraft(draft)
+        setDraft(data.draft)
+        setRefineOpen(false)
+        if (Array.isArray(data.pushbacksAnticipated)) setLastPushbacks(data.pushbacksAnticipated)
+      } else if (data.followUp) {
+        setRefineQuestion(data.followUp)
+      }
+    } catch {
+      setRefineError('Request failed')
+    } finally {
+      setRefineRunning(false)
+    }
+  }
+
   const supabase = getSupabaseClient()
 
   // Kick off the refine flow using the current textarea contents as "notes"
@@ -1103,7 +1182,14 @@ function PlayerQuestionCard({
       const res = await fetch('/api/admin/approve-question', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId: item.id, finalAnswer: draft }),
+        body: JSON.stringify({
+          questionId: item.id,
+          finalAnswer: draft,
+          // Send the scorecard too — only when it's current (not stale) so
+          // we persist Claude's grade of the exact answer that shipped.
+          scorecard: scores && !scoreStale ? scores : null,
+          scorecardOverall: overallScore && !scoreStale ? overallScore : null,
+        }),
       })
       if (!res.ok) throw new Error('Failed to approve')
       onToast?.(`Email sent to ${item.email}`)
@@ -1282,6 +1368,7 @@ function PlayerQuestionCard({
           onChange={(val) => {
             setDraft(val)
             setShowRegenBanner(val !== originalDraft)
+            if (scores) setScoreStale(true)
           }}
           onFocus={() => setTypingInTextarea(true)}
           onBlur={() => setTypingInTextarea(false)}
@@ -1403,6 +1490,135 @@ function PlayerQuestionCard({
           <span style={{ fontSize: '11px', color: '#555', fontFamily: '-apple-system, sans-serif' }}>
             AI keeps asking follow-ups (different angle each time) until you say enough. Then it anticipates player pushback before writing the final.
           </span>
+        </div>
+
+        {/* Scorecard: honest rubric grading with click-to-refine on weak rows */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{ marginTop: '10px' }}
+        >
+          {!scores && (
+            <button
+              onClick={runScore}
+              disabled={scoring}
+              style={{
+                background: 'none',
+                border: '1px solid #2a2a2a',
+                color: scoring ? '#444' : '#888',
+                borderRadius: '6px',
+                padding: '8px 14px',
+                fontSize: '12px',
+                cursor: scoring ? 'wait' : 'pointer',
+                fontFamily: '-apple-system, sans-serif',
+                minHeight: '36px',
+              }}
+            >
+              {scoring ? 'Scoring…' : '📊 Score this draft'}
+            </button>
+          )}
+          {scoreError && !scores && (
+            <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '6px', fontFamily: '-apple-system, sans-serif' }}>
+              {scoreError}
+            </p>
+          )}
+
+          {scores && (
+            <div
+              style={{
+                background: '#080b14',
+                border: '1px solid #1a2040',
+                borderRadius: '8px',
+                padding: '14px',
+                fontFamily: '-apple-system, sans-serif',
+                opacity: scoreStale ? 0.7 : 1,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+                  <span style={{ fontSize: '11px', color: '#4a5180', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Scorecard
+                  </span>
+                  {overallScore !== null && (
+                    <span style={{
+                      fontSize: '22px',
+                      fontWeight: 800,
+                      color: overallScore >= 80 ? '#4ade80' : overallScore >= 65 ? '#f59e0b' : '#ef4444',
+                    }}>
+                      {overallScore}
+                    </span>
+                  )}
+                  {scoreStale && (
+                    <span style={{ fontSize: '10px', color: '#f59e0b', fontStyle: 'italic' }}>
+                      draft edited — re-score
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={runScore}
+                  disabled={scoring}
+                  style={{
+                    background: 'none',
+                    border: '1px solid #2a2a2a',
+                    color: scoring ? '#444' : '#888',
+                    borderRadius: '4px',
+                    padding: '4px 10px',
+                    fontSize: '11px',
+                    cursor: scoring ? 'wait' : 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                  }}
+                >
+                  {scoring ? 'Scoring…' : 'Re-score'}
+                </button>
+              </div>
+
+              {scores.map((s) => {
+                const isTopWeak = topWeakness === s.key
+                const color = s.score >= 8 ? '#4ade80' : s.score >= 6 ? '#f59e0b' : '#ef4444'
+                return (
+                  <button
+                    key={s.key}
+                    onClick={() => refineTargetedAt(s.key, s.label)}
+                    disabled={refineRunning}
+                    title="Click to start a refine round targeting this weakness"
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      background: isTopWeak ? '#1a1208' : 'transparent',
+                      border: '1px solid transparent',
+                      borderRadius: '4px',
+                      padding: '8px 10px',
+                      marginBottom: '4px',
+                      textAlign: 'left',
+                      cursor: refineRunning ? 'wait' : 'pointer',
+                      fontFamily: '-apple-system, sans-serif',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#2a2a2a' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'transparent' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                      <span style={{ flex: 1, fontSize: '13px', color: '#ccc', fontWeight: 600 }}>
+                        {s.label}
+                      </span>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color, width: '28px', textAlign: 'right' }}>
+                        {s.score}
+                      </span>
+                    </div>
+                    <div style={{ height: '3px', background: '#111', borderRadius: '2px', overflow: 'hidden', marginBottom: '4px' }}>
+                      <div style={{ width: `${s.score * 10}%`, height: '100%', background: color }} />
+                    </div>
+                    <p style={{ fontSize: '11px', color: isTopWeak ? '#d4b896' : '#6b7280', margin: 0, lineHeight: 1.5 }}>
+                      {s.reason}
+                      {isTopWeak && (
+                        <span style={{ color: '#f59e0b', marginLeft: '6px', fontWeight: 600 }}>
+                          ← biggest win · click to refine this
+                        </span>
+                      )}
+                    </p>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Refine Q&A panel */}
