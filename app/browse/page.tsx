@@ -164,21 +164,27 @@ export default function BrowsePage() {
                     <p className="text-gray-400 text-sm leading-relaxed mb-5">{preview}</p>
                   </Link>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <button
                       onClick={() => handleUpvote(q.id)}
-                      className={`flex items-center gap-1.5 text-xs transition-colors ${
-                        q.user_upvoted ? 'text-white' : 'text-gray-600 hover:text-gray-300'
+                      className={`flex items-center gap-1.5 text-sm transition-colors min-h-[44px] px-3 -ml-3 rounded ${
+                        q.user_upvoted ? 'text-white' : 'text-gray-500 hover:text-gray-300'
                       }`}
                     >
-                      <span className="text-base">{q.user_upvoted ? '▲' : '△'}</span>
+                      <span className="text-lg">{q.user_upvoted ? '▲' : '△'}</span>
                       <span>{q.upvote_count > 0 ? `${q.upvote_count} had this too` : 'I had this too'}</span>
                     </button>
                     <Link
                       href={`/browse/${q.id}`}
-                      className="text-xs text-gray-600 hover:text-white transition-colors underline underline-offset-2"
+                      className="text-sm text-gray-500 hover:text-white transition-colors min-h-[44px] flex items-center px-2"
                     >
-                      Read the full answer →
+                      Read full →
+                    </Link>
+                    <Link
+                      href={`/ask?q=${encodeURIComponent(q.question)}`}
+                      className="text-sm text-gray-500 hover:text-white transition-colors min-h-[44px] flex items-center px-2 ml-auto"
+                    >
+                      Ask your version →
                     </Link>
                   </div>
                 </div>
@@ -188,8 +194,8 @@ export default function BrowsePage() {
         )}
       </main>
 
-      {/* Sticky bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-gray-900 px-5 py-4 flex items-center justify-between">
+      {/* Sticky bottom CTA — desktop only. Mobile uses the global bottom nav. */}
+      <div className="hidden md:flex fixed bottom-0 left-0 right-0 bg-black border-t border-gray-900 px-5 py-4 items-center justify-between">
         <p className="text-xs text-gray-600">Something on your mind?</p>
         <button
           onClick={() => router.push('/')}

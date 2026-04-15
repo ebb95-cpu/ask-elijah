@@ -129,7 +129,7 @@ export default function HistoryPage() {
         </button>
       </nav>
 
-      <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-12">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-12 pb-28 md:pb-12">
         <div className="flex items-end justify-between mb-10">
           <div>
             <p className="text-xs text-gray-400 tracking-widest uppercase mb-2">Your vault</p>

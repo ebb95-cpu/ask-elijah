@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import { usePostHog } from 'posthog-js/react'
+import { useVoiceInput } from '@/hooks/useVoiceInput'
 
 function Logo({ dark = false }: { dark?: boolean }) {
   const c = dark ? '#fff' : '#000'
@@ -388,6 +389,42 @@ function AskPageInner() {
     const stored = localStorage.getItem('asker_level')
     if (stored) setAskerLevel(stored as Level)
   }, [])
+
+  // Mobile bottom-sheet state for "what others are asking"
+  const [communitySheetOpen, setCommunitySheetOpen] = useState(false)
+
+  // Voice input — integrated via the existing useVoiceInput hook. On mobile
+  // typing a real question is a huge barrier; voice is how you catch a kid
+  // who's still in their feelings post-game.
+  const voicePartialRef = useRef('')
+  const voiceBaseRef = useRef('')
+  const {
+    state: voiceState,
+    start: startVoice,
+    stop: stopVoice,
+  } = useVoiceInput({
+    onPartial: (text) => {
+      voicePartialRef.current = text
+      setQuestion((voiceBaseRef.current + ' ' + text).trim())
+    },
+    onFinal: (text) => {
+      voiceBaseRef.current = (voiceBaseRef.current + ' ' + text).trim()
+      voicePartialRef.current = ''
+      setQuestion(voiceBaseRef.current)
+    },
+    onError: (msg) => {
+      console.warn('Voice input error:', msg)
+    },
+  })
+  const toggleVoice = () => {
+    if (voiceState === 'listening' || voiceState === 'requesting') {
+      stopVoice()
+    } else {
+      voiceBaseRef.current = question
+      voicePartialRef.current = ''
+      startVoice()
+    }
+  }
 
   // Onboarding state
   const [onboardStep, setOnboardStep] = useState(0)
@@ -1185,9 +1222,38 @@ function AskPageInner() {
       </div>
     )
 
+    // Mobile-first input layout: textarea fills the viewport, chips in a
+    // horizontal scroll row, voice input inline, sticky Ask button in the
+    // thumb zone with safe-area padding. Desktop keeps the two-column look.
+    const voiceButton = (
+      <button
+        onClick={toggleVoice}
+        aria-label={voiceState === 'listening' ? 'Stop voice input' : 'Start voice input'}
+        className={`flex items-center justify-center w-11 h-11 rounded-full border transition-colors shrink-0 ${
+          voiceState === 'listening'
+            ? 'border-red-500 bg-red-500/10 text-red-400'
+            : voiceState === 'requesting'
+              ? 'border-gray-600 text-gray-400'
+              : 'border-gray-700 text-gray-400 hover:border-white hover:text-white'
+        }`}
+      >
+        {voiceState === 'listening' ? (
+          <span className="w-3 h-3 bg-red-500 rounded-sm animate-pulse" />
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        )}
+      </button>
+    )
+
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col">
-        <nav className="flex items-center justify-between px-6 py-5">
+      <div className="min-h-[100dvh] bg-black text-white flex flex-col">
+        {/* Top nav — compact on mobile */}
+        <nav className="flex items-center justify-between px-5 py-4 md:px-6 md:py-5 shrink-0">
           <button onClick={() => router.back()} className="text-gray-500 hover:text-white transition-colors text-sm">
             ← Back
           </button>
@@ -1199,33 +1265,157 @@ function AskPageInner() {
           )}
         </nav>
 
-        {/* Beta spots remaining banner */}
         {betaSpotsLeft !== null && betaSpotsLeft <= 10 && (
-          <div className="text-center py-2 px-6">
+          <div className="text-center py-2 px-6 shrink-0">
             <p className="text-xs text-gray-600">
               {betaSpotsLeft === 0 ? 'Beta is full' : `${betaSpotsLeft} beta spot${betaSpotsLeft === 1 ? '' : 's'} left`}
             </p>
           </div>
         )}
 
-        {/* Desktop: side by side. Mobile: stacked (ask first) */}
-        <div className="flex-1 flex flex-col md:flex-row">
-
-          {/* Mobile: ask on top */}
-          <div className="flex md:hidden flex-col px-6 pt-10 pb-6">
-            {askPanel}
+        {/* ────────── Mobile layout ────────── */}
+        <div className="flex md:hidden flex-col flex-1 min-h-0">
+          {/* Entry mode chips — horizontal scroll row */}
+          <div className="chip-row flex gap-2 px-5 pt-2 pb-3 shrink-0">
+            {entryOptions.map((opt) => {
+              const active = entryMode === opt.id
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => {
+                    setEntryMode(active ? null : opt.id)
+                    posthog?.capture('entry_mode_selected', { mode: active ? null : opt.id })
+                    setTimeout(() => textareaRef.current?.focus(), 50)
+                  }}
+                  className={`shrink-0 text-sm px-4 py-2 rounded-full border whitespace-nowrap transition-colors ${
+                    active ? 'border-white text-white bg-white/10' : 'border-gray-800 text-gray-400'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
           </div>
 
-          {/* Left — community questions (desktop only as left col, mobile below) */}
-          <div className="md:w-2/5 md:border-r border-gray-900 md:overflow-y-auto md:flex md:flex-col md:justify-center px-6 py-10 order-last md:order-first">
+          {/* Optional level row — collapsed by default when unset */}
+          <div className="chip-row flex gap-1.5 px-5 pb-3 shrink-0">
+            {levelOptions.map((opt) => {
+              const active = askerLevel === opt.id
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => {
+                    const next = active ? null : opt.id
+                    setAskerLevel(next)
+                    if (next) localStorage.setItem('asker_level', next)
+                    else localStorage.removeItem('asker_level')
+                    posthog?.capture('asker_level_selected', { level: next })
+                  }}
+                  className={`shrink-0 text-xs px-3 py-1.5 rounded-full border whitespace-nowrap transition-colors ${
+                    active ? 'border-white text-white bg-white/10' : 'border-gray-900 text-gray-600'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Textarea fills remaining space */}
+          <div className="flex-1 min-h-0 px-5 pt-2 pb-3 flex">
+            <textarea
+              ref={textareaRef}
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder={activePlaceholder}
+              className="w-full h-full bg-transparent text-white placeholder-gray-600 text-xl leading-relaxed resize-none outline-none"
+            />
+          </div>
+
+          {entryMode && (
+            <p className="text-xs text-gray-600 px-5 pb-2 shrink-0">
+              {entryOptions.find((o) => o.id === entryMode)?.hint}
+            </p>
+          )}
+
+          {/* Sticky bottom action row — thumb zone, above home indicator */}
+          <div
+            className="shrink-0 border-t border-gray-900 bg-black px-4 pt-3 pb-safe-plus-16 flex items-center gap-3"
+          >
+            <button
+              onClick={() => setCommunitySheetOpen(true)}
+              className="w-11 h-11 rounded-full border border-gray-800 text-gray-400 flex items-center justify-center shrink-0"
+              aria-label="See what others asked"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12h18M3 6h18M3 18h12" />
+              </svg>
+            </button>
+            {voiceButton}
+            <button
+              onClick={handleQuestionSubmit}
+              disabled={!question.trim()}
+              className="flex-1 bg-white text-black py-3 text-base font-bold disabled:opacity-30 disabled:cursor-not-allowed rounded-full"
+            >
+              Ask Elijah →
+            </button>
+          </div>
+
+          {/* Community bottom sheet */}
+          {communitySheetOpen && (
+            <div
+              className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60"
+              onClick={() => setCommunitySheetOpen(false)}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="bg-black border-t border-gray-800 rounded-t-2xl max-h-[75vh] flex flex-col slide-up"
+              >
+                <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
+                  <p className="text-xs text-gray-500 uppercase tracking-widest">What others are asking</p>
+                  <button
+                    onClick={() => setCommunitySheetOpen(false)}
+                    className="text-gray-500 text-xl"
+                    aria-label="Close"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="overflow-y-auto pb-safe-plus-16">
+                  {topQuestions.length === 0 ? (
+                    <p className="text-sm text-gray-600 px-5 py-8 text-center">Nothing yet — be the first.</p>
+                  ) : (
+                    topQuestions.map((q) => (
+                      <button
+                        key={q.id}
+                        onClick={() => {
+                          setQuestion(q.question)
+                          setShowSuggestions(false)
+                          setCommunitySheetOpen(false)
+                          setTimeout(() => textareaRef.current?.focus(), 50)
+                        }}
+                        className="w-full text-left py-4 border-b border-gray-900 px-5 flex items-start gap-3"
+                      >
+                        <span className="text-xs text-gray-600 mt-0.5 shrink-0 tabular-nums">↑ {q.upvote_count}</span>
+                        <span className="text-gray-300 text-sm leading-snug">{q.question}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ────────── Desktop layout (unchanged) ────────── */}
+        <div className="hidden md:flex flex-1 flex-row">
+          <div className="md:w-2/5 md:border-r border-gray-900 md:overflow-y-auto md:flex md:flex-col md:justify-center px-6 py-10">
             {communityPanel}
           </div>
-
-          {/* Right — ask textarea (desktop only, hidden on mobile since it's above) */}
-          <div className="hidden md:flex md:w-3/5 flex-col items-center justify-center px-10 py-10">
+          <div className="md:w-3/5 flex flex-col items-center justify-center px-10 py-10">
             {askPanel}
           </div>
-
         </div>
       </div>
     )

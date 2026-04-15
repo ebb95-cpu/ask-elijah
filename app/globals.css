@@ -25,6 +25,28 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+
+  /* iOS safe-area helpers for fixed/sticky bottom elements above the home
+     indicator. Use .pb-safe on sticky action bars; .h-safe-bottom for
+     a spacer element the same height as the inset. */
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+  .pb-safe-plus-16 {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  }
+  .h-safe-bottom {
+    height: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Horizontal chip row that scrolls smoothly on mobile without a scrollbar */
+  .chip-row {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chip-row::-webkit-scrollbar { display: none; }
 }
 
 /* Streaming answer cursor */

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import NewAnswerNotification from "@/components/NewAnswerNotification";
 import PostHogProvider from "@/components/PostHogProvider";
+import MobileBottomNav from "@/components/ui/MobileBottomNav";
 
 export const metadata: Metadata = {
   title: "Ask Elijah — Submit one question. Get a personal answer from an NBA Champion.",
@@ -40,6 +41,7 @@ export default function RootLayout({
         <PostHogProvider>
           {children}
           <NewAnswerNotification />
+          <MobileBottomNav />
         </PostHogProvider>
       </body>
     </html>

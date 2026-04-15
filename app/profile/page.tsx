@@ -144,7 +144,7 @@ export default function ProfilePage() {
         <div className="w-12" />
       </nav>
 
-      <div className="max-w-lg mx-auto px-5 py-12">
+      <div className="max-w-lg mx-auto px-5 py-12 pb-28 md:pb-12">
 
         {/* ── Dashboard view ─────────────────────────────────────────────── */}
         {showDashboard && (
