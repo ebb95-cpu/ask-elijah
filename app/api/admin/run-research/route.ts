@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { runDailyResearch } from '../../cron/daily-research/route'
+import { runDailyResearch } from '@/lib/daily-research'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
