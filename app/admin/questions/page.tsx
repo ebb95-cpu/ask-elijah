@@ -534,6 +534,8 @@ function KbSourcesPanel({ refreshKey }: { refreshKey: number }) {
   const [data, setData] = useState<KbSourcesPayload | null>(null)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [backfilling, setBackfilling] = useState(false)
+  const [backfillMsg, setBackfillMsg] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -549,6 +551,29 @@ function KbSourcesPanel({ refreshKey }: { refreshKey: number }) {
       setLoading(false)
     }
   }, [])
+
+  const runBackfill = async () => {
+    setBackfilling(true)
+    setBackfillMsg(null)
+    try {
+      const res = await fetch('/api/admin/kb-sources/backfill', { method: 'POST' })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setBackfillMsg(`Error: ${body.error || res.status}`)
+      } else {
+        setBackfillMsg(
+          `Scanned ${body.totalVectors} vectors · inserted ${body.inserted}, updated ${body.updated}${body.skipped ? `, skipped ${body.skipped}` : ''}`
+        )
+        await load()
+      }
+    } catch (e) {
+      setBackfillMsg(
+        'Request timed out — backfill likely still running. Refresh in 2 min.'
+      )
+    } finally {
+      setBackfilling(false)
+    }
+  }
 
   useEffect(() => {
     if (open) load()
@@ -622,6 +647,32 @@ function KbSourcesPanel({ refreshKey }: { refreshKey: number }) {
                     {TYPE_LABELS[type] || type}: {t.sources} ({t.chunks} chunks)
                   </span>
                 ))}
+              </div>
+
+              {/* Backfill button — populates inventory from existing Pinecone
+                  content (newsletters + YouTube + Drive PDFs already ingested
+                  via cron runs before the kb_sources table existed). */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={runBackfill}
+                  disabled={backfilling}
+                  style={{
+                    background: 'none',
+                    border: '1px solid #2a2a2a',
+                    color: backfilling ? '#444' : '#888',
+                    fontSize: '12px',
+                    padding: '8px 14px',
+                    borderRadius: '4px',
+                    cursor: backfilling ? 'wait' : 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                    minHeight: '36px',
+                  }}
+                >
+                  {backfilling ? 'Scanning Pinecone…' : 'Backfill from Pinecone'}
+                </button>
+                <span style={{ fontSize: '11px', color: '#555', fontFamily: '-apple-system, sans-serif' }}>
+                  {backfillMsg || 'One-time scan to list existing newsletter + YouTube + Drive PDFs here.'}
+                </span>
               </div>
 
               {data.sources.length === 0 ? (

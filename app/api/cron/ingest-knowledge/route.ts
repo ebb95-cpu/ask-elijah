@@ -1,5 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
+import { getSupabase } from '@/lib/supabase-server'
+
+/**
+ * Record a source row in kb_sources so it shows up in the admin inventory.
+ * Deduped on id_prefix: if a row with the same prefix already exists,
+ * update the chunk_count (useful if a re-ingest added chunks).
+ * Fire-and-forget — failures are logged but don't stop the cron.
+ */
+async function recordKbSource(row: {
+  source_title: string
+  source_type: string
+  source_url: string | null
+  chunk_count: number
+  id_prefix: string
+  topic?: string | null
+  level?: string | null
+}): Promise<void> {
+  try {
+    const supabase = getSupabase()
+    const { data: existing } = await supabase
+      .from('kb_sources')
+      .select('id')
+      .eq('id_prefix', row.id_prefix)
+      .maybeSingle()
+    if (existing) {
+      await supabase
+        .from('kb_sources')
+        .update({ chunk_count: row.chunk_count, source_title: row.source_title, source_url: row.source_url })
+        .eq('id', existing.id)
+    } else {
+      await supabase.from('kb_sources').insert({
+        source_title: row.source_title,
+        source_type: row.source_type,
+        source_url: row.source_url,
+        chunk_count: row.chunk_count,
+        id_prefix: row.id_prefix,
+        topic: row.topic ?? null,
+        level: row.level ?? null,
+      })
+    }
+  } catch (e) {
+    console.error('recordKbSource failed:', e)
+  }
+}
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -109,6 +153,13 @@ async function ingestNewsletters(): Promise<number> {
       try {
         for (let k = 0; k < vectors.length; k += 50) await upsertVectors(vectors.slice(k, k + 50))
         count++
+        await recordKbSource({
+          source_title: issue.title || 'Newsletter',
+          source_type: 'newsletter',
+          source_url: issue.web_url || null,
+          chunk_count: vectors.length,
+          id_prefix: `nl_${issue.id}_`,
+        })
       } catch (e) { console.error('Newsletter upsert error:', e) }
     }
   }
@@ -162,6 +213,13 @@ async function ingestLeadMagnets(): Promise<number> {
       try {
         await upsertVectors(vectors)
         count++
+        await recordKbSource({
+          source_title: title,
+          source_type: 'lead-magnet',
+          source_url: url || null,
+          chunk_count: vectors.length,
+          id_prefix: `lead-magnet_${product.id}_`,
+        })
       } catch (e) { console.error('Product upsert error:', e) }
     }
   }
@@ -284,6 +342,13 @@ async function ingestYouTube(): Promise<number> {
         try {
           for (let k = 0; k < vectors.length; k += 50) await upsertVectors(vectors.slice(k, k + 50))
           count++
+          await recordKbSource({
+            source_title: title || `Video ${videoId}`,
+            source_type: 'youtube',
+            source_url: `https://youtube.com/watch?v=${videoId}`,
+            chunk_count: vectors.length,
+            id_prefix: `yt_${videoId}_`,
+          })
           console.log(`✅ ${title || videoId} — ${vectors.length} chunks`)
         } catch (e) { console.error('YouTube upsert error:', e) }
       }
@@ -415,6 +480,14 @@ async function ingestGoogleDrivePdfs(): Promise<number> {
           await upsertVectors(vectors.slice(k, k + 50))
         }
         count++
+        await recordKbSource({
+          source_title: fileName,
+          source_type: 'drive_pdf',
+          source_url: null,
+          chunk_count: vectors.length,
+          id_prefix: `gdrive_${fileId}_`,
+          topic,
+        })
       }
     } catch (e) {
       console.error(`PDF ingest error for ${fileName}:`, e)
