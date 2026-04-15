@@ -89,7 +89,7 @@ const STRUGGLES = [
   "Dealing with a tough coach",
 ]
 
-type Mode = 'input' | 'email_gate' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt' | 'beta_full' | 'paywall'
+type Mode = 'input' | 'email_gate' | 'clarifying' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt' | 'beta_full' | 'paywall'
 
 type JournalEntry = {
   id: string
@@ -369,6 +369,11 @@ function AskPageInner() {
   const [votedIds, setVotedIds] = useState<Set<string>>(new Set())
   const [checkoutLoading, setCheckoutLoading] = useState<'founding' | 'regular' | null>(null)
   const [upgradedSuccess, setUpgradedSuccess] = useState(false)
+  const [clarifyQuestion, setClarifyQuestion] = useState('')
+  const [clarifyAnswer, setClarifyAnswer] = useState('')
+  const [clarifyConversation, setClarifyConversation] = useState<{ q: string; a: string }[]>([])
+  const [clarifyLoading, setClarifyLoading] = useState(false)
+  const clarifyInputRef = useRef<HTMLTextAreaElement>(null)
 
   // Onboarding state
   const [onboardStep, setOnboardStep] = useState(0)
@@ -508,17 +513,51 @@ function AskPageInner() {
       }
     } catch { /* fail-open — proceed with API call */ }
 
+    // Check if we need clarification before submitting
+    try {
+      const clarRes = await fetch('/api/clarify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, conversation: [] }),
+      })
+      const clarData = await clarRes.json()
+      if (!clarData.done && clarData.followUp) {
+        setClarifyQuestion(clarData.followUp)
+        setClarifyConversation([])
+        setClarifyAnswer('')
+        setMode('clarifying')
+        setTimeout(() => clarifyInputRef.current?.focus(), 100)
+        return
+      }
+    } catch { /* fail-open — skip clarification on error */ }
+
     setMode('loading')
     incrementQuestionCount()
     sessionStorage.setItem('user_email', email.trim().toLowerCase())
+    await submitToApi(question, email.trim().toLowerCase(), [])
+  }
+
+  const submitToApi = async (
+    finalQuestion: string,
+    userEmail: string,
+    conversation: { q: string; a: string }[]
+  ) => {
+    // Build enriched question if there was clarification
+    let enrichedQuestion = finalQuestion
+    if (conversation.length > 0) {
+      const context = conversation
+        .map((c) => `Elijah asked: "${c.q}"\nPlayer said: "${c.a}"`)
+        .join('\n')
+      enrichedQuestion = `${finalQuestion}\n\n--- Additional context ---\n${context}`
+    }
 
     try {
       const res = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question,
-          email: email.trim().toLowerCase(),
+          question: enrichedQuestion,
+          email: userEmail,
           language: detectedLang,
         }),
       })
@@ -535,11 +574,9 @@ function AskPageInner() {
         return
       }
 
-      // Store draft answer to show immediately
       if (data.draft) setDraftAnswer(data.draft)
 
-      // Route to onboarding if profile not done, otherwise straight to submitted
-      posthog?.capture('question_sent')
+      posthog?.capture('question_sent', { had_clarification: conversation.length > 0 })
       if (!hasCompletedProfile()) {
         setOnboardStep(0)
         setMode('onboarding')
@@ -622,6 +659,43 @@ function AskPageInner() {
     setMode('upvote_prompt')
   }
 
+  const handleClarifySubmit = async () => {
+    if (!clarifyAnswer.trim()) return
+    setClarifyLoading(true)
+
+    const updatedConversation = [...clarifyConversation, { q: clarifyQuestion, a: clarifyAnswer.trim() }]
+    setClarifyConversation(updatedConversation)
+    setClarifyAnswer('')
+
+    try {
+      const res = await fetch('/api/clarify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, conversation: updatedConversation }),
+      })
+      const data = await res.json()
+
+      if (!data.done && data.followUp) {
+        // Another follow-up needed
+        setClarifyQuestion(data.followUp)
+        setClarifyLoading(false)
+        setTimeout(() => clarifyInputRef.current?.focus(), 100)
+      } else {
+        // Done — submit to API with full context
+        setMode('loading')
+        incrementQuestionCount()
+        sessionStorage.setItem('user_email', email.trim().toLowerCase())
+        await submitToApi(question, email.trim().toLowerCase(), updatedConversation)
+      }
+    } catch {
+      // On error, just submit what we have
+      setMode('loading')
+      incrementQuestionCount()
+      sessionStorage.setItem('user_email', email.trim().toLowerCase())
+      await submitToApi(question, email.trim().toLowerCase(), updatedConversation)
+    }
+  }
+
   const handleStripeCheckout = async (tier: 'founding' | 'regular') => {
     const priceId = tier === 'founding'
       ? process.env.NEXT_PUBLIC_STRIPE_FOUNDING_PRICE_ID
@@ -659,6 +733,101 @@ function AskPageInner() {
         body: JSON.stringify({ question_id: questionId, email }),
       })
     } catch { /* fail silently */ }
+  }
+
+  // Clarifying — Elijah asks follow-up questions before submitting
+  if (mode === 'clarifying') {
+    const roundNum = clarifyConversation.length + 1
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-6 py-5">
+          <button
+            onClick={() => setMode('email_gate')}
+            className="text-gray-500 hover:text-white transition-colors text-sm"
+          >
+            ← Back
+          </button>
+          <Logo dark />
+          <div className="w-16" />
+        </nav>
+
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20">
+          <div className="w-full max-w-sm">
+
+            {/* Progress dots */}
+            <div className="flex gap-2 justify-center mb-10">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className={`rounded-full transition-all duration-300 ${
+                    i < roundNum ? 'w-5 h-2 bg-white' : i === roundNum - 1 ? 'w-5 h-2 bg-white' : 'w-2 h-2 bg-gray-800'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Their original question — small, above */}
+            <div className="border-l-2 border-gray-800 pl-4 mb-8">
+              <p className="text-gray-600 text-xs italic leading-relaxed">&ldquo;{question}&rdquo;</p>
+            </div>
+
+            {/* Previous answers shown above current question */}
+            {clarifyConversation.length > 0 && (
+              <div className="space-y-4 mb-8">
+                {clarifyConversation.map((c, i) => (
+                  <div key={i}>
+                    <p className="text-xs text-gray-600 mb-1">{c.q}</p>
+                    <p className="text-sm text-gray-400 border-l border-gray-700 pl-3">{c.a}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Elijah's follow-up */}
+            <p className="text-xs text-gray-600 uppercase tracking-widest mb-4">Elijah wants to know</p>
+            <h2 className="text-2xl font-bold mb-8 leading-tight">{clarifyQuestion}</h2>
+
+            <textarea
+              ref={clarifyInputRef}
+              value={clarifyAnswer}
+              onChange={(e) => setClarifyAnswer(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && clarifyAnswer.trim()) {
+                  e.preventDefault()
+                  handleClarifySubmit()
+                }
+              }}
+              placeholder="Be honest. The more specific, the better the answer."
+              rows={3}
+              className="w-full bg-transparent border border-gray-700 focus:border-white transition-colors px-4 py-3 text-white placeholder-gray-700 text-base leading-relaxed resize-none outline-none mb-4"
+            />
+
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleClarifySubmit}
+                disabled={!clarifyAnswer.trim() || clarifyLoading}
+                className="bg-white text-black px-8 py-3 text-sm font-semibold disabled:opacity-30 hover:opacity-80 transition-opacity"
+              >
+                {clarifyLoading ? 'Got it...' : 'Answer →'}
+              </button>
+              <button
+                onClick={async () => {
+                  // Skip remaining clarification and just submit
+                  setMode('loading')
+                  incrementQuestionCount()
+                  sessionStorage.setItem('user_email', email.trim().toLowerCase())
+                  await submitToApi(question, email.trim().toLowerCase(), clarifyConversation)
+                }}
+                className="text-xs text-gray-600 hover:text-white transition-colors"
+              >
+                Skip and just submit →
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Paywall — free tier limit reached
