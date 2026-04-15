@@ -28,7 +28,15 @@ export function middleware(req: NextRequest) {
     pathname === '/admin/direct' ||
     pathname.startsWith('/admin/direct/')
   ) {
-    return NextResponse.next()
+    const res = NextResponse.next()
+    // Aggressive no-cache so mobile Safari can't serve a stale copy of the
+    // login form (which was the root cause of the admin not being able to
+    // sign in on phone — cached JS kept calling an older endpoint that had
+    // since been fixed).
+    res.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate')
+    res.headers.set('Pragma', 'no-cache')
+    res.headers.set('Expires', '0')
+    return res
   }
 
   const token = req.cookies.get('admin_token')?.value

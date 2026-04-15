@@ -1,45 +1,21 @@
-'use client'
+import { Suspense } from 'react'
+import AdminLoginForm from './form'
 
-import { Suspense, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+// Server-rendered shell. Important that it emits `Cache-Control: no-store`
+// via the route segment config below so mobile Safari cannot serve a stale
+// copy of this page (which was the root cause of the login-on-mobile saga).
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
-function AdminLoginForm() {
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  // Where to send the admin after successful login
-  const next = searchParams.get('next') || '/admin/questions'
+type Props = {
+  searchParams?: { next?: string; error?: string }
+}
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!password) return
-    setLoading(true)
-    setError('')
-
-    try {
-      const res = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      })
-
-      if (!res.ok) {
-        setError('Wrong password.')
-        setLoading(false)
-        return
-      }
-
-      // Hard-navigate so the server re-evaluates the admin layout with the
-      // fresh cookie. router.push works but some mobile Safari builds cache
-      // the redirect decision — location.href forces a clean round-trip.
-      window.location.href = next
-    } catch {
-      setError('Could not reach the server. Check your connection.')
-      setLoading(false)
-    }
-  }
+export default function AdminLoginPage({ searchParams }: Props) {
+  const next = typeof searchParams?.next === 'string' && searchParams.next.startsWith('/admin')
+    ? searchParams.next
+    : '/admin/questions'
+  const error = searchParams?.error === 'wrong_password' ? 'Wrong password.' : null
 
   return (
     <div
@@ -53,7 +29,17 @@ function AdminLoginForm() {
         padding: '24px',
       }}
     >
-      <form onSubmit={handleSubmit} style={{ width: '100%', maxWidth: 360 }}>
+      {/* HTML form as the source of truth. Submits natively — works without
+          any JS loading, so mobile Safari cache issues can't break it.
+          The React form below progressively enhances this (same endpoint,
+          nicer error handling), but if JS never runs this still works. */}
+      <form
+        method="POST"
+        action="/api/admin/login"
+        style={{ width: '100%', maxWidth: 360 }}
+      >
+        <input type="hidden" name="next" value={next} />
+
         <p
           style={{
             fontSize: 11,
@@ -67,65 +53,10 @@ function AdminLoginForm() {
           Admin
         </p>
 
-        {/* One field — no email; the single shared admin password is what gates
-            access. Cleaner on mobile and matches the API the app actually uses. */}
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Admin password"
-          autoFocus
-          autoComplete="current-password"
-          required
-          style={{
-            width: '100%',
-            background: 'transparent',
-            border: 'none',
-            borderBottom: '1px solid #333',
-            color: '#fff',
-            // 16px prevents iOS Safari's auto-zoom on focus
-            fontSize: 18,
-            padding: '12px 0',
-            outline: 'none',
-            marginBottom: 28,
-            boxSizing: 'border-box',
-          }}
-        />
-
-        {error && (
-          <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 16 }}>
-            {error}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={!password || loading}
-          style={{
-            width: '100%',
-            background: '#fff',
-            color: '#000',
-            border: 'none',
-            padding: '16px 0',
-            fontSize: 15,
-            fontWeight: 700,
-            cursor: loading ? 'wait' : 'pointer',
-            opacity: !password || loading ? 0.4 : 1,
-            // 48px touch target for mobile
-            minHeight: 48,
-          }}
-        >
-          {loading ? 'Signing in...' : 'Sign in →'}
-        </button>
+        <Suspense fallback={null}>
+          <AdminLoginForm initialError={error} />
+        </Suspense>
       </form>
     </div>
-  )
-}
-
-export default function AdminLoginPage() {
-  return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#000' }} />}>
-      <AdminLoginForm />
-    </Suspense>
   )
 }
