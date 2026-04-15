@@ -241,12 +241,22 @@ async function sendSummaryEmail(pendingCount: number, autoAnsweredCount: number)
   })
 }
 
-export async function GET(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret')
-  if (!secret || secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+/**
+ * Extracted runnable so both the cron route (via HTTP GET + cron secret) and
+ * the admin "Run Research Now" button (via in-process import) share the same
+ * work. Returns either a result payload or an error payload — callers wrap
+ * it in NextResponse as appropriate.
+ */
+export async function runDailyResearch(): Promise<{
+  ok: true
+  pending: number
+  autoAnswered: number
+  duplicates: number
+  message?: string
+} | {
+  ok: false
+  error: string
+}> {
   const supabase = getSupabase()
   let newPendingCount = 0
   let autoAnsweredCount = 0
@@ -269,7 +279,7 @@ export async function GET(req: NextRequest) {
     console.log(`Fetched ${allPosts.length} unique Reddit posts`)
 
     if (allPosts.length === 0) {
-      return NextResponse.json({ pending: 0, autoAnswered: 0, duplicates: 0, message: 'No posts fetched' })
+      return { ok: true, pending: 0, autoAnswered: 0, duplicates: 0, message: 'No posts fetched' }
     }
 
     // 2. Filter with Claude
@@ -281,7 +291,6 @@ export async function GET(req: NextRequest) {
       const post = allPosts[index]
       if (!post) continue
 
-      // 4. Check for duplicates
       const { data: existing } = await supabase
         .from('pain_points')
         .select('id')
@@ -297,7 +306,6 @@ export async function GET(req: NextRequest) {
       const sourceUrl = `https://reddit.com${post.permalink}`
       const originalText = `${post.title}\n\n${post.selftext || ''}`.trim()
 
-      // 5. Embed the cleaned question
       let embedding: number[]
       try {
         embedding = await embedText(cleaned_question)
@@ -306,7 +314,6 @@ export async function GET(req: NextRequest) {
         continue
       }
 
-      // 6. Search Pinecone
       let matches: PineconeMatch[] = []
       let kbSources: KbSource[] = []
       try {
@@ -319,9 +326,7 @@ export async function GET(req: NextRequest) {
 
       const bestScore = matches.length > 0 ? matches[0].score : 0
 
-      // 7. Determine status and generate draft
       if (bestScore > 0.6) {
-        // Auto-answered from KB
         await supabase.from('pain_points').insert({
           source: 'reddit',
           source_url: sourceUrl,
@@ -333,7 +338,6 @@ export async function GET(req: NextRequest) {
         })
         autoAnsweredCount++
       } else {
-        // Generate a draft answer
         let draftAnswer = ''
         try {
           draftAnswer = await generateDraftAnswer(cleaned_question, kbSources)
@@ -355,7 +359,6 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 8. Send summary email if there are new pending questions
     if (newPendingCount > 0) {
       try {
         await sendSummaryEmail(newPendingCount, autoAnsweredCount)
@@ -366,13 +369,27 @@ export async function GET(req: NextRequest) {
 
     console.log(`Daily research complete — pending: ${newPendingCount}, auto-answered: ${autoAnsweredCount}, duplicates: ${skippedDuplicates}`)
 
-    return NextResponse.json({
+    return {
+      ok: true,
       pending: newPendingCount,
       autoAnswered: autoAnsweredCount,
       duplicates: skippedDuplicates,
-    })
+    }
   } catch (err) {
     console.error('Daily research error:', err)
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+    return { ok: false, error: err instanceof Error ? err.message : 'Internal error' }
   }
 }
+
+export async function GET(req: NextRequest) {
+  const secret = req.headers.get('x-cron-secret')
+  if (!secret || secret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const result = await runDailyResearch()
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 500 })
+  const { ok: _ok, ...payload } = result
+  return NextResponse.json(payload)
+}
+

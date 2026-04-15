@@ -1314,12 +1314,11 @@ export default function AdminQuestionsPage() {
     setResearchResult(null)
     try {
       const res = await fetch('/api/admin/run-research', { method: 'POST' })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setResearchResult(`Error: ${data.error || 'Unknown error'}`)
+        setResearchResult(`Error: ${data.error || `${res.status}`}`)
       } else {
         setResearchResult(`Done — ${data.pending ?? 0} new questions`)
-        // Reload if on pending tab
         if (filter === 'pending') {
           await load('pending')
           await loadCounts()
@@ -1328,7 +1327,10 @@ export default function AdminQuestionsPage() {
         }
       }
     } catch {
-      setResearchResult('Error: Network failure')
+      // Research can take >30s on real Reddit volume. The browser gives up
+      // on the fetch but the serverless function keeps running up to 300s.
+      // Tell the admin the work probably still finished in the background.
+      setResearchResult('Request timed out — research likely still running. Refresh in 2 min.')
     } finally {
       setResearching(false)
     }
