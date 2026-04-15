@@ -154,9 +154,19 @@ export default function SignInPage() {
                 {loading ? 'Sending...' : isAdmin ? 'Continue →' : 'Send my link →'}
               </button>
 
-              {!isAdmin && (
-                <p className="text-xs text-gray-700 text-center mt-6">No password. Just your email.</p>
-              )}
+              {/* Always-visible admin path. Sign-in is mainly for regular
+                  users; admins have no reason to go through magic-link at
+                  all, so give them a direct button that bypasses the email
+                  detection (which depends on JS bundle freshness + env
+                  vars and has historically been fragile on mobile). */}
+              <div className="mt-8 pt-6 border-t border-gray-900 text-center">
+                <Link
+                  href="/admin/login"
+                  className="text-xs text-gray-500 hover:text-white transition-colors"
+                >
+                  Admin? Sign in here →
+                </Link>
+              </div>
             </>
           )}
 
