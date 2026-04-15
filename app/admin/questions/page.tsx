@@ -1933,6 +1933,11 @@ export default function AdminQuestionsPage() {
   // Bump after each successful KB upload so the inventory refetches
   const [kbRefreshKey, setKbRefreshKey] = useState(0)
 
+  // Mobile tools drawer — on phone the queue is the thing, not the
+  // dashboard / upload / inventory. Those are one tap away but not in
+  // the way. Desktop shows everything.
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false)
+
   const supabase = getSupabaseClient()
 
   async function loadCounts() {
@@ -2172,8 +2177,9 @@ export default function AdminQuestionsPage() {
           </a>
         </div>
 
-        {/* Action buttons */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
+        {/* Action buttons — hidden on mobile, accessible via the tools drawer.
+            On phone, the queue is what you see; tools are secondary. */}
+        <div className="hidden md:flex" style={{ alignItems: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
 
         {/* Notify waitlist button */}
         {waitlistCount !== null && waitlistCount > 0 && (
@@ -2243,6 +2249,36 @@ export default function AdminQuestionsPage() {
 
         </div>{/* end action buttons */}
       </div>
+
+      {/* Mobile-only "Tools" toggle — desktop sees everything inline */}
+      <div className="md:hidden" style={{ marginBottom: '16px' }}>
+        <button
+          onClick={() => setMobileToolsOpen((v) => !v)}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            background: '#0a0a0a',
+            border: '1px solid #1a1a1a',
+            borderRadius: '8px',
+            color: '#888',
+            fontSize: '13px',
+            fontFamily: '-apple-system, sans-serif',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            minHeight: '44px',
+          }}
+        >
+          <span>Dashboard · KB · Waitlist</span>
+          <span style={{ color: '#555' }}>{mobileToolsOpen ? '▲' : '▼'}</span>
+        </button>
+      </div>
+
+      {/* Admin tools: dashboard stats + KB upload/inventory + waitlist.
+          Hidden by default on mobile so the question queue is front-and-
+          center. Tap the "Tools" toggle above to expand. */}
+      <div className={mobileToolsOpen ? 'block' : 'hidden md:block'}>
 
       {/* Knowledge-base upload + inventory */}
       <UploadPanel onIngested={() => setKbRefreshKey((k) => k + 1)} />
@@ -2419,6 +2455,9 @@ export default function AdminQuestionsPage() {
           )}
         </div>
       )}
+
+      {/* end mobile tools drawer */}
+      </div>
 
       {/* Search bar */}
       <div style={{ marginBottom: '24px' }}>
