@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabase } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
-
-const TEASER_CHARS = 160
 
 const SB_URL = () => process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SB_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -23,25 +20,13 @@ async function sbFetch(path: string) {
 
 export async function GET(req: NextRequest) {
   const email = req.nextUrl.searchParams.get('email') || ''
-  const supabase = getSupabase()
 
-  // Check if user is subscribed
-  let subscribed = false
-  if (email) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscribed')
-      .eq('email', email.toLowerCase())
-      .single()
-    subscribed = profile?.subscribed === true
-  }
-
-  // Fetch approved questions via direct REST (supabase-js has a known issue with this query)
-  const questions: { id: string; question: string; answer: string }[] | null = await sbFetch(
-    '/rest/v1/questions?status=eq.approved&select=id,question,answer&order=created_at.desc&limit=50'
+  // Fetch approved questions via direct REST
+  const questions: { id: string; question: string; answer: string; topic: string | null; created_at: string }[] | null = await sbFetch(
+    '/rest/v1/questions?status=eq.approved&deleted_at=is.null&select=id,question,answer,topic,created_at&order=created_at.desc&limit=100'
   )
 
-  if (!questions?.length) return NextResponse.json({ questions: [], subscribed })
+  if (!questions?.length) return NextResponse.json({ questions: [] })
 
   // Get upvote counts via direct REST
   const ids = questions.map(q => q.id)
@@ -58,7 +43,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Deduplicate by question text — keep the one with more upvotes
-  const seenQuestions = new Map<string, { id: string; question: string; answer: string }>()
+  const seenQuestions = new Map<string, typeof questions[number]>()
   for (const q of questions) {
     const key = q.question.toLowerCase().trim()
     const existing = seenQuestions.get(key)
@@ -68,14 +53,16 @@ export async function GET(req: NextRequest) {
   }
   const deduped = Array.from(seenQuestions.values())
 
+  // Everything is free — no truncation. Full answers for all.
   const result = deduped.map(q => ({
     id: q.id,
     question: q.question,
-    answer: subscribed ? q.answer : (q.answer || '').slice(0, TEASER_CHARS),
-    truncated: !subscribed && (q.answer || '').length > TEASER_CHARS,
+    answer: q.answer,
+    topic: q.topic,
+    created_at: q.created_at,
     upvote_count: countMap[q.id] || 0,
     user_upvoted: userSet.has(q.id),
   })).sort((a, b) => b.upvote_count - a.upvote_count)
 
-  return NextResponse.json({ questions: result, subscribed })
+  return NextResponse.json({ questions: result })
 }

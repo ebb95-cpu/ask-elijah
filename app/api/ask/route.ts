@@ -155,6 +155,46 @@ Return only valid JSON array, nothing else.`
   }
 }
 
+/**
+ * Fetch 2 of Elijah's highest-quality approved answers to use as voice anchors
+ * in the prompt. Quality signal: approved AND edit_count is low (Elijah barely
+ * edited the AI draft, meaning the voice was already right) AND a matching
+ * topic. These get pasted in as few-shot examples — anchors the output to
+ * Elijah's real voice better than any description can.
+ *
+ * Returns formatted text ready to drop into the user message, or '' if none.
+ */
+async function getVoiceAnchors(topic: string | null): Promise<string> {
+  try {
+    const supabase = getSupabase()
+    let query = supabase
+      .from('questions')
+      .select('question, answer, edit_count, topic')
+      .eq('status', 'approved')
+      .is('deleted_at', null)
+      .not('answer', 'is', null)
+      .order('edit_count', { ascending: true })
+      .order('approved_at', { ascending: false })
+      .limit(10)
+
+    if (topic) {
+      // Prefer same-topic examples when we have a topic match
+      query = query.eq('topic', topic)
+    }
+
+    const { data } = await query
+    const candidates = (data || []).filter((q) => q.answer && q.answer.length > 200 && q.answer.length < 2000)
+    if (candidates.length === 0) return ''
+
+    // Take up to 2
+    const picks = candidates.slice(0, 2)
+    const lines = picks.map((p, i) => `EXAMPLE ${i + 1} — a real answer Elijah approved:\nQuestion: "${p.question}"\nElijah's answer: ${p.answer}`).join('\n\n')
+    return `Here are real approved answers showing Elijah's voice. Match this tone, cadence, and sentence structure — NOT a generic helpful-assistant voice:\n\n${lines}\n\n---\n\n`
+  } catch {
+    return ''
+  }
+}
+
 // Fetch player context for admin email
 async function getPlayerContext(email: string): Promise<string> {
   const supabase = getSupabase()
@@ -227,6 +267,46 @@ Text: "${text.replace(/"/g, '\\"')}"`,
     }
   } catch {
     return { language: 'English', englishTranslation: null }
+  }
+}
+
+/**
+ * Rewrite the raw player question into a search-optimized version before
+ * embedding. Players phrase things in first-person emotional language
+ * ("idk why I suck under pressure"), while Elijah's indexed content uses
+ * terminology ("performance anxiety", "pressure response"). This bridges
+ * the vocabulary gap and materially lifts RAG recall.
+ *
+ * Returns the rewritten query, or the original if rewrite fails.
+ */
+async function rewriteQuery(question: string): Promise<string> {
+  try {
+    const res = await getAnthropic().messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 120,
+      messages: [{
+        role: 'user',
+        content: `You are rewriting a basketball player's question to retrieve the most relevant material from Elijah Bryant's knowledge base of videos and newsletters about mental performance, confidence, pressure, and basketball improvement.
+
+The player's raw question:
+"${question}"
+
+Rewrite this as a search query that:
+- Uses the vocabulary Elijah uses (mental performance, pre-game routine, pressure response, identity, task-driven, confidence, slump, mindset, etc.)
+- Preserves the specific situation (is it a slump? a coach conflict? pre-game nerves?)
+- Strips filler and emotion words
+- Is ONE sentence, 15 words or fewer
+
+Return ONLY the rewritten query. No preamble, no quotes, no explanation.`,
+      }],
+    })
+    const out = res.content[0].type === 'text' ? res.content[0].text.trim() : ''
+    // Guard against the model refusing or returning garbage
+    if (!out || out.length < 5 || out.length > 200) return question
+    // Strip trailing punctuation and quotes
+    return out.replace(/^["']+|["']+$/g, '').replace(/[.!?]+$/, '').trim()
+  } catch {
+    return question
   }
 }
 
@@ -594,7 +674,9 @@ export async function POST(req: NextRequest) {
     let hasChunks = false
     let sources: { title: string; url: string; type: string }[] = []
     try {
-      const embedding = await embedQuestion(queryForEmbedding)
+      // Rewrite the query into Elijah's vocabulary before embedding
+      const rewritten = await rewriteQuery(queryForEmbedding)
+      const embedding = await embedQuestion(rewritten)
       const level = await levelPromise
       const result = await searchPinecone(embedding, 5, topic, level)
       sources = result.sources
@@ -648,7 +730,8 @@ export async function POST(req: NextRequest) {
       : ''
 
     const preamble = modePreamble(mode, askerType)
-    const userMessage = `${preamble}${playerContextBlock}${ragContext}Now answer this question using the above context where relevant:\n\n${question}`
+    const voiceAnchors = await getVoiceAnchors(topic)
+    const userMessage = `${preamble}${voiceAnchors}${playerContextBlock}${ragContext}Now answer this question using the above context where relevant:\n\n${question}`
 
     // Use preview answer if already generated on the frontend, otherwise generate fresh
     let draft = ''

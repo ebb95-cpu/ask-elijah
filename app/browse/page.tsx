@@ -20,7 +20,8 @@ type Question = {
   id: string
   question: string
   answer: string
-  truncated: boolean
+  topic: string | null
+  created_at: string
   upvote_count: number
   user_upvoted: boolean
 }
@@ -46,7 +47,6 @@ export default function BrowsePage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
   const [userEmail, setUserEmail] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
   const [activeCategory, setActiveCategory] = useState('All')
 
   useEffect(() => {
@@ -150,52 +150,40 @@ export default function BrowsePage() {
           </div>
         ) : (
           <div className="space-y-0">
-            {filtered.map((q, i) => (
-              <div
-                key={q.id}
-                className={`py-8 ${i < filtered.length - 1 ? 'border-b border-gray-900' : ''}`}
-              >
-                {/* Question */}
-                <p className="text-white font-bold text-lg leading-snug mb-4">
-                  &ldquo;{q.question}&rdquo;
-                </p>
+            {filtered.map((q, i) => {
+              const preview = q.answer.length > 280 ? q.answer.slice(0, 280) + '...' : q.answer
+              return (
+                <div
+                  key={q.id}
+                  className={`py-8 ${i < filtered.length - 1 ? 'border-b border-gray-900' : ''}`}
+                >
+                  <Link href={`/browse/${q.id}`} className="block group">
+                    <p className="text-white font-bold text-lg leading-snug mb-4 group-hover:opacity-80 transition-opacity">
+                      &ldquo;{q.question}&rdquo;
+                    </p>
+                    <p className="text-gray-400 text-sm leading-relaxed mb-5">{preview}</p>
+                  </Link>
 
-                {/* Answer preview */}
-                <div className="relative mb-5">
-                  <p className="text-gray-400 text-sm leading-relaxed">
-                    {q.answer}{q.truncated ? '...' : ''}
-                  </p>
-                  {q.truncated && (
-                    <div
-                      className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none"
-                      style={{ background: 'linear-gradient(to bottom, transparent, #000)' }}
-                    />
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => handleUpvote(q.id)}
-                    className={`flex items-center gap-1.5 text-xs transition-colors ${
-                      q.user_upvoted ? 'text-white' : 'text-gray-600 hover:text-gray-300'
-                    }`}
-                  >
-                    <span className="text-base">{q.user_upvoted ? '▲' : '△'}</span>
-                    <span>{q.upvote_count > 0 ? `${q.upvote_count} had this too` : 'I had this too'}</span>
-                  </button>
-
-                  {q.truncated && (
+                  <div className="flex items-center gap-4">
                     <button
-                      onClick={() => setModalOpen(true)}
+                      onClick={() => handleUpvote(q.id)}
+                      className={`flex items-center gap-1.5 text-xs transition-colors ${
+                        q.user_upvoted ? 'text-white' : 'text-gray-600 hover:text-gray-300'
+                      }`}
+                    >
+                      <span className="text-base">{q.user_upvoted ? '▲' : '△'}</span>
+                      <span>{q.upvote_count > 0 ? `${q.upvote_count} had this too` : 'I had this too'}</span>
+                    </button>
+                    <Link
+                      href={`/browse/${q.id}`}
                       className="text-xs text-gray-600 hover:text-white transition-colors underline underline-offset-2"
                     >
                       Read the full answer →
-                    </button>
-                  )}
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </main>
@@ -211,38 +199,6 @@ export default function BrowsePage() {
         </button>
       </div>
 
-      {/* Paywall modal */}
-      {modalOpen && (
-        <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center px-5 z-50"
-          onClick={() => setModalOpen(false)}
-        >
-          <div
-            className="bg-black border border-gray-800 max-w-sm w-full p-8 relative"
-            onClick={e => e.stopPropagation()}
-          >
-            <button onClick={() => setModalOpen(false)} className="absolute top-4 right-4 text-gray-600 hover:text-white text-xs">✕</button>
-            <p className="text-white font-bold text-xl mb-3">Ask your own question.</p>
-            <p className="text-gray-500 text-sm leading-relaxed mb-8">
-              Elijah reads it personally and writes back. Not a template. Your situation, specifically.
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => router.push('/')}
-                className="block bg-white text-black text-sm font-bold text-center py-3 px-6 hover:opacity-80 transition-opacity"
-              >
-                Ask my question →
-              </button>
-              <Link
-                href="/pricing"
-                className="text-xs text-gray-600 hover:text-white transition-colors text-center py-2"
-              >
-                View plans →
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
