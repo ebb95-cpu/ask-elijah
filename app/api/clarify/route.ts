@@ -54,8 +54,15 @@ async function getKnowledgeContext(question: string): Promise<string> {
   }
 }
 
+const MODE_GUIDANCE: Record<string, string> = {
+  bad_game: `This player JUST had a bad game. Your clarifying question should be emotional, not tactical. Ask about what they felt, not what they did. Think: "How bad did it feel after?" or "Was this one game or a pattern?" Never ask "what do you want to work on" — they don't want a drill right now.`,
+  coach: `This is a coach-situation question. Ask what the coach has actually said to them recently, or what the relationship looks like day-to-day. Avoid generic "have you talked to them" — dig into the specific dynamic.`,
+  playing_time: `This is a playing-time question. Ask either: who's ahead of them on the depth chart, what's their role in practice, or what the coach has specifically told them they need to do. Pick the one that most unlocks the answer.`,
+  parent: `This is from a parent asking about their kid. Ask one question that reveals what the parent is REALLY worried about underneath — is it their kid's happiness, their own disappointment, the coach, college exposure? Don't ask about drills or technique.`,
+}
+
 export async function POST(req: NextRequest) {
-  const { question, conversation } = await req.json()
+  const { question, conversation, mode } = await req.json()
   // conversation: [{ q: string, a: string }]
 
   if (!question) return NextResponse.json({ error: 'question required' }, { status: 400 })
@@ -80,7 +87,11 @@ export async function POST(req: NextRequest) {
     ? `Here is what you know and have said about this topic from your own content:\n\n${knowledgeContext}\n\n`
     : ''
 
-  const prompt = `A basketball player just sent you this question. You need to decide: do you have enough to give them a real, specific answer? Or is there one more thing you need to know first?
+  const modeSection = mode && MODE_GUIDANCE[mode]
+    ? `\n\nENTRY MODE: ${mode}\n${MODE_GUIDANCE[mode]}\n`
+    : ''
+
+  const prompt = `A basketball player just sent you this question. You need to decide: do you have enough to give them a real, specific answer? Or is there one more thing you need to know first?${modeSection}
 
 Player's question: "${question}"
 ${conversationText ? `\nConversation so far:\n${conversationText}\n` : ''}

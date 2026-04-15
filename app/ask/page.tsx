@@ -373,6 +373,11 @@ function AskPageInner() {
   const [clarifyLoading, setClarifyLoading] = useState(false)
   const clarifyInputRef = useRef<HTMLTextAreaElement>(null)
 
+  // Entry path: drives tone, clarifying questions, and system-prompt mode.
+  // Null means "generic ask" and goes through the existing flow unchanged.
+  type EntryMode = 'bad_game' | 'coach' | 'playing_time' | 'parent' | null
+  const [entryMode, setEntryMode] = useState<EntryMode>(null)
+
   // Onboarding state
   const [onboardStep, setOnboardStep] = useState(0)
   const [onboardName, setOnboardName] = useState('')
@@ -500,7 +505,7 @@ function AskPageInner() {
       const clarRes = await fetch('/api/clarify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, conversation: [] }),
+        body: JSON.stringify({ question, conversation: [], mode: entryMode }),
       })
       const clarData = await clarRes.json()
       if (clarData.fallback) {
@@ -545,6 +550,8 @@ function AskPageInner() {
           question: enrichedQuestion,
           email: userEmail,
           language: detectedLang,
+          mode: entryMode,
+          askerType: entryMode === 'parent' ? 'parent' : 'player',
         }),
       })
 
@@ -653,7 +660,7 @@ function AskPageInner() {
       const res = await fetch('/api/clarify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, conversation: updatedConversation }),
+        body: JSON.stringify({ question, conversation: updatedConversation, mode: entryMode }),
       })
       const data = await res.json()
 
@@ -1013,8 +1020,57 @@ function AskPageInner() {
 
   // Input mode
   if (mode === 'input') {
+    const entryOptions: { id: EntryMode; label: string; hint: string }[] = [
+      { id: 'bad_game', label: 'I just played bad', hint: "Tell Elijah what happened tonight. He gets it — he's been there." },
+      { id: 'coach', label: 'Coach situation', hint: 'Playing time, benching, conflict, favoritism — what\'s going on?' },
+      { id: 'playing_time', label: 'Not getting minutes', hint: 'Lay out the rotation and where you fit. Elijah will give you a play.' },
+      { id: 'parent', label: "I'm a parent", hint: 'Asking on behalf of your kid. Give Elijah the situation.' },
+    ]
+
+    const modePlaceholders: Record<string, string> = {
+      bad_game: "What happened? How'd you play? How are you feeling right now?",
+      coach: 'Walk Elijah through your coach situation.',
+      playing_time: 'Who\'s ahead of you? What has the coach said? What have you tried?',
+      parent: 'How old is your kid, what level, and what are you seeing?',
+    }
+
+    const activePlaceholder = entryMode ? modePlaceholders[entryMode] : 'Ask anything.'
+
+    const entryChooser = (
+      <div className="w-full mb-4">
+        <div className="flex flex-wrap gap-2">
+          {entryOptions.map((opt) => {
+            const active = entryMode === opt.id
+            return (
+              <button
+                key={opt.id}
+                onClick={() => {
+                  setEntryMode(active ? null : opt.id)
+                  posthog?.capture('entry_mode_selected', { mode: active ? null : opt.id })
+                  setTimeout(() => textareaRef.current?.focus(), 50)
+                }}
+                className={`text-xs px-3 py-2 border transition-colors ${
+                  active
+                    ? 'border-white text-white bg-white/5'
+                    : 'border-gray-800 text-gray-500 hover:border-gray-600 hover:text-gray-300'
+                }`}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+        {entryMode && (
+          <p className="text-xs text-gray-600 mt-3 leading-relaxed">
+            {entryOptions.find((o) => o.id === entryMode)?.hint}
+          </p>
+        )}
+      </div>
+    )
+
     const askPanel = (
       <div className="w-full">
+        {entryChooser}
         <div className="border border-gray-700 focus-within:border-white transition-colors">
           <textarea
             ref={textareaRef}
@@ -1025,7 +1081,7 @@ function AskPageInner() {
               e.target.style.height = e.target.scrollHeight + 'px'
             }}
             onKeyDown={handleKey}
-            placeholder="Ask anything."
+            placeholder={activePlaceholder}
             rows={3}
             className="w-full px-4 pt-4 pb-2 text-white placeholder-gray-600 text-xl leading-relaxed resize-none outline-none bg-transparent"
             style={{ minHeight: '80px' }}

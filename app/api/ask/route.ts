@@ -31,6 +31,30 @@ function highlightVerifyMarkers(text: string): string {
 
 const MIN_PINECONE_SCORE = 0.35
 
+type EntryMode = 'bad_game' | 'coach' | 'playing_time' | 'parent' | 'general' | null
+
+/**
+ * Extra instructions injected into the user message for specific entry modes.
+ * These shape tone and opening, not the whole prompt.
+ */
+function modePreamble(mode: EntryMode, askerType: string | null): string {
+  switch (mode) {
+    case 'bad_game':
+      return `THE PLAYER JUST PLAYED BADLY. They're still in it — maybe on the bus home, maybe in their feelings. Open by naming exactly how they're probably feeling right now before you give them anything else. Don't rush to the fix. Meet them where they are. Then, and only then, give them one thing to hold onto and one specific thing to do tomorrow (not tonight). No drills. No "here's a tip." Real talk.\n\n`
+    case 'coach':
+      return `THIS IS A COACH-SITUATION QUESTION. Don't give generic "communicate with your coach" advice. Name what's actually going on from both sides — what coaches look for, what they don't say out loud, what this player can control vs can't. If there's a conversation they need to have, give them the actual words to use (and the words NOT to use). Short, honest, no bullshit.\n\n`
+    case 'playing_time':
+      return `THIS IS A PLAYING-TIME QUESTION. Cut through the parent-talk and give the real answer: coaches play who they trust, and trust is built in three places — practice habits, the small stuff during games, and how you respond to being benched. Pick the ONE thing that will move the needle for this specific kid based on what they told you, and tell them exactly what to do this week.\n\n`
+    case 'parent':
+      return `THIS QUESTION IS FROM A PARENT asking about their kid. Speak to the parent directly, not the kid. They're worried and they love this kid. Validate that first. Then be honest about what parents can and can't control in basketball — and what the research actually says about when parents hurt vs help. End with one specific thing they can do this week that ISN'T "talk to the coach."\n\n`
+    default:
+      return askerType === 'parent'
+        ? `This question is from a parent asking about their kid. Address the parent, not the kid.\n\n`
+        : ''
+  }
+}
+
+
 const TOPICS = ['confidence', 'pressure', 'consistency', 'focus', 'slump', 'coaching', 'team', 'mindset', 'motivation', 'identity'] as const
 type Topic = typeof TOPICS[number]
 
@@ -220,7 +244,7 @@ async function embedQuestion(question: string): Promise<number[]> {
   return data.data[0].embedding
 }
 
-async function searchPinecone(embedding: number[], topK = 5, topic?: string | null): Promise<{
+async function searchPinecone(embedding: number[], topK = 5, topic?: string | null, level?: string | null): Promise<{
   chunks: string[]
   sources: { title: string; url: string; type: string }[]
 }> {
@@ -236,22 +260,42 @@ async function searchPinecone(embedding: number[], topK = 5, topic?: string | nu
 
   let filteredMatches: { score: number; metadata: Record<string, string> }[] = []
   let unfilteredMatches: { score: number; metadata: Record<string, string> }[] = []
+  let levelMatches: { score: number; metadata: Record<string, string> }[] = []
+
+  // Kick off a level-specific query in parallel when we have a level. These get
+  // a boost over generic matches because answers for a D1 player shouldn't
+  // sound identical to answers for a 14-year-old.
+  const levelQuery = level
+    ? pineconeFetch({ vector: embedding, topK, includeMetadata: true, filter: { level: { $eq: level } } })
+    : null
 
   if (topic) {
-    const [filteredRes, unfilteredRes] = await Promise.all([
+    const [filteredRes, unfilteredRes, levelRes] = await Promise.all([
       pineconeFetch({ vector: embedding, topK, includeMetadata: true, filter: { topic: { $eq: topic } } }),
       pineconeFetch({ vector: embedding, topK, includeMetadata: true }),
+      levelQuery,
     ])
     if (!filteredRes.ok) throw new Error(`Pinecone filtered query failed: ${filteredRes.status}`)
     if (!unfilteredRes.ok) throw new Error(`Pinecone unfiltered query failed: ${unfilteredRes.status}`)
     const [filteredData, unfilteredData] = await Promise.all([filteredRes.json(), unfilteredRes.json()])
     filteredMatches = filteredData.matches || []
     unfilteredMatches = unfilteredData.matches || []
+    if (levelRes && levelRes.ok) {
+      const lvl = await levelRes.json()
+      levelMatches = lvl.matches || []
+    }
   } else {
-    const res = await pineconeFetch({ vector: embedding, topK, includeMetadata: true })
+    const [res, levelRes] = await Promise.all([
+      pineconeFetch({ vector: embedding, topK, includeMetadata: true }),
+      levelQuery,
+    ])
     if (!res.ok) throw new Error(`Pinecone query failed: ${res.status}`)
     const data = await res.json()
     unfilteredMatches = data.matches || []
+    if (levelRes && levelRes.ok) {
+      const lvl = await levelRes.json()
+      levelMatches = lvl.matches || []
+    }
   }
 
   const chunks: string[] = []
@@ -281,8 +325,12 @@ async function searchPinecone(embedding: number[], topK = 5, topic?: string | nu
     }
   }
 
-  // Filtered results first, then unfiltered to fill remaining slots — cap total at 6
+  // Priority order: topic-filtered → level-matched → unfiltered. Cap at 6.
   for (const m of filteredMatches) {
+    if (chunks.length >= 6) break
+    addMatch(m)
+  }
+  for (const m of levelMatches) {
     if (chunks.length >= 6) break
     addMatch(m)
   }
@@ -450,7 +498,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 })
     }
 
-    const { question, email, previewAnswer, newsletterOptIn, utm_source, utm_medium, utm_campaign } = await req.json()
+    const { question, email, previewAnswer, newsletterOptIn, utm_source, utm_medium, utm_campaign, mode: rawMode, askerType: rawAskerType } = await req.json()
+
+    const mode: EntryMode = (['bad_game', 'coach', 'playing_time', 'parent', 'general'] as const).includes(rawMode)
+      ? (rawMode as EntryMode)
+      : null
+    const askerType: string | null = rawAskerType === 'parent' ? 'parent' : rawAskerType === 'player' ? 'player' : null
 
     if (!question?.trim()) {
       return NextResponse.json({ error: 'Question required' }, { status: 400 })
@@ -513,6 +566,21 @@ export async function POST(req: NextRequest) {
       return ''
     })
 
+    // Also fetch level separately so we can use it for Pinecone boosting and
+    // for the mode preamble ("at your level..."). Fast single-row lookup.
+    const levelPromise = (async () => {
+      try {
+        const { data } = await getSupabase()
+          .from('profiles')
+          .select('level')
+          .eq('email', cleanEmailEarly)
+          .single()
+        return data?.level ?? null
+      } catch {
+        return null
+      }
+    })()
+
     const [{ language: detectedLanguage, englishTranslation }, topicResult, trigger] = await Promise.all([
       detectLanguage(question).catch(() => ({ language: 'English', englishTranslation: null })),
       tagTopic(question),
@@ -527,7 +595,8 @@ export async function POST(req: NextRequest) {
     let sources: { title: string; url: string; type: string }[] = []
     try {
       const embedding = await embedQuestion(queryForEmbedding)
-      const result = await searchPinecone(embedding, 5, topic)
+      const level = await levelPromise
+      const result = await searchPinecone(embedding, 5, topic, level)
       sources = result.sources
       if (result.chunks.length > 0) {
         hasChunks = true
@@ -537,13 +606,15 @@ export async function POST(req: NextRequest) {
       logError('ask:rag-lookup', ragErr, { email: cleanEmailEarly })
     }
 
+    const levelSnapshot = await levelPromise
+
     // If no relevant chunks and no preview answer, use fallback
     const FALLBACK = "I want to make sure I give you something real on this one. Try asking me again with a bit more detail about your situation and I'll find the right angle."
     if (!hasChunks && !previewAnswer?.trim()) {
       const supabase = getSupabase()
       const { data: record } = await supabase
         .from('questions')
-        .insert({ question, answer: FALLBACK, ai_draft: FALLBACK, sources: [], ip, email: cleanEmailEarly, status: 'pending', topic: topic ?? null, topic_confidence: topicConfidence, trigger: trigger ?? null, language_detected: detectedLanguage !== 'English' ? detectedLanguage : null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null })
+        .insert({ question, answer: FALLBACK, ai_draft: FALLBACK, sources: [], ip, email: cleanEmailEarly, status: 'pending', topic: topic ?? null, topic_confidence: topicConfidence, trigger: trigger ?? null, language_detected: detectedLanguage !== 'English' ? detectedLanguage : null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, mode, asker_type: askerType, level_snapshot: levelSnapshot })
         .select('id').single()
       const playerContext = await playerContextPromise
       if (record?.id) await notifyElijah(record.id, question, FALLBACK, email, playerContext).catch((e) => logError('ask:notify-elijah', e, { questionId: record.id }))
@@ -576,7 +647,8 @@ export async function POST(req: NextRequest) {
       ? `CONTEXT ABOUT THIS PLAYER — use this to personalize your answer:\n${playerContext}\n\n---\n\n`
       : ''
 
-    const userMessage = `${playerContextBlock}${ragContext}Now answer this question using the above context where relevant:\n\n${question}`
+    const preamble = modePreamble(mode, askerType)
+    const userMessage = `${preamble}${playerContextBlock}${ragContext}Now answer this question using the above context where relevant:\n\n${question}`
 
     // Use preview answer if already generated on the frontend, otherwise generate fresh
     let draft = ''
@@ -626,6 +698,9 @@ export async function POST(req: NextRequest) {
         utm_source: utm_source || null,
         utm_medium: utm_medium || null,
         utm_campaign: utm_campaign || null,
+        mode,
+        asker_type: askerType,
+        level_snapshot: levelSnapshot,
       })
       .select('id')
       .single()
