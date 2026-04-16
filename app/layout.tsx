@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import NewAnswerNotification from "@/components/NewAnswerNotification";
 import PostHogProvider from "@/components/PostHogProvider";
+import ErrorCatcher from "@/components/ErrorCatcher";
 import dynamic from "next/dynamic";
 
 // Dynamic import with SSR off — ensures the bottom nav only loads client-side
@@ -48,10 +49,9 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased min-h-screen flex flex-col">
         <PostHogProvider>
+          <ErrorCatcher />
           {children}
           <NewAnswerNotification />
-          {/* Wrapped in a simple boundary so if MobileBottomNav crashes
-              (e.g. on older Safari), the rest of the app still works. */}
           <MobileBottomNavSafe />
         </PostHogProvider>
       </body>
