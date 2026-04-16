@@ -1925,6 +1925,8 @@ export default function AdminQuestionsPage() {
   const [counts, setCounts] = useState<StatusCounts>({ pending: 0, answered: 0, skipped: 0 })
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  // For the answered-tab compact grid: which card is expanded into full detail?
+  const [detailOpenId, setDetailOpenId] = useState<string | null>(null)
   const [dashStats, setDashStats] = useState<DashboardStats | null>(null)
   const [waitlistCount, setWaitlistCount] = useState<number | null>(null)
   const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>([])
@@ -2554,32 +2556,122 @@ export default function AdminQuestionsPage() {
           {searchQuery ? 'No questions match your search.' : `No ${filter} questions.`}
         </p>
       ) : (
-        filteredItems.map((item) => {
-          if (item.kind === 'pain_point') {
+        /* ── Compact grid for ALL tabs: see 10-20 at a glance, tap to open ── */
+        <>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+            gap: '10px',
+          }}>
+            {filteredItems.map((item) => {
+              const q = item.kind === 'player_question' ? item.data.question : (item.data as PainPoint).cleaned_question
+              const email = item.kind === 'player_question' ? (item.data as PlayerQuestion).email : ''
+              const id = item.data.id
+              const status = item.data.status
+              const date = new Date(item.data.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              const isActive = detailOpenId === id
+              return (
+                <button
+                  key={id}
+                  onClick={() => setDetailOpenId(id)}
+                  style={{
+                    background: isActive ? '#111830' : '#0a0d1a',
+                    border: `1px solid ${isActive ? '#3b3f6b' : '#1a2040'}`,
+                    borderRadius: '8px',
+                    padding: '14px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                    minHeight: '100px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '8px',
+                  }}
+                >
+                  <p style={{
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#ffffff',
+                    margin: 0,
+                    lineHeight: 1.4,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical' as const,
+                    overflow: 'hidden',
+                  }}>
+                    {q}
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '10px', color: '#555' }}>{email.split('@')[0] || '—'}</span>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      {status === 'approved' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} />}
+                      {status === 'skipped' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />}
+                      <span style={{ fontSize: '10px', color: '#3a4570' }}>{date}</span>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Detail overlay — full-screen card when a grid item is tapped */}
+          {detailOpenId && (() => {
+            const item = filteredItems.find((i) => i.data.id === detailOpenId)
+            if (!item) return null
             return (
-              <PainPointCard
-                key={`pp-${item.data.id}`}
-                item={item.data}
-                focused={focusedId === `pp-${item.data.id}`}
-                onFocus={() => setFocusedId(`pp-${item.data.id}`)}
-                onPublished={handlePublished}
-                onSkipped={handleSkipped}
-              />
+              <div
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  zIndex: 50,
+                  background: '#000000',
+                  overflowY: 'auto',
+                  WebkitOverflowScrolling: 'touch',
+                }}
+              >
+                <div style={{ maxWidth: '760px', margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
+                  <button
+                    onClick={() => setDetailOpenId(null)}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #333',
+                      borderRadius: '6px',
+                      color: '#888',
+                      fontSize: '13px',
+                      padding: '8px 16px',
+                      cursor: 'pointer',
+                      fontFamily: '-apple-system, sans-serif',
+                      marginBottom: '20px',
+                      minHeight: '44px',
+                    }}
+                  >
+                    ← Back to grid
+                  </button>
+
+                  {item.kind === 'pain_point' ? (
+                    <PainPointCard
+                      item={item.data}
+                      focused={true}
+                      onFocus={() => {}}
+                      onPublished={(id) => { handlePublished(id); setDetailOpenId(null) }}
+                      onSkipped={(id) => { handleSkipped(id); setDetailOpenId(null) }}
+                    />
+                  ) : (
+                    <PlayerQuestionCard
+                      item={item.data}
+                      focused={true}
+                      onFocus={() => {}}
+                      onApproved={(id, also) => { handlePublished(id, also); setDetailOpenId(null) }}
+                      onSkipped={(id) => { handleSkipped(id); setDetailOpenId(null) }}
+                      onToast={(msg) => { setToast(msg); setTimeout(() => setToast(null), 3500) }}
+                    />
+                  )}
+                </div>
+              </div>
             )
-          } else {
-            return (
-              <PlayerQuestionCard
-                key={`pq-${item.data.id}`}
-                item={item.data}
-                focused={focusedId === `pq-${item.data.id}`}
-                onFocus={() => setFocusedId(`pq-${item.data.id}`)}
-                onApproved={handlePublished}
-                onSkipped={handleSkipped}
-                onToast={(msg) => { setToast(msg); setTimeout(() => setToast(null), 3500) }}
-              />
-            )
-          }
-        })
+          })()}
+        </>
       )}
     </div>
   )

@@ -17,9 +17,14 @@ export async function GET(req: NextRequest) {
   const ppStatus = status === 'answered' ? ['answered'] : [status]
   const pqStatus = status === 'answered' ? ['approved', 'answered'] : [status]
 
+  // Answered tab sorts by approved_at (most recently answered first);
+  // pending/skipped sort by created_at (oldest first — FIFO triage).
+  const orderCol = status === 'answered' ? 'created_at' : 'created_at'
+  const orderAsc = status === 'pending' // oldest-first for pending so you triage in order
+
   const [ppRes, pqRes] = await Promise.all([
-    supabase.from('pain_points').select('*').in('status', ppStatus).order('created_at', { ascending: false }).limit(50),
-    supabase.from('questions').select('*').in('status', pqStatus).order('created_at', { ascending: false }).limit(50),
+    supabase.from('pain_points').select('*').in('status', ppStatus).order('created_at', { ascending: orderAsc }).limit(100),
+    supabase.from('questions').select('*').in('status', pqStatus).order(status === 'answered' ? 'approved_at' : 'created_at', { ascending: false }).limit(100),
   ])
 
   return NextResponse.json({
