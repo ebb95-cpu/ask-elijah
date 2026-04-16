@@ -1312,6 +1312,14 @@ function PlayerQuestionCard({
         }}>
           Player Question
         </span>
+        {item.status === 'approved' && (
+          <span style={{
+            background: '#064e3b', color: '#6ee7b7', fontSize: '10px', fontWeight: 700,
+            letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: '4px',
+          }}>
+            Answered
+          </span>
+        )}
         <span style={{ fontSize: '12px', color: '#4a5180', fontFamily: '-apple-system, sans-serif' }}>
           From your site
         </span>
@@ -1781,7 +1789,7 @@ function PlayerQuestionCard({
             opacity: !draft.trim() ? 0.5 : 1, minHeight: '48px',
           }}
         >
-          {approving ? 'Sending...' : 'Approve →'}
+          {approving ? 'Sending...' : item.status === 'approved' ? 'Update & re-send →' : 'Approve →'}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); handleSkip() }}
