@@ -983,7 +983,7 @@ function PlayerQuestionCard({
   item: PlayerQuestion
   focused: boolean
   onFocus: () => void
-  onApproved: (id: string) => void
+  onApproved: (id: string, alsoApprovedIds?: string[]) => void
   onSkipped: (id: string) => void
   onToast?: (msg: string) => void
 }) {
@@ -1261,18 +1261,20 @@ function PlayerQuestionCard({
       return
     }
     setBulkApproving(true)
+    const similarIds = Array.from(selectedSimilar)
     try {
       await fetch('/api/admin/bulk-approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionIds: Array.from(selectedSimilar), finalAnswer: draft }),
+        body: JSON.stringify({ questionIds: similarIds, finalAnswer: draft }),
       })
-      onToast?.(`Answer sent to ${selectedSimilar.size + 1} players`)
+      onToast?.(`Answer sent to ${similarIds.length + 1} players`)
     } catch { /* fail silently */ }
     setBulkApproving(false)
     setShowSimilarModal(false)
     setApproved(true)
-    setTimeout(() => onApproved(item.id), 800)
+    // Remove the original card + all the bulk-approved similar ones from the queue
+    setTimeout(() => onApproved(item.id, similarIds), 800)
   }
 
   if (approved) {
@@ -2094,9 +2096,18 @@ export default function AdminQuestionsPage() {
     setItems((prev) => prev.filter((i) => i.data.id !== id))
   }
 
-  function handlePublished(id: string) {
+  function handlePublished(id: string, alsoApprovedIds?: string[]) {
     removeItem(id)
-    setCounts((c) => ({ ...c, pending: Math.max(0, c.pending - 1), answered: c.answered + 1 }))
+    const extraCount = alsoApprovedIds?.length ?? 0
+    // Also remove any bulk-approved similar questions from the visible queue
+    if (alsoApprovedIds && alsoApprovedIds.length > 0) {
+      setItems((prev) => prev.filter((i) => !alsoApprovedIds.includes(i.data.id)))
+    }
+    setCounts((c) => ({
+      ...c,
+      pending: Math.max(0, c.pending - 1 - extraCount),
+      answered: c.answered + 1 + extraCount,
+    }))
   }
 
   function handleSkipped(id: string) {
