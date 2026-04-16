@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
+import { getLocal, setLocal } from '@/lib/safe-storage'
 
 export default function NewAnswerNotification() {
   const [show, setShow] = useState(false)
   const knownCountRef = useRef<number | null>(null)
 
   const check = async () => {
-    const email = localStorage.getItem('ask_elijah_email')
+    const email = getLocal('ask_elijah_email')
     if (!email) return
 
     try {
@@ -20,15 +21,15 @@ export default function NewAnswerNotification() {
       if (knownCountRef.current === null) {
         // First load — store baseline, don't notify
         knownCountRef.current = count
-        const stored = localStorage.getItem('ask_elijah_seen_count')
+        const stored = getLocal('ask_elijah_seen_count')
         if (stored && count > parseInt(stored)) {
           setShow(true)
         }
-        localStorage.setItem('ask_elijah_seen_count', String(count))
+        setLocal('ask_elijah_seen_count', String(count))
       } else if (count > knownCountRef.current) {
         // New answer came in while they were on the page
         knownCountRef.current = count
-        localStorage.setItem('ask_elijah_seen_count', String(count))
+        setLocal('ask_elijah_seen_count', String(count))
         setShow(true)
       }
     } catch {
@@ -52,7 +53,7 @@ export default function NewAnswerNotification() {
         href="/history"
         onClick={() => {
           setShow(false)
-          localStorage.setItem('ask_elijah_seen_count', String(knownCountRef.current ?? 0))
+          setLocal('ask_elijah_seen_count', String(knownCountRef.current ?? 0))
         }}
         className="flex items-center gap-3 bg-black text-white px-4 py-3 shadow-2xl border border-gray-800 hover:opacity-90 transition-opacity"
       >

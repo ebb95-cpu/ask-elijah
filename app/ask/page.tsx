@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import { usePostHog } from 'posthog-js/react'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
+import { getLocal, setLocal, removeLocal, getSession, setSession, removeSession } from '@/lib/safe-storage'
 
 function Logo({ dark = false }: { dark?: boolean }) {
   const c = dark ? '#fff' : '#000'
@@ -386,7 +387,7 @@ function AskPageInner() {
 
   // Hydrate level from localStorage so returning users don't have to re-pick
   useEffect(() => {
-    const stored = localStorage.getItem('asker_level')
+    const stored = getLocal('asker_level')
     if (stored) setAskerLevel(stored as Level)
   }, [])
 
@@ -452,9 +453,9 @@ function AskPageInner() {
   }, [])
 
   useEffect(() => {
-    const pending = sessionStorage.getItem('pending_question')
+    const pending = getSession('pending_question')
     if (pending) {
-      sessionStorage.removeItem('pending_question')
+      removeSession('pending_question')
       setQuestion(pending)
       setShowSuggestions(false)
     } else {
@@ -492,11 +493,11 @@ function AskPageInner() {
 
   // Returning user: check if they have an answered question with no reflection
   useEffect(() => {
-    const storedEmail = localStorage.getItem('ask_elijah_email')
-    const count = parseInt(localStorage.getItem('question_count') || '0', 10)
+    const storedEmail = getLocal('ask_elijah_email')
+    const count = parseInt(getLocal('question_count') || '0', 10)
     if (!storedEmail || count === 0) return
     // Don't show return flow if they came with a pending question in session
-    if (sessionStorage.getItem('pending_question')) return
+    if (getSession('pending_question')) return
 
     fetch(`/api/journal?email=${encodeURIComponent(storedEmail)}`)
       .then(r => r.json())
@@ -520,11 +521,11 @@ function AskPageInner() {
   }, [mode, posthog])
 
   const getQuestionCount = () =>
-    parseInt(localStorage.getItem('question_count') || '0', 10)
+    parseInt(getLocal('question_count') || '0', 10)
   const incrementQuestionCount = () =>
-    localStorage.setItem('question_count', String(getQuestionCount() + 1))
+    setLocal('question_count', String(getQuestionCount() + 1))
   const hasCompletedProfile = () =>
-    !!localStorage.getItem('profile_done')
+    !!getLocal('profile_done')
 
   // Step 1: question submitted → go to email gate
   const handleQuestionSubmit = () => {
@@ -572,7 +573,7 @@ function AskPageInner() {
 
     setMode('loading')
     incrementQuestionCount()
-    sessionStorage.setItem('user_email', email.trim().toLowerCase())
+    setSession('user_email', email.trim().toLowerCase())
     await submitToApi(question, email.trim().toLowerCase(), [])
   }
 
@@ -628,9 +629,9 @@ function AskPageInner() {
   }
 
   const handleOnboardComplete = async (skip = false) => {
-    localStorage.setItem('profile_done', '1')
+    setLocal('profile_done', '1')
     if (!skip && (onboardName || onboardPosition || onboardLevel || onboardChallenge)) {
-      const savedEmail = sessionStorage.getItem('user_email') || email
+      const savedEmail = getSession('user_email') || email
       try {
         await fetch('/api/profile', {
           method: 'POST',
@@ -654,8 +655,8 @@ function AskPageInner() {
   }
 
   const handleProfileComplete = async (profile: Record<string, unknown>) => {
-    localStorage.setItem('profile_done', '1')
-    const savedEmail = sessionStorage.getItem('user_email')
+    setLocal('profile_done', '1')
+    const savedEmail = getSession('user_email')
     if (savedEmail) {
       try {
         await fetch('/api/profile', {
@@ -671,7 +672,7 @@ function AskPageInner() {
   }
 
   const handleProfileSkip = () => {
-    localStorage.setItem('profile_done', '1')
+    setLocal('profile_done', '1')
     setShowProfile(false)
     setMode('email_gate')
   }
@@ -726,7 +727,7 @@ function AskPageInner() {
         // Done — submit to API with full context
         setMode('loading')
         incrementQuestionCount()
-        sessionStorage.setItem('user_email', email.trim().toLowerCase())
+        setSession('user_email', email.trim().toLowerCase())
         await submitToApi(question, email.trim().toLowerCase(), updatedConversation)
       }
     } catch (err) {
@@ -734,7 +735,7 @@ function AskPageInner() {
       posthog?.capture('clarify_error', { error: String(err), round: updatedConversation.length })
       setMode('loading')
       incrementQuestionCount()
-      sessionStorage.setItem('user_email', email.trim().toLowerCase())
+      setSession('user_email', email.trim().toLowerCase())
       await submitToApi(question, email.trim().toLowerCase(), updatedConversation)
     }
   }
@@ -835,7 +836,7 @@ function AskPageInner() {
                 onClick={async () => {
                   setMode('loading')
                   incrementQuestionCount()
-                  sessionStorage.setItem('user_email', email.trim().toLowerCase())
+                  setSession('user_email', email.trim().toLowerCase())
                   await submitToApi(question, email.trim().toLowerCase(), clarifyConversation)
                 }}
                 className="text-sm text-gray-600 hover:text-white transition-colors py-2 min-h-[44px]"
@@ -1138,8 +1139,8 @@ function AskPageInner() {
                   onClick={() => {
                     const next = active ? null : opt.id
                     setAskerLevel(next)
-                    if (next) localStorage.setItem('asker_level', next)
-                    else localStorage.removeItem('asker_level')
+                    if (next) setLocal('asker_level', next)
+                    else removeLocal('asker_level')
                     posthog?.capture('asker_level_selected', { level: next })
                   }}
                   className={`text-[11px] px-2.5 py-1 border transition-colors ${
@@ -1306,8 +1307,8 @@ function AskPageInner() {
                   onClick={() => {
                     const next = active ? null : opt.id
                     setAskerLevel(next)
-                    if (next) localStorage.setItem('asker_level', next)
-                    else localStorage.removeItem('asker_level')
+                    if (next) setLocal('asker_level', next)
+                    else removeLocal('asker_level')
                     posthog?.capture('asker_level_selected', { level: next })
                   }}
                   className={`shrink-0 text-xs px-3 py-1.5 rounded-full border whitespace-nowrap transition-colors ${

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { getLocal } from '@/lib/safe-storage'
 
 type Question = {
   id: string
@@ -37,7 +38,7 @@ export default function BrowsePage() {
   const [openId, setOpenId] = useState<string | null>(null)
 
   useEffect(() => {
-    const stored = localStorage.getItem('ask_elijah_email') || ''
+    const stored = getLocal('ask_elijah_email') || ''
     setUserEmail(stored)
     fetch(`/api/browse${stored ? `?email=${encodeURIComponent(stored)}` : ''}`)
       .then((r) => r.json())

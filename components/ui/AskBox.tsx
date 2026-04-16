@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { setSession } from '@/lib/safe-storage'
 
 interface AskBoxProps {
   autoFocus?: boolean
@@ -53,7 +54,7 @@ export default function AskBox({
     }
 
     // Store question in sessionStorage for the ask page to pick up
-    sessionStorage.setItem('pending_question', question.trim())
+    setSession('pending_question', question.trim())
     router.push('/ask')
   }
 

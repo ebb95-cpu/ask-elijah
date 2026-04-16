@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
+import { getLocal, setLocal } from '@/lib/safe-storage'
 
 function Logo({ dark = false }: { dark?: boolean }) {
   const c = dark ? '#fff' : '#000'
@@ -286,33 +287,24 @@ export default function HomePage() {
     return () => clearInterval(id)
   }, [])
 
-  // Capture UTM params once on landing and persist them.
-  // localStorage access is wrapped — Safari throws SecurityError when cookies
-  // are blocked or in some private-browsing states, which would otherwise
-  // crash the whole page with "Application error: a client-side exception".
+  // Capture UTM params once on landing and persist them. Safari throws
+  // SecurityError on storage access when cookies are blocked or in some
+  // private-browsing states — the safe-storage helper swallows that so it
+  // can't crash the page.
   useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search)
-      const utm = {
-        utm_source: params.get('utm_source'),
-        utm_medium: params.get('utm_medium'),
-        utm_campaign: params.get('utm_campaign'),
-      }
-      if (utm.utm_source || utm.utm_medium || utm.utm_campaign) {
-        localStorage.setItem('ask_elijah_utm', JSON.stringify(utm))
-      }
-    } catch {
-      // Storage blocked — not fatal, just skip UTM persistence.
+    const params = new URLSearchParams(window.location.search)
+    const utm = {
+      utm_source: params.get('utm_source'),
+      utm_medium: params.get('utm_medium'),
+      utm_campaign: params.get('utm_campaign'),
+    }
+    if (utm.utm_source || utm.utm_medium || utm.utm_campaign) {
+      setLocal('ask_elijah_utm', JSON.stringify(utm))
     }
   }, [])
 
   useEffect(() => {
-    let stored: string | null = null
-    try {
-      stored = localStorage.getItem('ask_elijah_email')
-    } catch {
-      // Storage blocked — treat as logged-out.
-    }
+    const stored = getLocal('ask_elijah_email')
     if (stored) {
       userEmailRef.current = stored
       Promise.all([
@@ -375,9 +367,9 @@ export default function HomePage() {
     try {
       let utm: Record<string, unknown> = {}
       try {
-        utm = JSON.parse(localStorage.getItem('ask_elijah_utm') || '{}')
+        utm = JSON.parse(getLocal('ask_elijah_utm') || '{}')
       } catch {
-        // Storage blocked or bad JSON — fine, just no UTM.
+        // Bad JSON — fine, just no UTM.
       }
       await fetch('/api/ask', {
         method: 'POST',
@@ -393,11 +385,7 @@ export default function HomePage() {
       prevQuestionRef.current = question.trim()
       prevAnswerRef.current = fullAnswerRef.current
       userEmailRef.current = email.trim()
-      try {
-        localStorage.setItem('ask_elijah_email', email.trim())
-      } catch {
-        // Storage blocked — they just won't be recognized on return.
-      }
+      setLocal('ask_elijah_email', email.trim())
       setMode('submitted')
     } catch {
       // still show submitted — question was received

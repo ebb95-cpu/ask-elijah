@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
+import { setSession } from '@/lib/safe-storage'
 
 function Logo() {
   return (
@@ -52,7 +53,7 @@ export default function HomePage() {
   const handleSubmit = () => {
     if (!question.trim() || loading) return
     setLoading(true)
-    sessionStorage.setItem('pending_question', question.trim())
+    setSession('pending_question', question.trim())
     router.push('/ask')
   }
 

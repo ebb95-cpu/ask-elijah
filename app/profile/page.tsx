@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { getLocal, setLocal } from '@/lib/safe-storage'
 
 const POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C', 'Coach']
 const LEVELS = ['Youth', 'High School', 'College', 'Pro']
@@ -38,7 +39,7 @@ export default function ProfilePage() {
   const router = useRouter()
 
   useEffect(() => {
-    const stored = localStorage.getItem('ask_elijah_email')
+    const stored = getLocal('ask_elijah_email')
     if (stored) {
       isFirstSave.current = false
       setEmail(stored)
@@ -77,7 +78,7 @@ export default function ProfilePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, position, level, country, challenge, age_range: ageRange, team_school: teamSchool }),
     })
-    localStorage.setItem('ask_elijah_email', email)
+    setLocal('ask_elijah_email', email)
     isFirstSave.current = false
 
     if (firstTime) {
