@@ -43,15 +43,22 @@ export function middleware(req: NextRequest) {
   const expected = process.env.ADMIN_PASSWORD
 
   if (!expected || token !== expected) {
-    // Preserve where the admin was trying to go so we can bounce them back
-    // after successful login.
     const next = pathname + (search || '')
     const loginUrl = new URL('/admin/login', req.url)
     loginUrl.searchParams.set('next', next)
     return NextResponse.redirect(loginUrl)
   }
 
-  return NextResponse.next()
+  // ALL admin pages get aggressive no-cache. Mobile Safari was caching the
+  // HTML response and serving old JS chunk URLs after a redeploy — the old
+  // chunks 404 on the new deploy, which causes "Application error: a
+  // client-side exception has occurred" (scripts fail to load, React never
+  // mounts). This forces the browser to always fetch fresh HTML.
+  const res = NextResponse.next()
+  res.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate')
+  res.headers.set('Pragma', 'no-cache')
+  res.headers.set('Expires', '0')
+  return res
 }
 
 export const config = {
