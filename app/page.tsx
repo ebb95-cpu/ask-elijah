@@ -125,16 +125,12 @@ const ALL_SUGGESTIONS = [
   "My teammates don't believe in me",
 ]
 
-function getRotatingSuggestions() {
-  const day = new Date().getDate()
-  const offset = day % ALL_SUGGESTIONS.length
-  return [
-    ...ALL_SUGGESTIONS.slice(offset),
-    ...ALL_SUGGESTIONS.slice(0, offset),
-  ]
-}
-
-const SUGGESTIONS = getRotatingSuggestions()
+// Rotation used to depend on `new Date().getDate()` at module load, which
+// evaluates once at SSR build time and again on client, causing hydration
+// mismatches at day-rollover and crashing mobile Safari. Static list now —
+// the page is pre-rendered, so date-based rotation never worked in prod
+// anyway (the value was frozen to the deploy date).
+const SUGGESTIONS = ALL_SUGGESTIONS
 
 function ReturningView({
   question, setQuestion, handleKey, handleSubmit, resetToHome, prevQuestion, prevAnswer, userEmail, memories
@@ -290,21 +286,33 @@ export default function HomePage() {
     return () => clearInterval(id)
   }, [])
 
-  // Capture UTM params once on landing and persist them
+  // Capture UTM params once on landing and persist them.
+  // localStorage access is wrapped — Safari throws SecurityError when cookies
+  // are blocked or in some private-browsing states, which would otherwise
+  // crash the whole page with "Application error: a client-side exception".
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const utm = {
-      utm_source: params.get('utm_source'),
-      utm_medium: params.get('utm_medium'),
-      utm_campaign: params.get('utm_campaign'),
-    }
-    if (utm.utm_source || utm.utm_medium || utm.utm_campaign) {
-      localStorage.setItem('ask_elijah_utm', JSON.stringify(utm))
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const utm = {
+        utm_source: params.get('utm_source'),
+        utm_medium: params.get('utm_medium'),
+        utm_campaign: params.get('utm_campaign'),
+      }
+      if (utm.utm_source || utm.utm_medium || utm.utm_campaign) {
+        localStorage.setItem('ask_elijah_utm', JSON.stringify(utm))
+      }
+    } catch {
+      // Storage blocked — not fatal, just skip UTM persistence.
     }
   }, [])
 
   useEffect(() => {
-    const stored = localStorage.getItem('ask_elijah_email')
+    let stored: string | null = null
+    try {
+      stored = localStorage.getItem('ask_elijah_email')
+    } catch {
+      // Storage blocked — treat as logged-out.
+    }
     if (stored) {
       userEmailRef.current = stored
       Promise.all([
@@ -365,6 +373,12 @@ export default function HomePage() {
     setEmailLoading(true)
 
     try {
+      let utm: Record<string, unknown> = {}
+      try {
+        utm = JSON.parse(localStorage.getItem('ask_elijah_utm') || '{}')
+      } catch {
+        // Storage blocked or bad JSON — fine, just no UTM.
+      }
       await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -373,13 +387,17 @@ export default function HomePage() {
           email: email.trim(),
           previewAnswer: fullAnswerRef.current,
           newsletterOptIn: true,
-          ...JSON.parse(localStorage.getItem('ask_elijah_utm') || '{}'),
+          ...utm,
         }),
       })
       prevQuestionRef.current = question.trim()
       prevAnswerRef.current = fullAnswerRef.current
       userEmailRef.current = email.trim()
-      localStorage.setItem('ask_elijah_email', email.trim())
+      try {
+        localStorage.setItem('ask_elijah_email', email.trim())
+      } catch {
+        // Storage blocked — they just won't be recognized on return.
+      }
       setMode('submitted')
     } catch {
       // still show submitted — question was received
