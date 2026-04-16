@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { getSupabase } from '@/lib/supabase-server'
 
 /**
  * Safe-to-expose diagnostic for admin login. Reveals whether env vars are
@@ -41,12 +42,24 @@ export async function GET(_req: NextRequest) {
       commitSha: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || 'unknown',
       buildTime: new Date().toISOString(),
     },
-    // What to check for each outcome
-    hints: {
-      'ADMIN_PASSWORD_set=false': 'Env var is not set on this deployment. Go to Vercel → Settings → Environment Variables → add ADMIN_PASSWORD for Production → redeploy.',
-      'cookie.present=false after login': 'Cookie is not being saved by the browser. If on Safari, check Settings → Safari → Block All Cookies is OFF.',
-      'cookie.matchesEnv=false': 'Cookie exists but does not match ADMIN_PASSWORD. The env var was changed after you logged in — clear the cookie and log in again.',
-      'commitSha does not match latest push': 'Deploy has not finished or failed. Check Vercel → Deployments.',
-    },
+    // Live Supabase connectivity test
+    supabase: await (async () => {
+      try {
+        const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
+        const keyLen = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim().length
+        const supabase = getSupabase()
+        const { count, error } = await supabase.from('questions').select('id', { count: 'exact', head: true })
+        return {
+          url_length: url.length,
+          url_ends_with: url.slice(-5),
+          key_length: keyLen,
+          query_ok: !error,
+          query_error: error?.message || null,
+          row_count: count,
+        }
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : String(e) }
+      }
+    })(),
   })
 }
