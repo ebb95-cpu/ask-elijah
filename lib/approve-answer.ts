@@ -99,9 +99,12 @@ export async function approveAnswer(args: {
 
   const supabase = getSupabase()
 
+  // Select * to be resilient to missing columns — some migrations may not
+  // have been run on prod yet. Specific column selects broke approve when
+  // `topic` didn't exist.
   const { data: record, error: fetchError } = await supabase
     .from('questions')
-    .select('question, email, sources, topic, trigger, ai_draft, answer, edit_count')
+    .select('*')
     .eq('id', questionId)
     .single()
 
