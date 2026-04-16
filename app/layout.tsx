@@ -2,7 +2,16 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import NewAnswerNotification from "@/components/NewAnswerNotification";
 import PostHogProvider from "@/components/PostHogProvider";
-import MobileBottomNav from "@/components/ui/MobileBottomNav";
+import dynamic from "next/dynamic";
+
+// Dynamic import with SSR off — ensures the bottom nav only loads client-side
+// and a load failure can't crash the server render. If the component itself
+// throws at runtime (e.g. usePathname edge case on older Safari), the dynamic
+// wrapper catches it and renders nothing instead of killing the whole page.
+const MobileBottomNavSafe = dynamic(
+  () => import("@/components/ui/MobileBottomNav"),
+  { ssr: false }
+);
 
 export const metadata: Metadata = {
   title: "Ask Elijah — Submit one question. Get a personal answer from an NBA Champion.",
@@ -41,7 +50,9 @@ export default function RootLayout({
         <PostHogProvider>
           {children}
           <NewAnswerNotification />
-          <MobileBottomNav />
+          {/* Wrapped in a simple boundary so if MobileBottomNav crashes
+              (e.g. on older Safari), the rest of the app still works. */}
+          <MobileBottomNavSafe />
         </PostHogProvider>
       </body>
     </html>
