@@ -115,7 +115,7 @@ export default function AdminQuestionsPage() {
         {/* Question */}
         <div style={{ marginBottom: 20 }}>
           <p style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-            {openItem.email} · {formatDate(openItem.created_at)}
+            {openItem.email || 'anon'} · {formatDate(openItem.created_at)}
           </p>
           <p style={{ fontSize: 20, fontWeight: 700, color: '#fff', lineHeight: 1.4, margin: 0 }}>
             {openItem.question}
@@ -266,7 +266,11 @@ export default function AdminQuestionsPage() {
                 {q.question}
               </p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 10, color: '#555' }}>{q.email.split('@')[0]}</span>
+                {/* Email can be null on pain-point-style records. Crashed the
+                    admin queue on mobile when .split was called on null. */}
+                <span style={{ fontSize: 10, color: '#555' }}>
+                  {q.email ? q.email.split('@')[0] : 'anon'}
+                </span>
                 <span style={{ fontSize: 10, color: '#3a4570' }}>{formatDate(q.created_at)}</span>
               </div>
             </button>
