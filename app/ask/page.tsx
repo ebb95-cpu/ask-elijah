@@ -823,25 +823,24 @@ function AskPageInner() {
               className="w-full bg-transparent border border-gray-700 focus:border-white transition-colors px-4 py-3 text-white placeholder-gray-700 text-base leading-relaxed resize-none outline-none mb-4"
             />
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-3">
               <button
                 onClick={handleClarifySubmit}
                 disabled={!clarifyAnswer.trim() || clarifyLoading}
-                className="bg-white text-black px-8 py-3 text-sm font-semibold disabled:opacity-30 hover:opacity-80 transition-opacity"
+                className="w-full bg-white text-black py-4 text-base font-bold rounded-full disabled:opacity-30 hover:opacity-80 transition-opacity min-h-[48px]"
               >
                 {clarifyLoading ? 'Got it...' : 'Answer →'}
               </button>
               <button
                 onClick={async () => {
-                  // Skip remaining clarification and just submit
                   setMode('loading')
                   incrementQuestionCount()
                   sessionStorage.setItem('user_email', email.trim().toLowerCase())
                   await submitToApi(question, email.trim().toLowerCase(), clarifyConversation)
                 }}
-                className="text-xs text-gray-600 hover:text-white transition-colors"
+                className="text-sm text-gray-600 hover:text-white transition-colors py-2 min-h-[44px]"
               >
-                Skip and just submit →
+                Skip and just send it →
               </button>
             </div>
 
@@ -1473,12 +1472,10 @@ function AskPageInner() {
             <button
               onClick={handleEmailSubmit}
               disabled={!email.trim() || !ageConfirmed}
-              className="w-full bg-white text-black py-3 text-sm font-semibold disabled:opacity-30 hover:opacity-80 transition-opacity"
+              className="w-full bg-white text-black py-4 text-base font-bold rounded-full disabled:opacity-30 hover:opacity-80 transition-opacity min-h-[48px]"
             >
               Send my question →
             </button>
-
-            <p className="text-xs text-gray-700 mt-4">No spam. Just your answer.</p>
           </div>
         </div>
       </div>
@@ -1488,15 +1485,15 @@ function AskPageInner() {
   // Loading
   if (mode === 'loading') {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-8 px-6 text-center">
+      <div className="min-h-[100dvh] bg-black text-white flex flex-col items-center justify-center gap-8 px-6 text-center">
         <ThinkingDots />
         <div>
-          <p className="text-white text-lg font-semibold mb-2">Elijah is thinking...</p>
+          <p className="text-white text-xl font-bold mb-2">Elijah is thinking...</p>
           <p className="text-gray-500 text-sm">Pulling from 20 years of pro experience</p>
         </div>
-        <div className="border border-gray-800 rounded-lg px-6 py-4 max-w-sm w-full text-left">
-          <p className="text-gray-600 text-xs uppercase tracking-widest mb-2">Your question</p>
-          <p className="text-gray-300 text-sm italic">&ldquo;{question}&rdquo;</p>
+        <div className="border border-gray-800 rounded-xl px-5 py-4 max-w-sm w-full text-left">
+          <p className="text-gray-600 text-[10px] uppercase tracking-widest mb-2">Your question</p>
+          <p className="text-gray-300 text-base italic leading-relaxed">&ldquo;{question}&rdquo;</p>
         </div>
       </div>
     )
