@@ -45,7 +45,26 @@ function SignInInner() {
   // "accepted" so the admin can see the signed-in student experience without
   // actually sending real emails or hitting auth.
   const searchParams = useSearchParams()
-  const simulated = searchParams?.get('simulated') === '1'
+  // Simulator mode is sticky: once we detect we're inside the admin simulator
+  // iframe, every subsequent navigation (including in-app ← Back, follow-ups,
+  // etc.) stays in simulated mode even if the URL ?simulated=1 gets stripped.
+  // We detect this by checking if we're rendered inside a same-origin iframe
+  // whose parent is at /admin/simulate.
+  const [simulated, setSimulated] = useState<boolean>(
+    () => searchParams?.get('simulated') === '1'
+  )
+
+  useEffect(() => {
+    if (simulated) return
+    if (typeof window === 'undefined') return
+    if (window.self === window.top) return
+    try {
+      const parentPath = window.parent.location.pathname
+      if (parentPath.startsWith('/admin/simulate')) setSimulated(true)
+    } catch {
+      // Cross-origin iframe — not our simulator. Leave simulated false.
+    }
+  }, [simulated])
 
   // In simulator mode, prefill an email that actually has prior questions
   // (so the returning-user dashboard triggers) and auto-tick the age check
@@ -53,7 +72,7 @@ function SignInInner() {
   // before submitting to preview a different student state.
   useEffect(() => {
     if (!simulated) return
-    setEmail('ebb95@mac.com')
+    setEmail((prev) => prev || 'ebb95@mac.com')
     setAgeConfirmed(true)
   }, [simulated])
 
