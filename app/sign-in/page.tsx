@@ -80,6 +80,12 @@ function SignInInner() {
     if (!email.trim()) return
     setLoading(true)
     setError('')
+    // In simulator mode we're always pretending to be a student — never
+    // route admin emails (like ebb95@mac.com) to the password prompt.
+    if (simulated) {
+      await handleSendLink()
+      return
+    }
     try {
       const res = await fetch('/api/admin/check-email', {
         method: 'POST',
