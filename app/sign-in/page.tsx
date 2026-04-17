@@ -1,5 +1,11 @@
 'use client'
 export const dynamic = 'force-dynamic'
+// Explicitly opt out of Next.js data cache so the edge can't serve a stale
+// HTML shell from a previous deploy. Without this, Vercel was returning a
+// HIT for this route for 40+ minutes even after new deploys landed, which
+// blocked the simulator's ?simulated=1 flag from ever being honored.
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
