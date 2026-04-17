@@ -27,6 +27,11 @@ export default function AdminQuestionsPage() {
   const [draft, setDraft] = useState('')
   const [approving, setApproving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Remix: extra context the admin wants woven into a fresh answer. Posts to
+  // /api/admin/regenerate-draft with (question + current draft + this text)
+  // and replaces the draft with whatever the model writes from scratch.
+  const [remixInfo, setRemixInfo] = useState('')
+  const [remixing, setRemixing] = useState(false)
 
   const load = useCallback(async (status: string) => {
     setLoading(true)
@@ -66,10 +71,42 @@ export default function AdminQuestionsPage() {
       setItems((prev) => prev.filter((q) => q.id !== questionId))
       setOpenId(null)
       setDraft('')
+      setRemixInfo('')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to approve')
     } finally {
       setApproving(false)
+    }
+  }
+
+  const handleRemix = async () => {
+    if (!openItem || !remixInfo.trim() || remixing) return
+    setRemixing(true)
+    setError(null)
+    try {
+      // Combine the current draft + new info into one context block. The
+      // endpoint treats it as raw material and writes a NEW answer from
+      // scratch — doesn't append or reference either piece.
+      const context = `Previous draft:\n${draft.trim() || '(none yet)'}\n\n---\n\nAdditional info from Elijah:\n${remixInfo.trim()}`
+      const res = await fetch('/api/admin/regenerate-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: openItem.question, context }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `${res.status}`)
+      }
+      const data = await res.json()
+      if (!data.draft) throw new Error('Empty remix response')
+      setDraft(data.draft)
+      setRemixInfo('')
+      setToast('Remixed — review the new draft')
+      setTimeout(() => setToast(null), 2500)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to remix')
+    } finally {
+      setRemixing(false)
     }
   }
 
@@ -80,6 +117,7 @@ export default function AdminQuestionsPage() {
       await supabase.from('questions').update({ status: 'skipped' }).eq('id', questionId)
       setItems((prev) => prev.filter((q) => q.id !== questionId))
       setOpenId(null)
+      setRemixInfo('')
     } catch {
       setError('Failed to skip')
     }
@@ -102,7 +140,7 @@ export default function AdminQuestionsPage() {
     return (
       <div style={{ maxWidth: 760, margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
         <button
-          onClick={() => { setOpenId(null); setDraft(''); setError(null) }}
+          onClick={() => { setOpenId(null); setDraft(''); setError(null); setRemixInfo('') }}
           style={{
             background: 'none', border: '1px solid #333', borderRadius: 6,
             color: '#888', fontSize: 13, padding: '8px 16px', cursor: 'pointer',
@@ -139,6 +177,43 @@ export default function AdminQuestionsPage() {
               boxSizing: 'border-box',
             }}
           />
+        </div>
+
+        {/* Remix: add more context and regenerate the answer from scratch.
+            The endpoint takes (question + current draft + this box) and writes
+            a fresh, cohesive answer — doesn't append, doesn't reference. */}
+        <div style={{ marginBottom: 20, padding: 14, border: '1px solid #1a2040', borderRadius: 6, background: '#0a0d1a' }}>
+          <p style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+            Add more info, then remix
+          </p>
+          <textarea
+            value={remixInfo}
+            onChange={(e) => setRemixInfo(e.target.value)}
+            rows={4}
+            placeholder="What's missing? Add context, angles to emphasize, stories, corrections — anything. Hit remix and I'll write a new answer using the draft above plus this."
+            style={{
+              width: '100%', background: '#000', color: '#fff',
+              border: '1px solid #333', borderRadius: 6, padding: 12,
+              fontSize: 16, lineHeight: 1.6, resize: 'vertical',
+              outline: 'none', fontFamily: '-apple-system, sans-serif',
+              boxSizing: 'border-box', marginBottom: 10,
+            }}
+          />
+          <button
+            onClick={handleRemix}
+            disabled={remixing || !remixInfo.trim()}
+            style={{
+              background: remixing ? '#333' : '#fff',
+              color: remixing ? '#888' : '#000',
+              border: 'none', borderRadius: 6, padding: '10px 18px',
+              fontSize: 14, fontWeight: 700,
+              cursor: remixing ? 'wait' : 'pointer',
+              opacity: !remixInfo.trim() ? 0.4 : 1, minHeight: 44,
+              fontFamily: '-apple-system, sans-serif',
+            }}
+          >
+            {remixing ? 'Remixing...' : 'Remix →'}
+          </button>
         </div>
 
         {error && (
