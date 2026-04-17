@@ -47,11 +47,13 @@ function SignInInner() {
   const searchParams = useSearchParams()
   const simulated = searchParams?.get('simulated') === '1'
 
-  // In simulator mode, prefill a dummy email + auto-tick the age checkbox so
-  // the admin can just hit the button to "sign in" without typing anything.
+  // In simulator mode, prefill an email that actually has prior questions
+  // (so the returning-user dashboard triggers) and auto-tick the age check
+  // so the admin can hit the button without typing. Admin can edit the email
+  // before submitting to preview a different student state.
   useEffect(() => {
     if (!simulated) return
-    setEmail('student@example.com')
+    setEmail('ebb95@mac.com')
     setAgeConfirmed(true)
   }, [simulated])
 
@@ -155,8 +157,11 @@ function SignInInner() {
             <>
               {simulated && (
                 <div className="mb-6 rounded-md border border-amber-900/70 bg-amber-950/30 px-3 py-2 text-center">
-                  <p className="text-[11px] text-amber-300 uppercase tracking-widest">
-                    Simulator mode · any email works · no real email is sent
+                  <p className="text-[11px] text-amber-300 uppercase tracking-widest mb-1">
+                    Simulator mode · no real email sent
+                  </p>
+                  <p className="text-[10px] text-amber-200/60">
+                    Pre-filled with a returning student. Use any other email to preview the new-user flow.
                   </p>
                 </div>
               )}
