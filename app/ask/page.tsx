@@ -8,6 +8,7 @@ import { usePostHog } from 'posthog-js/react'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
 import { getLocal, setLocal, removeLocal, getSession, setSession, removeSession } from '@/lib/safe-storage'
 import ReturningDashboard from '@/components/ReturningDashboard'
+import { simFetch } from '@/lib/simulator'
 
 function Logo({ dark = false }: { dark?: boolean }) {
   const c = dark ? '#fff' : '#000'
@@ -561,11 +562,16 @@ function AskPageInner() {
     // If clarify API fails, we proceed without it — but track the event so we
     // know when answer quality is dropping because the classifier is down.
     try {
-      const clarRes = await fetch('/api/clarify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, conversation: [], mode: entryMode }),
-      })
+      const clarRes = await simFetch(
+        '/api/clarify',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question, conversation: [], mode: entryMode }),
+        },
+        // Simulator skips clarification and goes straight to submit.
+        { done: true }
+      )
       const clarData = await clarRes.json()
       if (clarData.fallback) {
         posthog?.capture('clarify_fallback', { reason: clarData.reason })
@@ -602,18 +608,28 @@ function AskPageInner() {
     }
 
     try {
-      const res = await fetch('/api/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: enrichedQuestion,
-          email: userEmail,
-          language: detectedLang,
-          mode: entryMode,
-          askerType: entryMode === 'parent' ? 'parent' : 'player',
-          level: askerLevel,
-        }),
-      })
+      const res = await simFetch(
+        '/api/ask',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: enrichedQuestion,
+            email: userEmail,
+            language: detectedLang,
+            mode: entryMode,
+            askerType: entryMode === 'parent' ? 'parent' : 'player',
+            level: askerLevel,
+          }),
+        },
+        // Simulator mock: land on the "submitted" state with a placeholder
+        // draft so the admin sees the full post-submit UI without writing
+        // a real question to the DB or triggering the LLM.
+        {
+          ok: true,
+          draft: 'This is a simulated preview of what your answer would look like from Elijah. The real flow would generate this with the LLM and store it for review.',
+        }
+      )
 
       const data = await res.json()
 
@@ -643,18 +659,22 @@ function AskPageInner() {
     if (!skip && (onboardName || onboardPosition || onboardLevel || onboardChallenge)) {
       const savedEmail = getSession('user_email') || email
       try {
-        await fetch('/api/profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: savedEmail,
-            name: onboardName,
-            position: onboardPosition,
-            level: onboardLevel,
-            challenge: onboardChallenge,
-            language: detectedLang,
-          }),
-        })
+        await simFetch(
+          '/api/profile',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: savedEmail,
+              name: onboardName,
+              position: onboardPosition,
+              level: onboardLevel,
+              challenge: onboardChallenge,
+              language: detectedLang,
+            }),
+          },
+          { ok: true }
+        )
       } catch { /* fail silently */ }
     }
     setMode('submitted')
@@ -669,11 +689,15 @@ function AskPageInner() {
     const savedEmail = getSession('user_email')
     if (savedEmail) {
       try {
-        await fetch('/api/profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: savedEmail, ...profile, language: detectedLang }),
-        })
+        await simFetch(
+          '/api/profile',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: savedEmail, ...profile, language: detectedLang }),
+          },
+          { ok: true }
+        )
       } catch { /* fail silently */ }
     }
     setShowProfile(false)
@@ -698,11 +722,15 @@ function AskPageInner() {
     if (!reflectionText.trim() || !returnEntry) return
     setReflectionSubmitting(true)
     try {
-      await fetch('/api/reflection', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, question_id: returnEntry.id, text: reflectionText }),
-      })
+      await simFetch(
+        '/api/reflection',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, question_id: returnEntry.id, text: reflectionText }),
+        },
+        { ok: true }
+      )
     } catch { /* fail silently */ }
     setReflectionSubmitting(false)
     setMode('upvote_prompt')
@@ -717,11 +745,16 @@ function AskPageInner() {
     setClarifyAnswer('')
 
     try {
-      const res = await fetch('/api/clarify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, conversation: updatedConversation, mode: entryMode }),
-      })
+      const res = await simFetch(
+        '/api/clarify',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question, conversation: updatedConversation, mode: entryMode }),
+        },
+        // Follow-up clarify in simulator: mark done so it proceeds to submit.
+        { done: true }
+      )
       const data = await res.json()
 
       if (data.fallback) {
@@ -759,11 +792,15 @@ function AskPageInner() {
     }
     setVotedIds(newVoted)
     try {
-      await fetch('/api/upvote', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question_id: questionId, email }),
-      })
+      await simFetch(
+        '/api/upvote',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question_id: questionId, email }),
+        },
+        { ok: true }
+      )
     } catch { /* fail silently */ }
   }
 

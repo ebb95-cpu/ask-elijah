@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getLocal, setLocal } from '@/lib/safe-storage'
+import { simFetch } from '@/lib/simulator'
 
 const POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C', 'Coach']
 const LEVELS = ['Youth', 'High School', 'College', 'Pro']
@@ -73,11 +74,15 @@ export default function ProfilePage() {
     if (!email.trim()) return
     const firstTime = isFirstSave.current
     setSavePhase('saving')
-    await fetch('/api/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, position, level, country, challenge, age_range: ageRange, team_school: teamSchool }),
-    })
+    await simFetch(
+      '/api/profile',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, position, level, country, challenge, age_range: ageRange, team_school: teamSchool }),
+      },
+      { ok: true }
+    )
     setLocal('ask_elijah_email', email)
     isFirstSave.current = false
 

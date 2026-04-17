@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getLocal } from '@/lib/safe-storage'
+import { simFetch } from '@/lib/simulator'
 
 type Question = {
   id: string
@@ -50,11 +51,18 @@ export default function BrowsePage() {
   const handleUpvote = async (questionId: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
     if (!userEmail) { router.push('/sign-in'); return }
-    const res = await fetch('/api/upvote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question_id: questionId, email: userEmail }),
-    })
+    // Predict the upvote response in simulator mode so the UI still toggles
+    // visibly without hitting the real endpoint.
+    const currently = questions.find((q) => q.id === questionId)?.user_upvoted
+    const res = await simFetch(
+      '/api/upvote',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question_id: questionId, email: userEmail }),
+      },
+      { action: currently ? 'removed' : 'added' }
+    )
     const data = await res.json()
     setQuestions((prev) =>
       prev.map((q) =>
