@@ -5,13 +5,24 @@ import Link from 'next/link'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+interface QuestionDupe {
+  id: string
+  question: string
+  email: string | null
+  created_at: string
+}
+
 interface PlayerQuestion {
   id: string
   question: string
   answer: string | null
   status: string
-  email: string
+  email: string | null
   created_at: string
+  // Added by /api/admin/queue when pending questions cluster together by
+  // semantic similarity. Representative row is returned with the rest of
+  // the cluster collapsed into this field.
+  dupes?: QuestionDupe[]
 }
 
 type StatusFilter = 'pending' | 'answered' | 'skipped'
@@ -27,10 +38,9 @@ export default function AdminQuestionsPage() {
   const [draft, setDraft] = useState('')
   const [approving, setApproving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Remix: extra context the admin wants woven into a fresh answer. Posts to
-  // /api/admin/regenerate-draft with (question + current draft + this text)
-  // and replaces the draft with whatever the model writes from scratch.
-  const [remixInfo, setRemixInfo] = useState('')
+  // Remix: takes whatever's currently in the answer textarea (original draft
+  // plus whatever notes the admin inlined) and regenerates a fresh, cohesive
+  // answer from it via /api/admin/regenerate-draft.
   const [remixing, setRemixing] = useState(false)
 
   const load = useCallback(async (status: string) => {
@@ -54,24 +64,44 @@ export default function AdminQuestionsPage() {
 
   const handleApprove = async (questionId: string) => {
     if (!draft.trim()) return
+    const group = items.find((q) => q.id === questionId)
+    const dupeIds = group?.dupes?.map((d) => d.id) ?? []
+    const allIds = [questionId, ...dupeIds]
     setApproving(true)
     setError(null)
     try {
-      const res = await fetch('/api/admin/approve-question', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId, finalAnswer: draft }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || `${res.status}`)
+      // One approver, N recipients: if the card represents a cluster,
+      // bulk-approve sends the same answer to every asker in the cluster.
+      // Single card still goes through approve-question because that's the
+      // path wired to scorecard + shared approve pipeline.
+      if (allIds.length > 1) {
+        const res = await fetch('/api/admin/bulk-approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questionIds: allIds, finalAnswer: draft }),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.error || `${res.status}`)
+        }
+        const data = await res.json()
+        setToast(`Approved ${data.succeeded ?? allIds.length} — emails sent`)
+      } else {
+        const res = await fetch('/api/admin/approve-question', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questionId, finalAnswer: draft }),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.error || `${res.status}`)
+        }
+        setToast('Approved — email sent')
       }
-      setToast('Approved — email sent')
       setTimeout(() => setToast(null), 3000)
       setItems((prev) => prev.filter((q) => q.id !== questionId))
       setOpenId(null)
       setDraft('')
-      setRemixInfo('')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to approve')
     } finally {
@@ -80,18 +110,17 @@ export default function AdminQuestionsPage() {
   }
 
   const handleRemix = async () => {
-    if (!openItem || !remixInfo.trim() || remixing) return
+    if (!openItem || !draft.trim() || remixing) return
     setRemixing(true)
     setError(null)
     try {
-      // Combine the current draft + new info into one context block. The
-      // endpoint treats it as raw material and writes a NEW answer from
-      // scratch — doesn't append or reference either piece.
-      const context = `Previous draft:\n${draft.trim() || '(none yet)'}\n\n---\n\nAdditional info from Elijah:\n${remixInfo.trim()}`
+      // Whatever's in the textarea is the raw material — previous draft plus
+      // any notes Elijah inlined. The endpoint writes a new cohesive answer
+      // from scratch using it.
       const res = await fetch('/api/admin/regenerate-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: openItem.question, context }),
+        body: JSON.stringify({ question: openItem.question, context: draft }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -100,7 +129,6 @@ export default function AdminQuestionsPage() {
       const data = await res.json()
       if (!data.draft) throw new Error('Empty remix response')
       setDraft(data.draft)
-      setRemixInfo('')
       setToast('Remixed — review the new draft')
       setTimeout(() => setToast(null), 2500)
     } catch (e) {
@@ -117,7 +145,6 @@ export default function AdminQuestionsPage() {
       await supabase.from('questions').update({ status: 'skipped' }).eq('id', questionId)
       setItems((prev) => prev.filter((q) => q.id !== questionId))
       setOpenId(null)
-      setRemixInfo('')
     } catch {
       setError('Failed to skip')
     }
@@ -140,7 +167,7 @@ export default function AdminQuestionsPage() {
     return (
       <div style={{ maxWidth: 760, margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
         <button
-          onClick={() => { setOpenId(null); setDraft(''); setError(null); setRemixInfo('') }}
+          onClick={() => { setOpenId(null); setDraft(''); setError(null) }}
           style={{
             background: 'none', border: '1px solid #333', borderRadius: 6,
             color: '#888', fontSize: 13, padding: '8px 16px', cursor: 'pointer',
@@ -154,11 +181,35 @@ export default function AdminQuestionsPage() {
         <div style={{ marginBottom: 20 }}>
           <p style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
             {openItem.email || 'anon'} · {formatDate(openItem.created_at)}
+            {openItem.dupes && openItem.dupes.length > 0 && (
+              <> · <span style={{ color: '#fbbf24' }}>+{openItem.dupes.length} asked the same</span></>
+            )}
           </p>
           <p style={{ fontSize: 20, fontWeight: 700, color: '#fff', lineHeight: 1.4, margin: 0 }}>
             {openItem.question}
           </p>
         </div>
+
+        {/* Dupes list — everyone else who asked this same question (different
+            wording). Approving sends the same answer to all of them. */}
+        {openItem.dupes && openItem.dupes.length > 0 && (
+          <details style={{ marginBottom: 20, padding: 12, border: '1px solid #2a2015', borderRadius: 6, background: '#15100a' }}>
+            <summary style={{ cursor: 'pointer', fontSize: 12, color: '#fbbf24', fontWeight: 600 }}>
+              Also asked by {openItem.dupes.length} {openItem.dupes.length === 1 ? 'person' : 'people'} — all get the same answer on approve
+            </summary>
+            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {openItem.dupes.map((d) => (
+                <div key={d.id} style={{ fontSize: 13, color: '#ccc', lineHeight: 1.5 }}>
+                  <span style={{ color: '#888', fontSize: 11 }}>
+                    {(d.email || 'anon').split('@')[0]} · {formatDate(d.created_at)}
+                  </span>
+                  <br />
+                  <span style={{ fontStyle: 'italic' }}>&ldquo;{d.question}&rdquo;</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
 
         {/* Editable answer */}
         <div style={{ marginBottom: 20 }}>
@@ -179,48 +230,13 @@ export default function AdminQuestionsPage() {
           />
         </div>
 
-        {/* Remix: add more context and regenerate the answer from scratch.
-            The endpoint takes (question + current draft + this box) and writes
-            a fresh, cohesive answer — doesn't append, doesn't reference. */}
-        <div style={{ marginBottom: 20, padding: 14, border: '1px solid #1a2040', borderRadius: 6, background: '#0a0d1a' }}>
-          <p style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-            Add more info, then remix
-          </p>
-          <textarea
-            value={remixInfo}
-            onChange={(e) => setRemixInfo(e.target.value)}
-            rows={4}
-            placeholder="What's missing? Add context, angles to emphasize, stories, corrections — anything. Hit remix and I'll write a new answer using the draft above plus this."
-            style={{
-              width: '100%', background: '#000', color: '#fff',
-              border: '1px solid #333', borderRadius: 6, padding: 12,
-              fontSize: 16, lineHeight: 1.6, resize: 'vertical',
-              outline: 'none', fontFamily: '-apple-system, sans-serif',
-              boxSizing: 'border-box', marginBottom: 10,
-            }}
-          />
-          <button
-            onClick={handleRemix}
-            disabled={remixing || !remixInfo.trim()}
-            style={{
-              background: remixing ? '#333' : '#fff',
-              color: remixing ? '#888' : '#000',
-              border: 'none', borderRadius: 6, padding: '10px 18px',
-              fontSize: 14, fontWeight: 700,
-              cursor: remixing ? 'wait' : 'pointer',
-              opacity: !remixInfo.trim() ? 0.4 : 1, minHeight: 44,
-              fontFamily: '-apple-system, sans-serif',
-            }}
-          >
-            {remixing ? 'Remixing...' : 'Remix →'}
-          </button>
-        </div>
-
         {error && (
           <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>
         )}
 
-        {/* Actions */}
+        {/* Actions. Remix sits between Approve and Skip — edit the draft
+            inline (add notes, rewrites, whatever), hit Remix, and it writes
+            a fresh cohesive answer from what's currently in the textarea. */}
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <button
             onClick={() => handleApprove(openItem.id)}
@@ -234,6 +250,24 @@ export default function AdminQuestionsPage() {
             }}
           >
             {approving ? 'Sending...' : openItem.status === 'approved' ? 'Update & re-send →' : 'Approve →'}
+          </button>
+          <button
+            onClick={handleRemix}
+            disabled={remixing || !draft.trim()}
+            title="Edit the draft, add notes inline, then Remix to regenerate a fresh answer from what's in the textarea."
+            style={{
+              background: 'none',
+              border: '1px solid #fff',
+              borderRadius: 6,
+              color: '#fff',
+              fontSize: 14, fontWeight: 700,
+              padding: '12px 20px',
+              cursor: remixing ? 'wait' : 'pointer',
+              opacity: !draft.trim() ? 0.4 : 1, minHeight: 48,
+              fontFamily: '-apple-system, sans-serif',
+            }}
+          >
+            {remixing ? 'Remixing...' : 'Remix ↻'}
           </button>
           <button
             onClick={() => handleSkip(openItem.id)}
@@ -340,11 +374,26 @@ export default function AdminQuestionsPage() {
               }}>
                 {q.question}
               </p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
                 {/* Email can be null on pain-point-style records. Crashed the
                     admin queue on mobile when .split was called on null. */}
                 <span style={{ fontSize: 10, color: '#555' }}>
                   {q.email ? q.email.split('@')[0] : 'anon'}
+                  {q.dupes && q.dupes.length > 0 && (
+                    <>
+                      {' '}
+                      <span style={{
+                        color: '#fbbf24',
+                        background: '#2a2015',
+                        padding: '1px 6px',
+                        borderRadius: 10,
+                        fontWeight: 700,
+                        marginLeft: 2,
+                      }}>
+                        +{q.dupes.length}
+                      </span>
+                    </>
+                  )}
                 </span>
                 <span style={{ fontSize: 10, color: '#3a4570' }}>{formatDate(q.created_at)}</span>
               </div>
