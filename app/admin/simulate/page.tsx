@@ -1,32 +1,34 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 
 /**
- * Student-view simulator. Iframes the real student routes inside a phone-shaped
- * frame so the admin can see exactly what a student sees without leaving the
- * admin surface. Iframe src is same-origin, so navigation inside the frame
- * works like a normal browser session — click around as if you were a student.
+ * Student-view simulator. Iframes the real student routes inside a
+ * phone/tablet/desktop frame with simulated browser chrome (URL bar,
+ * back/forward/reload). Navigation inside the iframe stays inside the
+ * iframe — the outer page shows where the student currently is via a
+ * polled readback of iframe.contentWindow.location (safe because the
+ * iframe is same-origin).
  *
- * NOTE: cookies are shared with the parent, so if the admin is also signed in
- * as a regular user, the iframe will reflect that auth state. For a truly
- * logged-out preview, use the "Logged out" tab (opens in a private iframe via
- * a URL param that tells the page to ignore stored user state).
+ * NOTE on auth: cookies are shared with the parent admin session. The
+ * banner at the top tells you exactly what auth state the student sees.
+ * For a clean "new user" preview, open /admin/simulate in an incognito
+ * window — same page, no stored auth.
  */
 
 type RouteDef = { key: string; label: string; href: string; note?: string }
 
 const ROUTES: RouteDef[] = [
-  { key: 'signin', label: 'Sign in', href: '/sign-in', note: 'Fake login screen — what a new student lands on' },
-  { key: 'signup', label: 'Sign up', href: '/sign-up', note: 'Account creation flow' },
-  { key: 'home', label: 'Home', href: '/', note: 'Landing page' },
-  { key: 'ask', label: 'Ask', href: '/ask', note: 'Main ask-a-question screen' },
-  { key: 'browse', label: 'Browse', href: '/browse', note: 'Public Q&A gallery — shows the ✓ Elijah badges' },
-  { key: 'history', label: 'History', href: '/history', note: "Student's own question history (needs login)" },
-  { key: 'library', label: 'Library', href: '/library', note: 'Saved content' },
-  { key: 'profile', label: 'Profile', href: '/profile', note: 'Account settings' },
-  { key: 'pricing', label: 'Pricing', href: '/pricing', note: 'Paywall / subscription view' },
+  { key: 'signin', label: 'Sign in', href: '/sign-in', note: 'What a new student lands on.' },
+  { key: 'signup', label: 'Sign up', href: '/sign-up', note: 'Account creation flow.' },
+  { key: 'home', label: 'Home', href: '/', note: 'Landing page.' },
+  { key: 'ask', label: 'Ask', href: '/ask', note: 'Main ask-a-question screen.' },
+  { key: 'browse', label: 'Browse', href: '/browse', note: 'Public Q&A gallery — ✓ Elijah badges visible here.' },
+  { key: 'history', label: 'History', href: '/history', note: "Student's own question history (needs login)." },
+  { key: 'library', label: 'Library', href: '/library', note: 'Saved content.' },
+  { key: 'profile', label: 'Profile', href: '/profile', note: 'Account settings.' },
+  { key: 'pricing', label: 'Pricing', href: '/pricing', note: 'Paywall / subscription view.' },
 ]
 
 type Device = { key: 'phone' | 'tablet' | 'desktop'; label: string; width: number; height: number }
@@ -39,15 +41,106 @@ const DEVICES: Device[] = [
 export default function AdminSimulatePage() {
   const [routeKey, setRouteKey] = useState<string>('signin')
   const [device, setDevice] = useState<Device>(DEVICES[0])
+  const [landscape, setLandscape] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [iframeKey, setIframeKey] = useState(0) // bumping this remounts the iframe
+  const [iframeKey, setIframeKey] = useState(0) // bumping remounts the iframe
+  // Current URL inside the iframe (read via same-origin contentWindow polling).
+  const [currentUrl, setCurrentUrl] = useState<string>('')
+  // Supabase auth + stored email — tells the admin what state the student sees.
+  const [authInfo, setAuthInfo] = useState<{ email: string | null; hasStoredEmail: boolean }>({
+    email: null,
+    hasStoredEmail: false,
+  })
 
   const route = useMemo(() => ROUTES.find((r) => r.key === routeKey) || ROUTES[0], [routeKey])
 
-  // When the route changes we just set the src directly, but when the admin
-  // hits "Reset" we force a remount so the iframe goes back to the starting
-  // URL even if they've navigated deeper inside it.
+  // Phone in landscape swaps dimensions. Other devices ignore landscape toggle.
+  const dims = useMemo(() => {
+    if (device.key === 'phone' && landscape) return { width: device.height, height: device.width }
+    return { width: device.width, height: device.height }
+  }, [device, landscape])
+
+  // Poll iframe URL 3×/sec so the address bar reflects in-frame navigation.
+  useEffect(() => {
+    const tick = () => {
+      try {
+        const frame = iframeRef.current
+        if (!frame) return
+        const href = frame.contentWindow?.location?.href
+        if (href && href !== 'about:blank') setCurrentUrl(href)
+      } catch {
+        // Cross-origin error would land here — shouldn't happen since src is same-origin.
+      }
+    }
+    tick()
+    const id = setInterval(tick, 300)
+    return () => clearInterval(id)
+  }, [iframeKey])
+
+  // Read the signed-in user once so the auth banner shows who the iframe
+  // will think is logged in.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { getSupabaseClient } = await import('@/lib/supabase-client')
+        const sb = getSupabaseClient()
+        const { data } = await sb.auth.getUser()
+        const email = data.user?.email || null
+        const { getLocal } = await import('@/lib/safe-storage')
+        const storedEmail = getLocal('ask_elijah_email')
+        if (!cancelled) setAuthInfo({ email, hasStoredEmail: Boolean(storedEmail) })
+      } catch {
+        /* ignore — banner just says "unknown" */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [iframeKey])
+
+  const goBack = useCallback(() => {
+    try {
+      iframeRef.current?.contentWindow?.history.back()
+    } catch {
+      /* no-op */
+    }
+  }, [])
+
+  const goForward = useCallback(() => {
+    try {
+      iframeRef.current?.contentWindow?.history.forward()
+    } catch {
+      /* no-op */
+    }
+  }, [])
+
+  const reload = useCallback(() => {
+    try {
+      iframeRef.current?.contentWindow?.location.reload()
+    } catch {
+      setIframeKey((k) => k + 1)
+    }
+  }, [])
+
   const src = `${route.href}?simulated=1`
+
+  // Strip the origin so the URL bar shows a clean path like /ask?x=1.
+  const displayUrl = useMemo(() => {
+    if (!currentUrl) return src
+    try {
+      const u = new URL(currentUrl)
+      return u.pathname + u.search + u.hash
+    } catch {
+      return currentUrl
+    }
+  }, [currentUrl, src])
+
+  const authLabel = authInfo.email
+    ? `Signed in as ${authInfo.email}`
+    : authInfo.hasStoredEmail
+      ? 'Email remembered, no active Supabase session'
+      : 'Logged out'
 
   return (
     <div style={{ padding: '20px 24px', maxWidth: 1280, margin: '0 auto' }}>
@@ -58,7 +151,40 @@ export default function AdminSimulatePage() {
           ← Back to queue
         </Link>
         <span style={{ fontSize: 11, color: '#555', marginLeft: 'auto' }}>
-          Same-origin iframe. Click around inside the frame like a real student.
+          Click through inside the frame like a real student.
+        </span>
+      </div>
+
+      {/* Auth state banner */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '8px 12px',
+          marginBottom: 14,
+          background: authInfo.email ? '#0a1f15' : '#1f1505',
+          border: `1px solid ${authInfo.email ? '#1f4030' : '#3a2a10'}`,
+          borderRadius: 6,
+          fontSize: 12,
+        }}
+      >
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 999,
+            background: authInfo.email ? '#34d399' : '#f59e0b',
+            flexShrink: 0,
+          }}
+        />
+        <span style={{ color: '#ddd' }}>
+          Viewing as: <strong>{authLabel}</strong>
+        </span>
+        <span style={{ color: '#666', fontSize: 11, marginLeft: 'auto' }}>
+          {authInfo.email
+            ? 'For a clean "new user" preview, open this page in an incognito window.'
+            : 'This matches what a new visitor would see.'}
         </span>
       </div>
 
@@ -75,144 +201,220 @@ export default function AdminSimulatePage() {
           borderRadius: 6,
         }}
       >
-        {/* Route picker */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Screen
-          </span>
+        <Control label="Screen">
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', maxWidth: 700 }}>
             {ROUTES.map((r) => (
-              <button
+              <Chip
                 key={r.key}
+                active={route.key === r.key}
                 onClick={() => {
                   setRouteKey(r.key)
                   setIframeKey((k) => k + 1)
                 }}
-                style={{
-                  fontSize: 11,
-                  padding: '5px 10px',
-                  background: route.key === r.key ? '#ffffff' : 'transparent',
-                  color: route.key === r.key ? '#000000' : '#aaaaaa',
-                  border: `1px solid ${route.key === r.key ? '#ffffff' : '#333333'}`,
-                  borderRadius: 999,
-                  cursor: 'pointer',
-                }}
               >
                 {r.label}
-              </button>
+              </Chip>
             ))}
           </div>
-        </div>
+        </Control>
 
-        {/* Device toggle */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Device
-          </span>
+        <Control label="Device">
           <div style={{ display: 'flex', gap: 6 }}>
             {DEVICES.map((d) => (
-              <button
-                key={d.key}
-                onClick={() => setDevice(d)}
-                style={{
-                  fontSize: 11,
-                  padding: '5px 10px',
-                  background: device.key === d.key ? '#ffffff' : 'transparent',
-                  color: device.key === d.key ? '#000000' : '#aaaaaa',
-                  border: `1px solid ${device.key === d.key ? '#ffffff' : '#333333'}`,
-                  borderRadius: 999,
-                  cursor: 'pointer',
-                }}
-              >
+              <Chip key={d.key} active={device.key === d.key} onClick={() => setDevice(d)}>
                 {d.label}
-              </button>
+              </Chip>
             ))}
           </div>
-        </div>
+        </Control>
 
-        {/* Reset + open in new tab */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Actions
-          </span>
+        {device.key === 'phone' && (
+          <Control label="Orientation">
+            <div style={{ display: 'flex', gap: 6 }}>
+              <Chip active={!landscape} onClick={() => setLandscape(false)}>
+                Portrait
+              </Chip>
+              <Chip active={landscape} onClick={() => setLandscape(true)}>
+                Landscape
+              </Chip>
+            </div>
+          </Control>
+        )}
+
+        <Control label="Actions">
           <div style={{ display: 'flex', gap: 6 }}>
             <button
               onClick={() => setIframeKey((k) => k + 1)}
-              style={{
-                fontSize: 11,
-                padding: '5px 10px',
-                background: 'transparent',
-                color: '#aaaaaa',
-                border: '1px solid #333333',
-                borderRadius: 4,
-                cursor: 'pointer',
-              }}
+              title="Reset to starting URL"
+              style={buttonStyle}
             >
               ↻ Reset
             </button>
-            <a
-              href={route.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                fontSize: 11,
-                padding: '5px 10px',
-                background: 'transparent',
-                color: '#aaaaaa',
-                border: '1px solid #333333',
-                borderRadius: 4,
-                textDecoration: 'none',
-              }}
-            >
-              Open in new tab ↗
+            <a href={route.href} target="_blank" rel="noopener noreferrer" style={buttonStyle}>
+              New tab ↗
             </a>
           </div>
-        </div>
+        </Control>
       </div>
 
-      {/* Route context note */}
+      {/* Route note */}
       {route.note && (
         <p style={{ fontSize: 12, color: '#888', margin: '0 0 16px 0' }}>
           <strong style={{ color: '#bbb' }}>{route.label}:</strong> {route.note}
         </p>
       )}
 
-      {/* Device frame */}
+      {/* Device frame with browser chrome */}
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <div
           style={{
-            width: device.width,
+            width: dims.width,
             maxWidth: '100%',
             padding: device.key === 'phone' ? 14 : 10,
-            background: '#111111',
+            background: '#111',
             border: '1px solid #222',
             borderRadius: device.key === 'phone' ? 36 : 12,
             boxShadow: '0 30px 80px rgba(0,0,0,0.6)',
           }}
         >
-          <iframe
-            key={iframeKey}
-            ref={iframeRef}
-            src={src}
-            title={`Student view — ${route.label}`}
+          <div
             style={{
-              width: '100%',
-              height: device.height,
-              border: 'none',
               borderRadius: device.key === 'phone' ? 24 : 6,
               background: '#000',
-              display: 'block',
+              overflow: 'hidden',
+              border: '1px solid #1a1a1a',
             }}
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-          />
+          >
+            {/* Browser chrome */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 8px',
+                background: '#0d0d0d',
+                borderBottom: '1px solid #1a1a1a',
+              }}
+            >
+              <button onClick={goBack} title="Back" style={chromeBtnStyle}>
+                ◀
+              </button>
+              <button onClick={goForward} title="Forward" style={chromeBtnStyle}>
+                ▶
+              </button>
+              <button onClick={reload} title="Reload" style={chromeBtnStyle}>
+                ↻
+              </button>
+              <div
+                style={{
+                  flex: 1,
+                  background: '#1a1a1a',
+                  color: '#aaa',
+                  fontSize: 11,
+                  padding: '4px 10px',
+                  borderRadius: 999,
+                  fontFamily: 'ui-monospace, Menlo, monospace',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  border: '1px solid #222',
+                }}
+                title={displayUrl}
+              >
+                {displayUrl}
+              </div>
+            </div>
+
+            {/* Iframe */}
+            <iframe
+              key={iframeKey}
+              ref={iframeRef}
+              src={src}
+              title={`Student view — ${route.label}`}
+              style={{
+                width: '100%',
+                height: dims.height,
+                border: 'none',
+                background: '#000',
+                display: 'block',
+              }}
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Footer disclaimer */}
       <p style={{ fontSize: 11, color: '#555', marginTop: 16, textAlign: 'center' }}>
-        You share cookies with the iframe. If you&apos;re signed in as a regular user in this browser,
-        the iframe will show that logged-in state. For a truly-logged-out preview, use an incognito window.
+        The simulator shares cookies with your admin session — the banner above tells you what auth
+        state the student sees.
       </p>
     </div>
   )
+}
+
+// ── UI primitives ───────────────────────────────────────────────────────────
+
+function Control({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <span style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        {label}
+      </span>
+      {children}
+    </div>
+  )
+}
+
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        fontSize: 11,
+        padding: '5px 10px',
+        background: active ? '#fff' : 'transparent',
+        color: active ? '#000' : '#aaa',
+        border: `1px solid ${active ? '#fff' : '#333'}`,
+        borderRadius: 999,
+        cursor: 'pointer',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+const buttonStyle: React.CSSProperties = {
+  fontSize: 11,
+  padding: '5px 10px',
+  background: 'transparent',
+  color: '#aaa',
+  border: '1px solid #333',
+  borderRadius: 4,
+  cursor: 'pointer',
+  textDecoration: 'none',
+  fontFamily: '-apple-system, sans-serif',
+}
+
+const chromeBtnStyle: React.CSSProperties = {
+  fontSize: 10,
+  width: 24,
+  height: 24,
+  color: '#888',
+  background: '#141414',
+  border: '1px solid #222',
+  borderRadius: 4,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 0,
 }
