@@ -75,7 +75,12 @@ function timeAgo(iso: string | null): string {
   return `${mo}mo ago`
 }
 
-type KbQuote = { text: string; source_title: string; source_url: string | null }
+type KbQuote = {
+  text: string
+  source_title: string
+  source_url: string | null
+  voice?: string
+}
 
 export default function ReturningDashboard({
   email,
@@ -197,7 +202,7 @@ export default function ReturningDashboard({
             &ldquo;{kbQuote.text}&rdquo;
           </p>
           <p className="text-xs text-gray-600">
-            — Dr. Craig Manning
+            — {kbQuote.voice || 'Elijah'}
             {kbQuote.source_url ? (
               <>
                 {' · '}
