@@ -4,17 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 
 /**
- * Student-view simulator. Iframes the real student routes inside a
- * phone/tablet/desktop frame with simulated browser chrome (URL bar,
- * back/forward/reload). Navigation inside the iframe stays inside the
- * iframe — the outer page shows where the student currently is via a
- * polled readback of iframe.contentWindow.location (safe because the
- * iframe is same-origin).
+ * Student-view simulator.
  *
- * NOTE on auth: cookies are shared with the parent admin session. The
- * banner at the top tells you exactly what auth state the student sees.
- * For a clean "new user" preview, open /admin/simulate in an incognito
- * window — same page, no stored auth.
+ * Renders the real student site inside one or two device frames so the admin
+ * can preview phone and desktop UX without leaving admin chrome. Each frame
+ * is CSS-transform scaled to fit its slot's WIDTH and HEIGHT — no scroll,
+ * no clipping, regardless of monitor size.
+ *
+ * Three view modes:
+ *   - phone : single phone frame, fills available space
+ *   - web   : single desktop frame, fills available space
+ *   - both  : phone (left) + desktop (right), each scaled to its half
  */
 
 type RouteDef = { key: string; label: string; href: string; note?: string }
@@ -31,80 +31,23 @@ const ROUTES: RouteDef[] = [
   { key: 'pricing', label: 'Pricing', href: '/pricing', note: 'Paywall / subscription view.' },
 ]
 
-type Device = { key: 'phone' | 'tablet' | 'desktop'; label: string; width: number; height: number }
-const DEVICES: Device[] = [
-  { key: 'phone', label: 'Phone', width: 390, height: 844 },
-  { key: 'tablet', label: 'Tablet', width: 768, height: 1024 },
-  { key: 'desktop', label: 'Desktop', width: 1280, height: 800 },
-]
+type ViewMode = 'phone' | 'web' | 'both'
+const PHONE = { width: 390, height: 844 }
+const WEB = { width: 1280, height: 800 }
+// Browser chrome row sits above the iframe inside the device frame.
+const CHROME_HEIGHT = 36
 
 export default function AdminSimulatePage() {
   const [routeKey, setRouteKey] = useState<string>('signin')
-  const [device, setDevice] = useState<Device>(DEVICES[0])
-  const [landscape, setLandscape] = useState(false)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [iframeKey, setIframeKey] = useState(0) // bumping remounts the iframe
-  // Container width that the device frame must fit inside. Drives the scale
-  // factor so the chosen device size never overflows the viewport.
-  const stageRef = useRef<HTMLDivElement>(null)
-  const [stageWidth, setStageWidth] = useState(0)
-  // Current URL inside the iframe (read via same-origin contentWindow polling).
-  const [currentUrl, setCurrentUrl] = useState<string>('')
-  // Supabase auth + stored email — tells the admin what state the student sees.
-  const [authInfo, setAuthInfo] = useState<{ email: string | null; hasStoredEmail: boolean }>({
-    email: null,
-    hasStoredEmail: false,
-  })
+  const [view, setView] = useState<ViewMode>('both')
+  const [iframeKey, setIframeKey] = useState(0)
+  const [authInfo, setAuthInfo] = useState<{ email: string | null }>({ email: null })
 
   const route = useMemo(() => ROUTES.find((r) => r.key === routeKey) || ROUTES[0], [routeKey])
+  const src = `${route.href}?simulated=1`
 
-  // Phone in landscape swaps dimensions. Other devices ignore landscape toggle.
-  const dims = useMemo(() => {
-    if (device.key === 'phone' && landscape) return { width: device.height, height: device.width }
-    return { width: device.width, height: device.height }
-  }, [device, landscape])
-
-  // Track the available stage width so we can compute a scale factor that
-  // keeps the device frame inside the viewport without clipping.
-  useEffect(() => {
-    const el = stageRef.current
-    if (!el) return
-    const apply = () => setStageWidth(el.clientWidth)
-    apply()
-    const ro = new ResizeObserver(apply)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
-  // Padding around the device chrome (~28px each side for phone, ~20 otherwise)
-  // plus a small safety margin so the frame border isn't flush with the edge.
-  const framePadding = (device.key === 'phone' ? 14 : 10) * 2 + 8
-  const scale = stageWidth > 0
-    ? Math.min(1, stageWidth / (dims.width + framePadding))
-    : 1
-  // Reserve scaled height in layout flow so the page doesn't have a giant
-  // empty gap below the shrunk frame.
-  const scaledHeight = (dims.height + 36 /* browser chrome */ + framePadding) * scale
-
-  // Poll iframe URL 3×/sec so the address bar reflects in-frame navigation.
-  useEffect(() => {
-    const tick = () => {
-      try {
-        const frame = iframeRef.current
-        if (!frame) return
-        const href = frame.contentWindow?.location?.href
-        if (href && href !== 'about:blank') setCurrentUrl(href)
-      } catch {
-        // Cross-origin error would land here — shouldn't happen since src is same-origin.
-      }
-    }
-    tick()
-    const id = setInterval(tick, 300)
-    return () => clearInterval(id)
-  }, [iframeKey])
-
-  // Read the signed-in user once so the auth banner shows who the iframe
-  // will think is logged in.
+  // Read the signed-in user once so the auth banner shows what state the
+  // iframes will inherit.
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -112,12 +55,9 @@ export default function AdminSimulatePage() {
         const { getSupabaseClient } = await import('@/lib/supabase-client')
         const sb = getSupabaseClient()
         const { data } = await sb.auth.getUser()
-        const email = data.user?.email || null
-        const { getLocal } = await import('@/lib/safe-storage')
-        const storedEmail = getLocal('ask_elijah_email')
-        if (!cancelled) setAuthInfo({ email, hasStoredEmail: Boolean(storedEmail) })
+        if (!cancelled) setAuthInfo({ email: data.user?.email || null })
       } catch {
-        /* ignore — banner just says "unknown" */
+        /* ignore */
       }
     })()
     return () => {
@@ -125,207 +65,247 @@ export default function AdminSimulatePage() {
     }
   }, [iframeKey])
 
-  const goBack = useCallback(() => {
-    try {
-      iframeRef.current?.contentWindow?.history.back()
-    } catch {
-      /* no-op */
-    }
-  }, [])
-
-  const goForward = useCallback(() => {
-    try {
-      iframeRef.current?.contentWindow?.history.forward()
-    } catch {
-      /* no-op */
-    }
-  }, [])
-
-  const reload = useCallback(() => {
-    try {
-      iframeRef.current?.contentWindow?.location.reload()
-    } catch {
-      setIframeKey((k) => k + 1)
-    }
-  }, [])
-
-  const src = `${route.href}?simulated=1`
-
-  // Strip the origin so the URL bar shows a clean path like /ask?x=1.
-  const displayUrl = useMemo(() => {
-    if (!currentUrl) return src
-    try {
-      const u = new URL(currentUrl)
-      return u.pathname + u.search + u.hash
-    } catch {
-      return currentUrl
-    }
-  }, [currentUrl, src])
-
-  const authLabel = authInfo.email
-    ? `Signed in as ${authInfo.email}`
-    : authInfo.hasStoredEmail
-      ? 'Email remembered, no active Supabase session'
-      : 'Logged out'
-
   return (
-    <div style={{ padding: '20px 24px', maxWidth: 1280, margin: '0 auto' }}>
-      {/* Page header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Student Simulator</h1>
-        <Link href="/admin/questions" style={{ fontSize: 12, color: '#555' }}>
-          ← Back to queue
+    <div
+      style={{
+        height: 'calc(100vh - 50px)', // admin chrome top bar is ~50px
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '12px 16px',
+        boxSizing: 'border-box',
+        gap: 10,
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Student Simulator</h1>
+        <Link href="/admin/questions" style={{ fontSize: 11, color: '#555' }}>
+          ← Queue
         </Link>
-        <span style={{ fontSize: 11, color: '#555', marginLeft: 'auto' }}>
-          Click through inside the frame like a real student.
+        <span
+          style={{
+            marginLeft: 'auto',
+            fontSize: 11,
+            color: '#888',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 999,
+              background: authInfo.email ? '#34d399' : '#f59e0b',
+            }}
+          />
+          {authInfo.email ? `as ${authInfo.email}` : 'logged out'}
         </span>
       </div>
 
-      {/* Auth state banner */}
+      {/* Controls — single compact row */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
-          padding: '8px 12px',
-          marginBottom: 14,
-          background: authInfo.email ? '#0a1f15' : '#1f1505',
-          border: `1px solid ${authInfo.email ? '#1f4030' : '#3a2a10'}`,
-          borderRadius: 6,
-          fontSize: 12,
-        }}
-      >
-        <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 999,
-            background: authInfo.email ? '#34d399' : '#f59e0b',
-            flexShrink: 0,
-          }}
-        />
-        <span style={{ color: '#ddd' }}>
-          Viewing as: <strong>{authLabel}</strong>
-        </span>
-        <span style={{ color: '#666', fontSize: 11, marginLeft: 'auto' }}>
-          {authInfo.email
-            ? 'For a clean "new user" preview, open this page in an incognito window.'
-            : 'This matches what a new visitor would see.'}
-        </span>
-      </div>
-
-      {/* Controls */}
-      <div
-        style={{
-          display: 'flex',
           flexWrap: 'wrap',
-          gap: 16,
-          marginBottom: 20,
-          padding: '12px 14px',
+          gap: 12,
+          padding: '8px 10px',
           background: '#0a0a0a',
           border: '1px solid #1a1a1a',
           borderRadius: 6,
         }}
       >
-        <Control label="Screen">
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', maxWidth: 700 }}>
-            {ROUTES.map((r) => (
-              <Chip
-                key={r.key}
-                active={route.key === r.key}
-                onClick={() => {
-                  setRouteKey(r.key)
-                  setIframeKey((k) => k + 1)
-                }}
-              >
-                {r.label}
-              </Chip>
-            ))}
-          </div>
-        </Control>
+        <Group label="View">
+          {(['phone', 'web', 'both'] as ViewMode[]).map((v) => (
+            <Chip key={v} active={view === v} onClick={() => setView(v)}>
+              {v === 'both' ? 'Phone + Web' : v === 'phone' ? 'Phone' : 'Web'}
+            </Chip>
+          ))}
+        </Group>
 
-        <Control label="Device">
-          <div style={{ display: 'flex', gap: 6 }}>
-            {DEVICES.map((d) => (
-              <Chip key={d.key} active={device.key === d.key} onClick={() => setDevice(d)}>
-                {d.label}
-              </Chip>
-            ))}
-          </div>
-        </Control>
-
-        {device.key === 'phone' && (
-          <Control label="Orientation">
-            <div style={{ display: 'flex', gap: 6 }}>
-              <Chip active={!landscape} onClick={() => setLandscape(false)}>
-                Portrait
-              </Chip>
-              <Chip active={landscape} onClick={() => setLandscape(true)}>
-                Landscape
-              </Chip>
-            </div>
-          </Control>
-        )}
-
-        <Control label="Actions">
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button
-              onClick={() => setIframeKey((k) => k + 1)}
-              title="Reset to starting URL"
-              style={buttonStyle}
+        <Group label="Screen">
+          {ROUTES.map((r) => (
+            <Chip
+              key={r.key}
+              active={route.key === r.key}
+              onClick={() => {
+                setRouteKey(r.key)
+                setIframeKey((k) => k + 1)
+              }}
             >
-              ↻ Reset
-            </button>
-            <a href={route.href} target="_blank" rel="noopener noreferrer" style={buttonStyle}>
-              New tab ↗
-            </a>
-          </div>
-        </Control>
+              {r.label}
+            </Chip>
+          ))}
+        </Group>
+
+        <button
+          onClick={() => setIframeKey((k) => k + 1)}
+          title="Reload all frames"
+          style={btn}
+        >
+          ↻
+        </button>
       </div>
 
-      {/* Route note */}
-      {route.note && (
-        <p style={{ fontSize: 12, color: '#888', margin: '0 0 16px 0' }}>
-          <strong style={{ color: '#bbb' }}>{route.label}:</strong> {route.note}
-        </p>
-      )}
-
-      {/* Device frame with browser chrome — scaled to fit the stage so the
-          chosen device dimensions never overflow horizontally. The outer
-          stageRef div drives the scale calc; the inner div is the fixed-size
-          frame that gets visually shrunk via CSS transform. */}
+      {/* Stage — fills remaining vertical space, holds one or two device frames */}
       <div
-        ref={stageRef}
         style={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          gap: 16,
+          justifyContent: 'center',
+          alignItems: 'stretch',
+        }}
+      >
+        {(view === 'phone' || view === 'both') && (
+          <DeviceSlot
+            kind="phone"
+            width={PHONE.width}
+            height={PHONE.height}
+            src={src}
+            iframeKey={iframeKey}
+            label={`Phone — ${route.label}`}
+          />
+        )}
+        {(view === 'web' || view === 'both') && (
+          <DeviceSlot
+            kind="web"
+            width={WEB.width}
+            height={WEB.height}
+            src={src}
+            iframeKey={iframeKey}
+            label={`Web — ${route.label}`}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Device slot — measures its container, scales to fit width AND height ──
+
+function DeviceSlot({
+  kind,
+  width,
+  height,
+  src,
+  iframeKey,
+  label,
+}: {
+  kind: 'phone' | 'web'
+  width: number
+  height: number
+  src: string
+  iframeKey: number
+  label: string
+}) {
+  const slotRef = useRef<HTMLDivElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [size, setSize] = useState({ w: 0, h: 0 })
+  const [currentPath, setCurrentPath] = useState('')
+
+  // Watch slot size so we can rescale on viewport changes.
+  useEffect(() => {
+    const el = slotRef.current
+    if (!el) return
+    const apply = () => setSize({ w: el.clientWidth, h: el.clientHeight })
+    apply()
+    const ro = new ResizeObserver(apply)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // Poll iframe URL so the URL bar reflects in-frame navigation.
+  useEffect(() => {
+    const tick = () => {
+      try {
+        const href = iframeRef.current?.contentWindow?.location?.href
+        if (!href || href === 'about:blank') return
+        const u = new URL(href)
+        setCurrentPath(u.pathname + u.search + u.hash)
+      } catch {
+        /* cross-origin would land here; should not happen for same-origin */
+      }
+    }
+    tick()
+    const id = setInterval(tick, 300)
+    return () => clearInterval(id)
+  }, [iframeKey])
+
+  // Scale = min(widthFit, heightFit) so the frame fits inside the slot
+  // both horizontally and vertically. Capped at 1 — never upscale.
+  const padding = kind === 'phone' ? 14 : 10
+  const frameW = width + padding * 2
+  const frameH = height + CHROME_HEIGHT + padding * 2
+  const scale =
+    size.w > 0 && size.h > 0 ? Math.min(1, size.w / frameW, size.h / frameH) : 0
+
+  const goBack = useCallback(() => {
+    try { iframeRef.current?.contentWindow?.history.back() } catch { /* */ }
+  }, [])
+  const goForward = useCallback(() => {
+    try { iframeRef.current?.contentWindow?.history.forward() } catch { /* */ }
+  }, [])
+  const reload = useCallback(() => {
+    try { iframeRef.current?.contentWindow?.location.reload() } catch { /* */ }
+  }, [])
+
+  return (
+    <div
+      ref={slotRef}
+      style={{
+        flex: 1,
+        minWidth: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 6,
+      }}
+    >
+      <div style={{ fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        {label}
+      </div>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
           width: '100%',
-          height: scaledHeight,
           display: 'flex',
           justifyContent: 'center',
+          alignItems: 'flex-start',
           overflow: 'hidden',
         }}
       >
         <div
           style={{
-            width: dims.width,
-            padding: device.key === 'phone' ? 14 : 10,
+            width: frameW,
+            height: frameH,
+            padding,
             background: '#111',
             border: '1px solid #222',
-            borderRadius: device.key === 'phone' ? 36 : 12,
-            boxShadow: '0 30px 80px rgba(0,0,0,0.6)',
-            transform: `scale(${scale})`,
+            borderRadius: kind === 'phone' ? 36 : 12,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.55)',
+            transform: `scale(${scale || 0.01})`,
             transformOrigin: 'top center',
             flexShrink: 0,
+            visibility: scale > 0 ? 'visible' : 'hidden',
+            boxSizing: 'border-box',
           }}
         >
           <div
             style={{
-              borderRadius: device.key === 'phone' ? 24 : 6,
+              borderRadius: kind === 'phone' ? 24 : 6,
               background: '#000',
               overflow: 'hidden',
               border: '1px solid #1a1a1a',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            {/* Browser chrome */}
             <div
               style={{
                 display: 'flex',
@@ -334,20 +314,16 @@ export default function AdminSimulatePage() {
                 padding: '6px 8px',
                 background: '#0d0d0d',
                 borderBottom: '1px solid #1a1a1a',
+                flexShrink: 0,
               }}
             >
-              <button onClick={goBack} title="Back" style={chromeBtnStyle}>
-                ◀
-              </button>
-              <button onClick={goForward} title="Forward" style={chromeBtnStyle}>
-                ▶
-              </button>
-              <button onClick={reload} title="Reload" style={chromeBtnStyle}>
-                ↻
-              </button>
+              <button onClick={goBack} title="Back" style={chromeBtn}>◀</button>
+              <button onClick={goForward} title="Forward" style={chromeBtn}>▶</button>
+              <button onClick={reload} title="Reload" style={chromeBtn}>↻</button>
               <div
                 style={{
                   flex: 1,
+                  minWidth: 0,
                   background: '#1a1a1a',
                   color: '#aaa',
                   fontSize: 11,
@@ -359,21 +335,19 @@ export default function AdminSimulatePage() {
                   whiteSpace: 'nowrap',
                   border: '1px solid #222',
                 }}
-                title={displayUrl}
+                title={currentPath || src}
               >
-                {displayUrl}
+                {currentPath || src}
               </div>
             </div>
-
-            {/* Iframe */}
             <iframe
               key={iframeKey}
               ref={iframeRef}
               src={src}
-              title={`Student view — ${route.label}`}
+              title={label}
               style={{
+                flex: 1,
                 width: '100%',
-                height: dims.height,
                 border: 'none',
                 background: '#000',
                 display: 'block',
@@ -383,24 +357,19 @@ export default function AdminSimulatePage() {
           </div>
         </div>
       </div>
-
-      <p style={{ fontSize: 11, color: '#555', marginTop: 16, textAlign: 'center' }}>
-        The simulator shares cookies with your admin session — the banner above tells you what auth
-        state the student sees.
-      </p>
     </div>
   )
 }
 
 // ── UI primitives ───────────────────────────────────────────────────────────
 
-function Control({ label, children }: { label: string; children: React.ReactNode }) {
+function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <span style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
         {label}
       </span>
-      {children}
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{children}</div>
     </div>
   )
 }
@@ -419,7 +388,7 @@ function Chip({
       onClick={onClick}
       style={{
         fontSize: 11,
-        padding: '5px 10px',
+        padding: '4px 9px',
         background: active ? '#fff' : 'transparent',
         color: active ? '#000' : '#aaa',
         border: `1px solid ${active ? '#fff' : '#333'}`,
@@ -432,22 +401,25 @@ function Chip({
   )
 }
 
-const buttonStyle: React.CSSProperties = {
-  fontSize: 11,
-  padding: '5px 10px',
+const btn: React.CSSProperties = {
+  fontSize: 12,
+  width: 28,
+  height: 28,
   background: 'transparent',
   color: '#aaa',
   border: '1px solid #333',
   borderRadius: 4,
   cursor: 'pointer',
-  textDecoration: 'none',
-  fontFamily: '-apple-system, sans-serif',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginLeft: 'auto',
 }
 
-const chromeBtnStyle: React.CSSProperties = {
+const chromeBtn: React.CSSProperties = {
   fontSize: 10,
-  width: 24,
-  height: 24,
+  width: 22,
+  height: 22,
   color: '#888',
   background: '#141414',
   border: '1px solid #222',
@@ -457,4 +429,5 @@ const chromeBtnStyle: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   padding: 0,
+  flexShrink: 0,
 }
