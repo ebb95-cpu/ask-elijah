@@ -1,13 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
-// Explicitly opt out of Next.js data cache so the edge can't serve a stale
-// HTML shell from a previous deploy. Without this, Vercel was returning a
-// HIT for this route for 40+ minutes even after new deploys landed, which
-// blocked the simulator's ?simulated=1 flag from ever being honored.
-export const revalidate = 0
-export const fetchCache = 'force-no-store'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
@@ -27,7 +21,18 @@ function Logo() {
 
 type Step = 'email' | 'password' | 'sent'
 
+// useSearchParams must be wrapped in a Suspense boundary at build time or
+// Next.js bails out of prerendering. Default export provides the boundary
+// so the hook can safely run inside SignInInner.
 export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <SignInInner />
+    </Suspense>
+  )
+}
+
+function SignInInner() {
   const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
