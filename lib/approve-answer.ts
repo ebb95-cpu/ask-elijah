@@ -133,6 +133,11 @@ export async function approveAnswer(args: {
       status: 'approved',
       action_steps: actionSteps,
       approved_at: new Date().toISOString(),
+      // This path is only hit when the admin explicitly approves in the queue.
+      // A future auto-approve path (high-confidence KB match) should NOT go
+      // through this function, so this flag is a safe signal that a human
+      // reviewed this specific answer.
+      reviewed_by_elijah: true,
       edit_count: draftChanged ? (record.edit_count || 0) + 1 : (record.edit_count || 0),
       corrections,
     })

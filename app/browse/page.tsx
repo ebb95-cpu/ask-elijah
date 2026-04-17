@@ -13,6 +13,7 @@ type Question = {
   created_at: string
   upvote_count: number
   user_upvoted: boolean
+  reviewed_by_elijah: boolean
 }
 
 const CATEGORIES = ['All', 'Confidence', 'Pressure', 'Coach', 'Slumps', 'Mindset']
@@ -150,9 +151,20 @@ export default function BrowsePage() {
                     {q.question}
                   </p>
                 </div>
-                <p className="text-[10px] text-gray-700 mt-2">
-                  {q.topic || 'General'}
-                </p>
+                <div className="flex items-center justify-between mt-2 gap-2">
+                  <p className="text-[10px] text-gray-700">
+                    {q.topic || 'General'}
+                  </p>
+                  {q.reviewed_by_elijah && (
+                    <span
+                      className="text-[9px] text-white/80 flex items-center gap-1 shrink-0"
+                      title="Reviewed by Elijah"
+                    >
+                      <span aria-hidden="true">✓</span>
+                      <span className="uppercase tracking-wider">Elijah</span>
+                    </span>
+                  )}
+                </div>
               </button>
             ))}
           </div>
@@ -191,7 +203,18 @@ export default function BrowsePage() {
 
             {/* Answer */}
             <div className="border-l-2 border-white pl-5 mb-8">
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">Elijah&apos;s answer</p>
+              <div className="flex items-center gap-3 mb-3">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest">Elijah&apos;s answer</p>
+                {openQuestion.reviewed_by_elijah && (
+                  <span
+                    className="text-[10px] text-white uppercase tracking-widest flex items-center gap-1"
+                    title="Elijah personally reviewed and approved this answer"
+                  >
+                    <span aria-hidden="true">✓</span>
+                    <span>Reviewed by Elijah</span>
+                  </span>
+                )}
+              </div>
               <p className="text-base leading-relaxed text-gray-200 whitespace-pre-wrap">{openQuestion.answer}</p>
             </div>
 

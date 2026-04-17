@@ -19,6 +19,10 @@ interface PlayerQuestion {
   status: string
   email: string | null
   created_at: string
+  // True when this question's answer went through manual approval in the
+  // admin queue (vs. a future auto-approve path). Surfaced as a badge on
+  // the card so Elijah can see at a glance which ones he's already touched.
+  reviewed_by_elijah?: boolean
   // Added by /api/admin/queue when pending questions cluster together by
   // semantic similarity. Representative row is returned with the rest of
   // the cluster collapsed into this field.
@@ -42,6 +46,9 @@ export default function AdminQuestionsPage() {
   // plus whatever notes the admin inlined) and regenerates a fresh, cohesive
   // answer from it via /api/admin/regenerate-draft.
   const [remixing, setRemixing] = useState(false)
+  // Sources the LLM consulted via web_search / web_fetch when remixing.
+  // Rendered under the draft so admin can verify quotes before approving.
+  const [sources, setSources] = useState<{ title: string; url: string }[]>([])
 
   const load = useCallback(async (status: string) => {
     setLoading(true)
@@ -102,6 +109,7 @@ export default function AdminQuestionsPage() {
       setItems((prev) => prev.filter((q) => q.id !== questionId))
       setOpenId(null)
       setDraft('')
+      setSources([])
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to approve')
     } finally {
@@ -129,8 +137,13 @@ export default function AdminQuestionsPage() {
       const data = await res.json()
       if (!data.draft) throw new Error('Empty remix response')
       setDraft(data.draft)
-      setToast('Remixed — review the new draft')
-      setTimeout(() => setToast(null), 2500)
+      setSources(Array.isArray(data.sources) ? data.sources : [])
+      setToast(
+        data.sources?.length
+          ? `Remixed — ${data.sources.length} source${data.sources.length === 1 ? '' : 's'} consulted`
+          : 'Remixed — review the new draft'
+      )
+      setTimeout(() => setToast(null), 3000)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to remix')
     } finally {
@@ -167,7 +180,7 @@ export default function AdminQuestionsPage() {
     return (
       <div style={{ maxWidth: 760, margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
         <button
-          onClick={() => { setOpenId(null); setDraft(''); setError(null) }}
+          onClick={() => { setOpenId(null); setDraft(''); setError(null); setSources([]) }}
           style={{
             background: 'none', border: '1px solid #333', borderRadius: 6,
             color: '#888', fontSize: 13, padding: '8px 16px', cursor: 'pointer',
@@ -229,6 +242,43 @@ export default function AdminQuestionsPage() {
             }}
           />
         </div>
+
+        {/* Sources consulted by the LLM during Remix. Review each before
+            approving to verify any quotes or facts pulled from the web. */}
+        {sources.length > 0 && (
+          <div
+            style={{
+              marginBottom: 20,
+              padding: '12px 14px',
+              background: '#0a0a0a',
+              border: '1px solid #1a1a1a',
+              borderRadius: 6,
+            }}
+          >
+            <p style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0, marginBottom: 8 }}>
+              Sources consulted ({sources.length}) — verify before approving
+            </p>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {sources.map((s, i) => (
+                <li key={i} style={{ fontSize: 13, lineHeight: 1.4 }}>
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#7dd3fc', textDecoration: 'none' }}
+                  >
+                    {s.title}
+                  </a>
+                  <span style={{ color: '#555', marginLeft: 8, fontSize: 11 }}>
+                    {(() => {
+                      try { return new URL(s.url).hostname.replace(/^www\./, '') } catch { return '' }
+                    })()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {error && (
           <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>
@@ -292,7 +342,10 @@ export default function AdminQuestionsPage() {
         <h1 style={{ fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, color: '#fff', margin: 0, fontFamily: '-apple-system, sans-serif' }}>
           Question Queue
         </h1>
-        <Link href="/admin/signals" style={{ fontSize: 12, color: '#888', textDecoration: 'none' }}>Signals →</Link>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <Link href="/admin/kb-sources" style={{ fontSize: 12, color: '#888', textDecoration: 'none' }}>Knowledge Base →</Link>
+          <Link href="/admin/signals" style={{ fontSize: 12, color: '#888', textDecoration: 'none' }}>Signals →</Link>
+        </div>
       </div>
 
       {/* Toast */}
@@ -352,7 +405,9 @@ export default function AdminQuestionsPage() {
               }}
               style={{
                 background: '#0a0d1a',
-                border: '1px solid #1a2040',
+                // Reviewed cards get a subtle green accent so they're
+                // visually distinct from raw AI-drafted or pending cards.
+                border: q.reviewed_by_elijah ? '1px solid #1f4030' : '1px solid #1a2040',
                 borderRadius: 8,
                 padding: 14,
                 textAlign: 'left',
@@ -363,14 +418,38 @@ export default function AdminQuestionsPage() {
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 gap: 8,
+                position: 'relative',
               }}
             >
+              {q.reviewed_by_elijah && (
+                <span
+                  title="Reviewed by Elijah"
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    color: '#34d399',
+                    background: '#0a1f15',
+                    border: '1px solid #1f4030',
+                    borderRadius: 999,
+                    padding: '2px 6px',
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  ✓ Reviewed
+                </span>
+              )}
               <p style={{
                 fontSize: 13, fontWeight: 600, color: '#fff', margin: 0,
                 lineHeight: 1.4, overflow: 'hidden',
                 display: '-webkit-box',
                 WebkitLineClamp: 3,
                 WebkitBoxOrient: 'vertical' as const,
+                // Leave room for the badge in the top-right corner on reviewed cards.
+                paddingRight: q.reviewed_by_elijah ? 72 : 0,
               }}>
                 {q.question}
               </p>

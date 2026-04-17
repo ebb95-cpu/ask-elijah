@@ -182,6 +182,13 @@ Keep each pushback under 20 words, in the player's voice, specific to what they 
 
     const finalPrompt = `Write a completely new polished answer to the player's question. Weave in Elijah's notes AND everything he said during the refinement conversation. Do not reference the old draft, do not append — produce ONE cohesive final answer as if you knew all this from the start. Structure: pain → mechanism → solution → one concrete action today.
 
+You have access to web_search and web_fetch. Use them only when:
+- The notes or Q&A mention a book, study, article, or person by name and a specific quote or fact would strengthen the answer
+- A URL is present (fetch it with web_fetch to pull the relevant passage)
+- A claim needs verification before you state it
+
+Do NOT search for general advice — Elijah's own experience is enough. One or two lookups is plenty.
+
 Player's question:
 "${question}"
 
@@ -200,18 +207,58 @@ ${convoText ? `Clarifying Q&A with Elijah:\n\n${convoText}\n\n` : ''}${pushbackS
 Write the full answer now. Length: however long it needs to be to cover every angle without padding — typically 8 to 14 sentences when the Q&A was deep. No lists. No em-dashes. First person. Same conversational voice as always.`
 
     const finalRes = await anthropic.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 1500,
+      model: 'claude-sonnet-4-5',
+      max_tokens: 2000,
       system: SYSTEM_PROMPT,
+      tools: [
+        { type: 'web_search_20250305', name: 'web_search', max_uses: 3 },
+        { type: 'web_fetch_20250910', name: 'web_fetch', max_uses: 5 },
+      ],
       messages: [{ role: 'user', content: finalPrompt }],
     })
 
-    const newDraft = finalRes.content[0].type === 'text' ? finalRes.content[0].text.trim() : ''
+    const finalTextBlocks = finalRes.content.filter(
+      (b): b is Anthropic.Messages.TextBlock => b.type === 'text'
+    )
+    const newDraft = finalTextBlocks.map((b) => b.text).join('\n\n').trim()
     if (!newDraft || newDraft.length < 30) {
       return NextResponse.json({ error: 'Generation failed' }, { status: 500 })
     }
 
-    return NextResponse.json({ done: true, draft: newDraft, pushbacksAnticipated: pushbacks })
+    // Harvest web_search + web_fetch sources so the admin can verify quotes.
+    const sources: Array<{ title: string; url: string }> = []
+    const seen = new Set<string>()
+    for (const block of finalRes.content) {
+      if (block.type === 'web_search_tool_result') {
+        const items = (block as unknown as { content: Array<{ url?: string; title?: string }> }).content || []
+        for (const item of items) {
+          if (item.url && !seen.has(item.url)) {
+            seen.add(item.url)
+            sources.push({ url: item.url, title: item.title || item.url })
+          }
+        }
+      }
+      if (block.type === 'web_fetch_tool_result') {
+        const fetched = (block as unknown as { content?: { url?: string; title?: string } }).content
+        if (fetched?.url && !seen.has(fetched.url)) {
+          seen.add(fetched.url)
+          sources.push({ url: fetched.url, title: fetched.title || fetched.url })
+        }
+      }
+      if (block.type === 'text') {
+        const citations = (block as unknown as { citations?: Array<{ url?: string; title?: string }> }).citations
+        if (Array.isArray(citations)) {
+          for (const c of citations) {
+            if (c.url && !seen.has(c.url)) {
+              seen.add(c.url)
+              sources.push({ url: c.url, title: c.title || c.url })
+            }
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({ done: true, draft: newDraft, pushbacksAnticipated: pushbacks, sources })
   } catch (err) {
     await logError('admin:refine-draft', err)
     return NextResponse.json(
