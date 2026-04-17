@@ -44,6 +44,10 @@ export default function AdminSimulatePage() {
   const [landscape, setLandscape] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [iframeKey, setIframeKey] = useState(0) // bumping remounts the iframe
+  // Container width that the device frame must fit inside. Drives the scale
+  // factor so the chosen device size never overflows the viewport.
+  const stageRef = useRef<HTMLDivElement>(null)
+  const [stageWidth, setStageWidth] = useState(0)
   // Current URL inside the iframe (read via same-origin contentWindow polling).
   const [currentUrl, setCurrentUrl] = useState<string>('')
   // Supabase auth + stored email — tells the admin what state the student sees.
@@ -59,6 +63,28 @@ export default function AdminSimulatePage() {
     if (device.key === 'phone' && landscape) return { width: device.height, height: device.width }
     return { width: device.width, height: device.height }
   }, [device, landscape])
+
+  // Track the available stage width so we can compute a scale factor that
+  // keeps the device frame inside the viewport without clipping.
+  useEffect(() => {
+    const el = stageRef.current
+    if (!el) return
+    const apply = () => setStageWidth(el.clientWidth)
+    apply()
+    const ro = new ResizeObserver(apply)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // Padding around the device chrome (~28px each side for phone, ~20 otherwise)
+  // plus a small safety margin so the frame border isn't flush with the edge.
+  const framePadding = (device.key === 'phone' ? 14 : 10) * 2 + 8
+  const scale = stageWidth > 0
+    ? Math.min(1, stageWidth / (dims.width + framePadding))
+    : 1
+  // Reserve scaled height in layout flow so the page doesn't have a giant
+  // empty gap below the shrunk frame.
+  const scaledHeight = (dims.height + 36 /* browser chrome */ + framePadding) * scale
 
   // Poll iframe URL 3×/sec so the address bar reflects in-frame navigation.
   useEffect(() => {
@@ -264,17 +290,31 @@ export default function AdminSimulatePage() {
         </p>
       )}
 
-      {/* Device frame with browser chrome */}
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
+      {/* Device frame with browser chrome — scaled to fit the stage so the
+          chosen device dimensions never overflow horizontally. The outer
+          stageRef div drives the scale calc; the inner div is the fixed-size
+          frame that gets visually shrunk via CSS transform. */}
+      <div
+        ref={stageRef}
+        style={{
+          width: '100%',
+          height: scaledHeight,
+          display: 'flex',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
         <div
           style={{
             width: dims.width,
-            maxWidth: '100%',
             padding: device.key === 'phone' ? 14 : 10,
             background: '#111',
             border: '1px solid #222',
             borderRadius: device.key === 'phone' ? 36 : 12,
             boxShadow: '0 30px 80px rgba(0,0,0,0.6)',
+            transform: `scale(${scale})`,
+            transformOrigin: 'top center',
+            flexShrink: 0,
           }}
         >
           <div

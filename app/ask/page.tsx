@@ -359,6 +359,12 @@ function AskPageInner() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [topQuestions, setTopQuestions] = useState<{ id: string; question: string; upvote_count: number }[]>([])
   const [returnEntry, setReturnEntry] = useState<JournalEntry | null>(null)
+  // Most-recent journal entry — used to render a Hooked-style "welcome back"
+  // card on the input screen when a returning user lands here. Distinct from
+  // returnEntry which gates the dedicated reflection-prompt mode.
+  const [lastEntry, setLastEntry] = useState<JournalEntry | null>(null)
+  // Hide the welcome card after the user takes any action on it this session.
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false)
   const [draftAnswer, setDraftAnswer] = useState('')
   const [betaSpotsLeft, setBetaSpotsLeft] = useState<number | null>(null)
   const [waitlistEmail, setWaitlistEmail] = useState('')
@@ -503,6 +509,7 @@ function AskPageInner() {
       .then(r => r.json())
       .then(d => {
         const entries: JournalEntry[] = d.entries || []
+        if (entries.length > 0) setLastEntry(entries[0])
         const needsReflection = entries.find(e => !e.reflection && e.action_steps)
         if (needsReflection) {
           setReturnEntry(needsReflection)
@@ -1264,6 +1271,69 @@ function AskPageInner() {
             <Link href="/sign-in" className="text-xs text-gray-500 hover:text-white transition-colors">Sign in</Link>
           )}
         </nav>
+
+        {/* Returning-user welcome card. Hooked loop:
+              Trigger  — time-since callout reactivates the prior context
+              Action   — one tap to either continue or move on (low friction)
+              Reward   — picking up where they left off, no cold start
+              Investment — pre-seeded follow-up keeps their stake in the thread
+            Hidden once dismissed, when there's no prior entry, or when the
+            user came in with a pending question / URL ?q= param. */}
+        {lastEntry && !welcomeDismissed && !question.trim() && (
+          (() => {
+            const days = Math.max(
+              0,
+              Math.floor((Date.now() - new Date(lastEntry.answered_at).getTime()) / 86_400_000)
+            )
+            const timeStr =
+              days === 0 ? 'earlier today' : days === 1 ? 'yesterday' : `${days} days ago`
+            return (
+              <div className="px-5 md:px-6 mb-2 md:mb-4 shrink-0">
+                <div className="max-w-2xl mx-auto bg-gray-950 border border-gray-900 rounded-lg p-4 md:p-5">
+                  <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">
+                    Welcome back · last asked {timeStr}
+                  </p>
+                  <p className="text-sm text-gray-300 leading-snug mb-4 italic line-clamp-2">
+                    &ldquo;{lastEntry.question}&rdquo;
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => {
+                        setQuestion(`Going deeper on this — ${lastEntry.question.replace(/\?$/, '')}. `)
+                        setShowSuggestions(false)
+                        setWelcomeDismissed(true)
+                        posthog?.capture('welcome_continue', { days })
+                        setTimeout(() => textareaRef.current?.focus(), 50)
+                      }}
+                      className="bg-white text-black text-xs font-semibold px-4 py-2 rounded-full hover:opacity-80 transition-opacity"
+                    >
+                      Continue this thread →
+                    </button>
+                    <Link
+                      href={`/history`}
+                      onClick={() => {
+                        setWelcomeDismissed(true)
+                        posthog?.capture('welcome_view_answer', { days })
+                      }}
+                      className="text-xs text-gray-400 hover:text-white transition-colors"
+                    >
+                      Re-read the answer
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setWelcomeDismissed(true)
+                        posthog?.capture('welcome_dismiss', { days })
+                      }}
+                      className="text-xs text-gray-600 hover:text-white transition-colors ml-auto"
+                    >
+                      Ask something new
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })()
+        )}
 
         {betaSpotsLeft !== null && betaSpotsLeft <= 10 && (
           <div className="text-center py-2 px-6 shrink-0">
