@@ -16,6 +16,19 @@ import type { NextRequest } from 'next/server'
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl
 
+  // /sign-in must not be CDN-cached: the page reads ?simulated=1 client-side
+  // to toggle simulator mode, but Vercel caches by path only and ignores
+  // query params for 'use client' pages — which means a cached copy from one
+  // visit was being served to another with the opposite param. Force no-store
+  // so every load renders fresh.
+  if (pathname === '/sign-in') {
+    const res = NextResponse.next()
+    res.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate')
+    res.headers.set('Pragma', 'no-cache')
+    res.headers.set('Expires', '0')
+    return res
+  }
+
   // Only guard the admin surface. Everything else passes through.
   if (!pathname.startsWith('/admin')) return NextResponse.next()
 
@@ -62,6 +75,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Match every /admin path. /admin/login is handled inside the function.
-  matcher: ['/admin/:path*'],
+  // Match every /admin path + /sign-in so the middleware runs for both.
+  // /admin/login and /sign-in special-cases are handled inside the function.
+  matcher: ['/admin/:path*', '/sign-in'],
 }
