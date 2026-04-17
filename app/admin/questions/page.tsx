@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -342,10 +341,6 @@ export default function AdminQuestionsPage() {
         <h1 style={{ fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, color: '#fff', margin: 0, fontFamily: '-apple-system, sans-serif' }}>
           Question Queue
         </h1>
-        <div style={{ display: 'flex', gap: 16 }}>
-          <Link href="/admin/kb-sources" style={{ fontSize: 12, color: '#888', textDecoration: 'none' }}>Knowledge Base →</Link>
-          <Link href="/admin/signals" style={{ fontSize: 12, color: '#888', textDecoration: 'none' }}>Signals →</Link>
-        </div>
       </div>
 
       {/* Toast */}

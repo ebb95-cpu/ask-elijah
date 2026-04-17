@@ -4,54 +4,20 @@ import { useEffect, useRef, useState } from 'react'
 
 /**
  * The "ADMIN" label in the top-left of every admin page is an interactive
- * dropdown. Click it to see all admin screens and a "Switch to student view"
- * option that takes you to the simulator (sign-in page → full student flow
- * in an iframe with back-to-admin always visible).
- *
- * Kept as a separate client component so the admin layout can stay a
- * server component and keep its cookie-based auth gating logic.
+ * dropdown. Click it to jump between the three surfaces that matter:
+ * Question Queue, Knowledge Base, and the Student Simulator.
  */
 
-type LinkGroup = {
-  label: string
-  items: Array<{ href: string; label: string; external?: boolean; primary?: boolean }>
-}
-
-const GROUPS: LinkGroup[] = [
-  {
-    label: 'Admin',
-    items: [
-      { href: '/admin/questions', label: 'Question Queue' },
-      { href: '/admin/kb-sources', label: 'Knowledge Base' },
-      { href: '/admin/signals', label: 'Signals' },
-    ],
-  },
-  {
-    label: 'Student View',
-    items: [
-      { href: '/admin/simulate', label: 'Open Student Simulator', primary: true },
-      { href: '/admin/preview', label: 'Mock Preview (dummy data)' },
-    ],
-  },
-  {
-    label: 'Open live (new tab)',
-    items: [
-      { href: '/', label: 'Home', external: true },
-      { href: '/ask', label: 'Ask', external: true },
-      { href: '/browse', label: 'Browse', external: true },
-      { href: '/history', label: 'History', external: true },
-      { href: '/library', label: 'Library', external: true },
-      { href: '/profile', label: 'Profile', external: true },
-      { href: '/pricing', label: 'Pricing', external: true },
-    ],
-  },
+const ITEMS: Array<{ href: string; label: string }> = [
+  { href: '/admin/questions', label: 'Question Queue' },
+  { href: '/admin/kb-sources', label: 'Knowledge Base' },
+  { href: '/admin/simulate', label: 'Student Simulator' },
 ]
 
 export default function AdminNav() {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
-  // Close on click outside + Escape so it feels like a real menu.
   useEffect(() => {
     if (!open) return
     const onClick = (e: MouseEvent) => {
@@ -91,7 +57,16 @@ export default function AdminNav() {
         aria-haspopup="menu"
       >
         Admin
-        <span style={{ fontSize: 9, opacity: 0.7, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 120ms' }}>▼</span>
+        <span
+          style={{
+            fontSize: 9,
+            opacity: 0.7,
+            transform: open ? 'rotate(180deg)' : 'none',
+            transition: 'transform 120ms',
+          }}
+        >
+          ▼
+        </span>
       </button>
 
       {open && (
@@ -101,66 +76,39 @@ export default function AdminNav() {
             position: 'absolute',
             top: 'calc(100% + 6px)',
             left: 0,
-            minWidth: 240,
+            minWidth: 200,
             background: '#0a0a0a',
             border: '1px solid #1f1f1f',
             borderRadius: 8,
             boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
-            padding: 6,
+            padding: 4,
             zIndex: 50,
           }}
         >
-          {GROUPS.map((g, gi) => (
-            <div
-              key={g.label}
+          {ITEMS.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              onClick={() => setOpen(false)}
               style={{
-                padding: '6px 0',
-                borderTop: gi === 0 ? 'none' : '1px solid #1a1a1a',
+                display: 'block',
+                padding: '8px 12px',
+                borderRadius: 4,
+                textDecoration: 'none',
+                fontSize: 13,
+                color: '#cccccc',
+              }}
+              onMouseEnter={(e) => {
+                ;(e.currentTarget as HTMLAnchorElement).style.background = '#1a1a1a'
+                ;(e.currentTarget as HTMLAnchorElement).style.color = '#ffffff'
+              }}
+              onMouseLeave={(e) => {
+                ;(e.currentTarget as HTMLAnchorElement).style.background = 'transparent'
+                ;(e.currentTarget as HTMLAnchorElement).style.color = '#cccccc'
               }}
             >
-              <div
-                style={{
-                  fontSize: 9,
-                  color: '#555',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  padding: '4px 10px 6px',
-                }}
-              >
-                {g.label}
-              </div>
-              {g.items.map((item) => (
-                <a
-                  key={item.href + item.label}
-                  href={item.href}
-                  target={item.external ? '_blank' : '_self'}
-                  rel={item.external ? 'noopener noreferrer' : undefined}
-                  onClick={() => setOpen(false)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                    padding: '8px 10px',
-                    borderRadius: 4,
-                    textDecoration: 'none',
-                    fontSize: 13,
-                    color: item.primary ? '#ffffff' : '#cccccc',
-                    background: item.primary ? '#1a1a1a' : 'transparent',
-                    fontWeight: item.primary ? 600 : 400,
-                  }}
-                  onMouseEnter={(e) => {
-                    ;(e.currentTarget as HTMLAnchorElement).style.background = '#1a1a1a'
-                  }}
-                  onMouseLeave={(e) => {
-                    ;(e.currentTarget as HTMLAnchorElement).style.background = item.primary ? '#1a1a1a' : 'transparent'
-                  }}
-                >
-                  <span>{item.label}</span>
-                  {item.external && <span style={{ fontSize: 10, color: '#555' }}>↗</span>}
-                </a>
-              ))}
-            </div>
+              {item.label}
+            </a>
           ))}
         </div>
       )}
