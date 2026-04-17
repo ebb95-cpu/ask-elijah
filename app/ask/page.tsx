@@ -7,6 +7,7 @@ import { getSupabaseClient } from '@/lib/supabase-client'
 import { usePostHog } from 'posthog-js/react'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
 import { getLocal, setLocal, removeLocal, getSession, setSession, removeSession } from '@/lib/safe-storage'
+import ReturningDashboard from '@/components/ReturningDashboard'
 
 function Logo({ dark = false }: { dark?: boolean }) {
   const c = dark ? '#fff' : '#000'
@@ -91,7 +92,7 @@ const STRUGGLES = [
   "Dealing with a tough coach",
 ]
 
-type Mode = 'input' | 'email_gate' | 'clarifying' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt' | 'beta_full'
+type Mode = 'input' | 'email_gate' | 'clarifying' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt' | 'beta_full' | 'dashboard'
 
 type JournalEntry = {
   id: string
@@ -359,12 +360,9 @@ function AskPageInner() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [topQuestions, setTopQuestions] = useState<{ id: string; question: string; upvote_count: number }[]>([])
   const [returnEntry, setReturnEntry] = useState<JournalEntry | null>(null)
-  // Most-recent journal entry — used to render a Hooked-style "welcome back"
-  // card on the input screen when a returning user lands here. Distinct from
-  // returnEntry which gates the dedicated reflection-prompt mode.
+  // Most-recent journal entry — drives the decision to land on the
+  // returning-user dashboard vs the cold input chip-picker.
   const [lastEntry, setLastEntry] = useState<JournalEntry | null>(null)
-  // Hide the welcome card after the user takes any action on it this session.
-  const [welcomeDismissed, setWelcomeDismissed] = useState(false)
   const [draftAnswer, setDraftAnswer] = useState('')
   const [betaSpotsLeft, setBetaSpotsLeft] = useState<number | null>(null)
   const [waitlistEmail, setWaitlistEmail] = useState('')
@@ -515,6 +513,11 @@ function AskPageInner() {
           setReturnEntry(needsReflection)
           setEmail(storedEmail)
           setMode('returning')
+        } else if (entries.length > 0) {
+          // Has prior history but nothing to reflect on right now — drop them
+          // on the personal dashboard instead of the cold-start chip picker.
+          setEmail(storedEmail)
+          setMode('dashboard')
         }
       })
       .catch(() => {})
@@ -1074,6 +1077,41 @@ function AskPageInner() {
     )
   }
 
+  // Returning-user dashboard. Rendered when the user has prior history but
+  // nothing pending to reflect on. Replaces the cold "Ask anything" entry
+  // chips with their own questions + status, plus trending community asks.
+  if (mode === 'dashboard') {
+    return (
+      <div className="min-h-[100dvh] bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-5 py-4 md:px-6 md:py-5 shrink-0">
+          <Link href="/" className="text-gray-500 hover:text-white transition-colors text-sm">
+            ← Home
+          </Link>
+          <Logo dark />
+          <Link href="/history" className="text-xs text-gray-500 hover:text-white transition-colors">
+            My questions
+          </Link>
+        </nav>
+        <div className="flex-1 overflow-y-auto">
+          <ReturningDashboard
+            email={email || getLocal('ask_elijah_email') || ''}
+            trending={topQuestions}
+            onAsk={() => {
+              setMode('input')
+              setTimeout(() => textareaRef.current?.focus(), 50)
+            }}
+            onContinueThread={(prior) => {
+              setQuestion(`Going deeper on this — ${prior.replace(/\?$/, '')}. `)
+              setShowSuggestions(false)
+              setMode('input')
+              setTimeout(() => textareaRef.current?.focus(), 50)
+            }}
+          />
+        </div>
+      </div>
+    )
+  }
+
   // Input mode
   if (mode === 'input') {
     const entryOptions: { id: EntryMode; label: string; hint: string }[] = [
@@ -1271,69 +1309,6 @@ function AskPageInner() {
             <Link href="/sign-in" className="text-xs text-gray-500 hover:text-white transition-colors">Sign in</Link>
           )}
         </nav>
-
-        {/* Returning-user welcome card. Hooked loop:
-              Trigger  — time-since callout reactivates the prior context
-              Action   — one tap to either continue or move on (low friction)
-              Reward   — picking up where they left off, no cold start
-              Investment — pre-seeded follow-up keeps their stake in the thread
-            Hidden once dismissed, when there's no prior entry, or when the
-            user came in with a pending question / URL ?q= param. */}
-        {lastEntry && !welcomeDismissed && !question.trim() && (
-          (() => {
-            const days = Math.max(
-              0,
-              Math.floor((Date.now() - new Date(lastEntry.answered_at).getTime()) / 86_400_000)
-            )
-            const timeStr =
-              days === 0 ? 'earlier today' : days === 1 ? 'yesterday' : `${days} days ago`
-            return (
-              <div className="px-5 md:px-6 mb-2 md:mb-4 shrink-0">
-                <div className="max-w-2xl mx-auto bg-gray-950 border border-gray-900 rounded-lg p-4 md:p-5">
-                  <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">
-                    Welcome back · last asked {timeStr}
-                  </p>
-                  <p className="text-sm text-gray-300 leading-snug mb-4 italic line-clamp-2">
-                    &ldquo;{lastEntry.question}&rdquo;
-                  </p>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      onClick={() => {
-                        setQuestion(`Going deeper on this — ${lastEntry.question.replace(/\?$/, '')}. `)
-                        setShowSuggestions(false)
-                        setWelcomeDismissed(true)
-                        posthog?.capture('welcome_continue', { days })
-                        setTimeout(() => textareaRef.current?.focus(), 50)
-                      }}
-                      className="bg-white text-black text-xs font-semibold px-4 py-2 rounded-full hover:opacity-80 transition-opacity"
-                    >
-                      Continue this thread →
-                    </button>
-                    <Link
-                      href={`/history`}
-                      onClick={() => {
-                        setWelcomeDismissed(true)
-                        posthog?.capture('welcome_view_answer', { days })
-                      }}
-                      className="text-xs text-gray-400 hover:text-white transition-colors"
-                    >
-                      Re-read the answer
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setWelcomeDismissed(true)
-                        posthog?.capture('welcome_dismiss', { days })
-                      }}
-                      className="text-xs text-gray-600 hover:text-white transition-colors ml-auto"
-                    >
-                      Ask something new
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          })()
-        )}
 
         {betaSpotsLeft !== null && betaSpotsLeft <= 10 && (
           <div className="text-center py-2 px-6 shrink-0">
