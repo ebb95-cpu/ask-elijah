@@ -93,7 +93,7 @@ const STRUGGLES = [
   "Dealing with a tough coach",
 ]
 
-type Mode = 'input' | 'email_gate' | 'clarifying' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt' | 'beta_full' | 'dashboard'
+type Mode = 'input' | 'email_gate' | 'clarifying' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt' | 'beta_full' | 'dashboard' | 'unread_hero' | 'pending_wait'
 
 type JournalEntry = {
   id: string
@@ -496,28 +496,85 @@ function AskPageInner() {
   }, [])
 
 
-  // Returning user: check if they have an answered question with no reflection
+  // Hooked-style routing for returning users. Priority order (Nir Eyal's
+  // "deliver the reward before asking for more investment"):
+  //   1. Unread approved answer  → unread_hero     (deliver the reward)
+  //   2. Pending question        → pending_wait    (set expectation)
+  //   3. History + nothing new   → dashboard       (variable reward + invest)
+  //   4. needsReflection only    → returning       (legacy reflection prompt)
+  //   5. None of the above       → input           (cold-start chip picker)
   useEffect(() => {
     const storedEmail = getLocal('ask_elijah_email')
-    const count = parseInt(getLocal('question_count') || '0', 10)
-    if (!storedEmail || count === 0) return
-    // Don't show return flow if they came with a pending question in session
+    if (!storedEmail) return
+    // Don't pre-empt someone who came in with a deep-linked pending question.
     if (getSession('pending_question')) return
 
-    fetch(`/api/journal?email=${encodeURIComponent(storedEmail)}`)
+    fetch(`/api/my-questions?email=${encodeURIComponent(storedEmail)}`)
       .then(r => r.json())
       .then(d => {
-        const entries: JournalEntry[] = d.entries || []
-        if (entries.length > 0) setLastEntry(entries[0])
-        const needsReflection = entries.find(e => !e.reflection && e.action_steps)
-        if (needsReflection) {
-          setReturnEntry(needsReflection)
-          setEmail(storedEmail)
-          setMode('returning')
-        } else if (entries.length > 0) {
-          // Has prior history but nothing to reflect on right now — drop them
-          // on the personal dashboard instead of the cold-start chip picker.
-          setEmail(storedEmail)
+        const all: Array<{
+          id: string
+          question: string
+          answer: string | null
+          status: 'pending' | 'approved'
+          action_steps: string | null
+          asked_at: string
+          answered_at: string | null
+          has_reflection: boolean
+        }> = d.questions || []
+        if (all.length === 0) return
+
+        // Viewed-set is localStorage-tracked by ReturningDashboard. Anything
+        // approved not in that set is "unread" from the student's POV.
+        let viewed: Set<string> = new Set()
+        try {
+          const raw = getLocal('ask_elijah_viewed_question_ids')
+          if (raw) viewed = new Set(JSON.parse(raw))
+        } catch {
+          /* ignore */
+        }
+
+        const approved = all.filter(q => q.status === 'approved')
+        const pending = all.filter(q => q.status === 'pending')
+        const unreadApproved = approved.find(q => !viewed.has(q.id) && q.answer)
+
+        setEmail(storedEmail)
+        if (approved[0]) {
+          // Shape the newest approved entry into JournalEntry for legacy
+          // UI (reflection prompt, welcome card pointers, etc.).
+          setLastEntry({
+            id: approved[0].id,
+            question: approved[0].question,
+            answer: approved[0].answer || '',
+            action_steps: approved[0].action_steps,
+            answered_at: approved[0].answered_at || approved[0].asked_at,
+            reflection: approved[0].has_reflection
+              ? { text: '', created_at: approved[0].answered_at || approved[0].asked_at }
+              : null,
+          })
+        }
+
+        if (unreadApproved) {
+          setReturnEntry({
+            id: unreadApproved.id,
+            question: unreadApproved.question,
+            answer: unreadApproved.answer || '',
+            action_steps: unreadApproved.action_steps,
+            answered_at: unreadApproved.answered_at || unreadApproved.asked_at,
+            reflection: null,
+          })
+          setMode('unread_hero')
+        } else if (pending.length > 0) {
+          setReturnEntry({
+            id: pending[0].id,
+            question: pending[0].question,
+            answer: '',
+            action_steps: null,
+            answered_at: pending[0].asked_at,
+            reflection: null,
+          })
+          setMode('pending_wait')
+        } else if (approved.length > 0) {
           setMode('dashboard')
         }
       })
@@ -1114,9 +1171,176 @@ function AskPageInner() {
     )
   }
 
-  // Returning-user dashboard. Rendered when the user has prior history but
-  // nothing pending to reflect on. Replaces the cold "Ask anything" entry
-  // chips with their own questions + status, plus trending community asks.
+  // State 1 — the Hooked payoff. Returning user has a fresh approved answer
+  // they haven't tapped yet. Show it full-screen as the first thing they
+  // see on sign-in: the reward precedes the next investment ask.
+  if (mode === 'unread_hero' && returnEntry) {
+    return (
+      <div className="min-h-[100dvh] bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-5 py-4 md:px-6 md:py-5 shrink-0">
+          <button
+            onClick={() => {
+              try {
+                const raw = getLocal('ask_elijah_viewed_question_ids')
+                const arr = raw ? JSON.parse(raw) : []
+                const next = new Set([...(Array.isArray(arr) ? arr : []), returnEntry.id])
+                setLocal('ask_elijah_viewed_question_ids', JSON.stringify(Array.from(next)))
+              } catch { /* localStorage blocked */ }
+              setMode('dashboard')
+            }}
+            className="text-gray-500 hover:text-white transition-colors text-sm"
+          >
+            My questions →
+          </button>
+          <Logo dark />
+          <div className="w-20" />
+        </nav>
+
+        <div className="flex-1 overflow-y-auto px-5 md:px-6 pb-16">
+          <div className="max-w-2xl mx-auto pt-8">
+            <p className="text-[10px] text-emerald-400 uppercase tracking-widest mb-6">
+              ✓ Elijah wrote back
+            </p>
+
+            <p className="text-sm text-gray-500 mb-2">You asked</p>
+            <p className="text-base italic text-gray-300 leading-snug mb-8">
+              &ldquo;{returnEntry.question}&rdquo;
+            </p>
+
+            <div className="border-l-2 border-white pl-5 mb-10">
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">
+                Elijah&apos;s answer
+              </p>
+              <p className="text-base text-gray-100 leading-relaxed whitespace-pre-wrap">
+                {returnEntry.answer}
+              </p>
+            </div>
+
+            {returnEntry.action_steps && (
+              <div className="bg-gray-950 border border-gray-900 px-5 py-4 mb-10">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">
+                  Your steps
+                </p>
+                <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
+                  {returnEntry.action_steps}
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3">
+              {returnEntry.action_steps && !returnEntry.reflection && (
+                <button
+                  onClick={() => {
+                    // Investment step — reflection UI already exists in mode='returning'.
+                    setMode('returning')
+                  }}
+                  className="bg-white text-black text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-80 transition-opacity"
+                >
+                  Reflect on this →
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setQuestion(`Going deeper on this — ${returnEntry.question.replace(/\?$/, '')}. `)
+                  setShowSuggestions(false)
+                  try {
+                    const raw = getLocal('ask_elijah_viewed_question_ids')
+                    const arr = raw ? JSON.parse(raw) : []
+                    const next = new Set([...(Array.isArray(arr) ? arr : []), returnEntry.id])
+                    setLocal('ask_elijah_viewed_question_ids', JSON.stringify(Array.from(next)))
+                  } catch { /* */ }
+                  setMode('input')
+                  setTimeout(() => textareaRef.current?.focus(), 50)
+                }}
+                className={`text-sm font-semibold px-5 py-2.5 rounded-full transition-colors ${
+                  returnEntry.action_steps && !returnEntry.reflection
+                    ? 'border border-gray-700 text-white hover:bg-white/5'
+                    : 'bg-white text-black hover:opacity-80'
+                }`}
+              >
+                Ask a follow-up
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // State 2 — pending question, nothing new yet. Set expectation ("Elijah
+  // writes back within 24h") so the student doesn't refresh anxiously, then
+  // offer variable-reward filler via the trending list.
+  if (mode === 'pending_wait' && returnEntry) {
+    const hoursAgo = Math.max(
+      0,
+      Math.floor((Date.now() - new Date(returnEntry.answered_at).getTime()) / 3_600_000)
+    )
+    const timeStr =
+      hoursAgo < 1 ? 'just now' : hoursAgo === 1 ? '1 hour ago' : `${hoursAgo} hours ago`
+    return (
+      <div className="min-h-[100dvh] bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-5 py-4 md:px-6 md:py-5 shrink-0">
+          <button
+            onClick={() => setMode('dashboard')}
+            className="text-gray-500 hover:text-white transition-colors text-sm"
+          >
+            My questions →
+          </button>
+          <Logo dark />
+          <div className="w-20" />
+        </nav>
+        <div className="flex-1 overflow-y-auto px-5 md:px-6 pb-16">
+          <div className="max-w-2xl mx-auto pt-8">
+            <p className="text-[10px] text-amber-400 uppercase tracking-widest mb-4">
+              ⏱ Elijah is working on it
+            </p>
+            <p className="text-sm text-gray-500 mb-2">You asked {timeStr}</p>
+            <p className="text-xl font-semibold leading-snug mb-3">
+              &ldquo;{returnEntry.question}&rdquo;
+            </p>
+            <p className="text-sm text-gray-500 mb-10">
+              He usually writes back within 24 hours. You&apos;ll get an email the moment he does.
+            </p>
+
+            {topQuestions.length > 0 && (
+              <div className="border-t border-gray-900 pt-8">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-4">
+                  While you wait — what other players are asking
+                </p>
+                <ul className="flex flex-col gap-1 mb-8">
+                  {topQuestions.slice(0, 4).map((t) => (
+                    <li key={t.id}>
+                      <Link
+                        href={`/browse?q=${encodeURIComponent(t.question)}`}
+                        className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-gray-950 transition-colors"
+                      >
+                        <span className="text-xs text-gray-600 mt-0.5 shrink-0 w-8">↑ {t.upvote_count}</span>
+                        <span className="text-sm text-gray-300 leading-snug">{t.question}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                setShowSuggestions(false)
+                setMode('input')
+                setTimeout(() => textareaRef.current?.focus(), 50)
+              }}
+              className="bg-white text-black text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-80 transition-opacity"
+            >
+              Ask another question →
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // State 3 — has history, nothing pending, nothing unread. The personal
+  // dashboard with a Craig Manning quote rotating in as the variable reward.
   if (mode === 'dashboard') {
     return (
       <div className="min-h-[100dvh] bg-black text-white flex flex-col">

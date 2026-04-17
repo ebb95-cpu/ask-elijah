@@ -75,6 +75,8 @@ function timeAgo(iso: string | null): string {
   return `${mo}mo ago`
 }
 
+type KbQuote = { text: string; source_title: string; source_url: string | null }
+
 export default function ReturningDashboard({
   email,
   trending,
@@ -90,6 +92,9 @@ export default function ReturningDashboard({
   const [loading, setLoading] = useState(true)
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set())
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  // Variable-reward slot: one Craig Manning quote tied to the student's most
+  // recent question. Changes every visit — Nir Eyal's stickiness principle.
+  const [kbQuote, setKbQuote] = useState<KbQuote | null>(null)
 
   // Hydrate viewed-set from localStorage on mount.
   useEffect(() => {
@@ -121,6 +126,24 @@ export default function ReturningDashboard({
     () => questions.filter((q) => q.status === 'approved' && !viewedIds.has(q.id)).length,
     [questions, viewedIds]
   )
+
+  // Fetch a Craig Manning quote once we know the student's most recent topic.
+  useEffect(() => {
+    const topic = questions[0]?.question
+    if (!topic) return
+    let cancelled = false
+    fetch(`/api/kb-quote?topic=${encodeURIComponent(topic)}`)
+      .then((r) => r.json())
+      .then((d: KbQuote) => {
+        if (!cancelled && d?.text) setKbQuote(d)
+      })
+      .catch(() => {
+        /* fallback handled by API */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [questions])
 
   const handleExpand = useCallback((q: MyQuestion) => {
     if (q.status !== 'approved') return
@@ -163,6 +186,36 @@ export default function ReturningDashboard({
           Ask Elijah →
         </button>
       </div>
+
+      {/* Variable-reward slot — Craig Manning quote tied to last topic. */}
+      {kbQuote && (
+        <section className="border border-gray-900 bg-gray-950/50 rounded-lg px-5 py-4">
+          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">
+            One thing to chew on
+          </p>
+          <p className="text-base text-gray-200 leading-relaxed italic mb-2">
+            &ldquo;{kbQuote.text}&rdquo;
+          </p>
+          <p className="text-xs text-gray-600">
+            — Dr. Craig Manning
+            {kbQuote.source_url ? (
+              <>
+                {' · '}
+                <a
+                  href={kbQuote.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-500 hover:text-white transition-colors"
+                >
+                  {kbQuote.source_title}
+                </a>
+              </>
+            ) : (
+              <>{' · '}{kbQuote.source_title}</>
+            )}
+          </p>
+        </section>
+      )}
 
       {/* Your questions */}
       <section>
