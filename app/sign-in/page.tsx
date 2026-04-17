@@ -1,10 +1,11 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
+import { setLocal } from '@/lib/safe-storage'
 
 function Logo() {
   return (
@@ -28,6 +29,20 @@ export default function SignInPage() {
   const [error, setError] = useState('')
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const router = useRouter()
+  // The admin simulator loads this page with ?simulated=1 inside an iframe.
+  // In that mode we skip Supabase magic-link entirely — any email is
+  // "accepted" so the admin can see the signed-in student experience without
+  // actually sending real emails or hitting auth.
+  const searchParams = useSearchParams()
+  const simulated = searchParams?.get('simulated') === '1'
+
+  // In simulator mode, prefill a dummy email + auto-tick the age checkbox so
+  // the admin can just hit the button to "sign in" without typing anything.
+  useEffect(() => {
+    if (!simulated) return
+    setEmail('student@example.com')
+    setAgeConfirmed(true)
+  }, [simulated])
 
   const handleEmailNext = async () => {
     if (!email.trim()) return
@@ -55,6 +70,19 @@ export default function SignInPage() {
 
   const handleSendLink = async () => {
     setLoading(true)
+    // Simulator short-circuit: we don't want the iframe to actually call
+    // Supabase and burn a real magic-link email. Persist the email in
+    // localStorage (matches what /ask reads back for the display name) and
+    // jump straight to /ask so the admin can see the logged-in state.
+    if (simulated) {
+      try {
+        setLocal('ask_elijah_email', email.trim().toLowerCase())
+      } catch {
+        /* localStorage blocked — still navigate */
+      }
+      router.push('/ask?simulated=1')
+      return
+    }
     try {
       const supabase = getSupabaseClient()
       const { error: authError } = await supabase.auth.signInWithOtp({
@@ -114,6 +142,13 @@ export default function SignInPage() {
           {/* Step 1: Email */}
           {step === 'email' && (
             <>
+              {simulated && (
+                <div className="mb-6 rounded-md border border-amber-900/70 bg-amber-950/30 px-3 py-2 text-center">
+                  <p className="text-[11px] text-amber-300 uppercase tracking-widest">
+                    Simulator mode · any email works · no real email is sent
+                  </p>
+                </div>
+              )}
               <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 text-center">Connect the dots</p>
               <h1 className="text-3xl font-bold text-center mb-4 leading-tight">Something&apos;s been on your mind.</h1>
               <p className="text-gray-500 text-sm text-center mb-10 leading-relaxed">
@@ -151,7 +186,13 @@ export default function SignInPage() {
                 disabled={!email.trim() || loading || (!isAdmin && !ageConfirmed)}
                 className="w-full bg-white text-black py-3 text-sm font-semibold tracking-tight disabled:opacity-30 hover:opacity-80 transition-opacity"
               >
-                {loading ? 'Sending...' : isAdmin ? 'Continue →' : 'Send my link →'}
+                {loading
+                  ? 'Sending...'
+                  : isAdmin
+                    ? 'Continue →'
+                    : simulated
+                      ? 'Simulated sign in →'
+                      : 'Send my link →'}
               </button>
 
               {/* Always-visible admin path. Sign-in is mainly for regular
