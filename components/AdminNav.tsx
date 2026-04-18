@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react'
 const ITEMS: Array<{ href: string; label: string }> = [
   { href: '/admin/questions', label: 'Question Queue' },
   { href: '/admin/kb-sources', label: 'Knowledge Base' },
+  { href: '/admin/pain-research', label: 'Pain Research' },
   { href: '/admin/simulate', label: 'Student Simulator' },
 ]
 
