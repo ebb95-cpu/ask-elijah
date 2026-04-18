@@ -93,7 +93,7 @@ const STRUGGLES = [
   "Dealing with a tough coach",
 ]
 
-type Mode = 'input' | 'email_gate' | 'clarifying' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt' | 'beta_full' | 'dashboard' | 'unread_hero' | 'pending_wait'
+type Mode = 'input' | 'email_gate' | 'clarifying' | 'loading' | 'onboarding' | 'submitted' | 'returning' | 'upvote_prompt' | 'beta_full' | 'dashboard' | 'unread_hero' | 'pending_wait' | 'welcome_back'
 
 type JournalEntry = {
   id: string
@@ -522,7 +522,13 @@ function AskPageInner() {
           answered_at: string | null
           has_reflection: boolean
         }> = d.questions || []
-        if (all.length === 0) return
+        if (all.length === 0) {
+          // Second visit but they never asked anything — acknowledge them
+          // instead of showing the same cold-start chips as visit 1.
+          setEmail(storedEmail)
+          setMode('welcome_back')
+          return
+        }
 
         // Viewed-set is localStorage-tracked by ReturningDashboard. Anything
         // approved not in that set is "unread" from the student's POV.
@@ -1168,6 +1174,67 @@ function AskPageInner() {
         onComplete={handleProfileComplete}
         onSkip={handleProfileSkip}
       />
+    )
+  }
+
+  // Second-visit edge case: they signed in before but never actually asked
+  // a question. The default "Ask anything" screen would be identical to what
+  // they saw on visit 1 — which breaks habit formation (app has amnesia).
+  // Show a tight welcome that acknowledges them and points at trending peer
+  // questions as the nudge to actually ask this time.
+  if (mode === 'welcome_back') {
+    const firstName = (email || '').split('@')[0].split(/[._-]/)[0] || 'there'
+    const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1)
+    return (
+      <div className="min-h-[100dvh] bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-5 py-4 md:px-6 md:py-5 shrink-0">
+          <Link href="/" className="text-gray-500 hover:text-white transition-colors text-sm">
+            ← Home
+          </Link>
+          <Logo dark />
+          <div className="w-16" />
+        </nav>
+        <div className="flex-1 overflow-y-auto px-5 md:px-6 pb-16">
+          <div className="max-w-2xl mx-auto pt-8">
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">Welcome back, {displayName}.</h1>
+            <p className="text-sm text-gray-500 mb-8">
+              Last time you looked around but didn&apos;t ask. What&apos;s been sitting on your mind?
+            </p>
+
+            <button
+              onClick={() => {
+                setShowSuggestions(false)
+                setMode('input')
+                setTimeout(() => textareaRef.current?.focus(), 50)
+              }}
+              className="bg-white text-black text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-80 transition-opacity mb-10"
+            >
+              Ask Elijah →
+            </button>
+
+            {topQuestions.length > 0 && (
+              <div className="border-t border-gray-900 pt-8">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-4">
+                  Other players are asking
+                </p>
+                <ul className="flex flex-col gap-1">
+                  {topQuestions.slice(0, 5).map((t) => (
+                    <li key={t.id}>
+                      <Link
+                        href={`/browse?q=${encodeURIComponent(t.question)}`}
+                        className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-gray-950 transition-colors"
+                      >
+                        <span className="text-xs text-gray-600 mt-0.5 shrink-0 w-8">↑ {t.upvote_count}</span>
+                        <span className="text-sm text-gray-300 leading-snug">{t.question}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     )
   }
 
