@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import { usePostHog } from 'posthog-js/react'
+import ThumbsFeedback from '@/components/ThumbsFeedback'
 
 type Question = {
   id: string
@@ -247,6 +248,13 @@ export default function HistoryPage() {
               <p className="text-base leading-relaxed text-gray-200 whitespace-pre-wrap">
                 {openQuestion.answer}
               </p>
+              {/* Answer feedback — only for approved answers. Silent thumbs-up,
+                  thumbs-down prompts for a comment that emails Elijah. */}
+              {openQuestion.status === 'approved' && (
+                <div className="mt-5 pt-4 border-t border-gray-900">
+                  <ThumbsFeedback questionId={openQuestion.id} email={userEmail} />
+                </div>
+              )}
             </div>
 
             {/* Sources */}

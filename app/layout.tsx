@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import ErrorCatcher from "@/components/ErrorCatcher";
+import BugReportButton from "@/components/BugReportButton";
 
 export const metadata: Metadata = {
   title: "Ask Elijah",
@@ -27,6 +28,10 @@ export default function RootLayout({
             candidate culprits in the last crash hunt. */}
         <ErrorCatcher />
         {children}
+        {/* Floating "Something broken?" button. Hides itself on /admin/*
+            and inside the student simulator iframe so bug reports only
+            come from real users on real pages. */}
+        <BugReportButton />
       </body>
     </html>
   );
