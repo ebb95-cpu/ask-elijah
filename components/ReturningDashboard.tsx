@@ -77,11 +77,16 @@ function timeAgo(iso: string | null): string {
 
 export default function ReturningDashboard({
   email,
+  firstName,
   trending,
   onAsk,
   onContinueThread,
 }: {
   email: string
+  // Real first name from the student's profile. Null when we don't have
+  // one — in that case we skip the "Welcome back, X" pattern rather than
+  // faking a name from the email prefix.
+  firstName: string | null
   trending: TrendingQuestion[]
   onAsk: () => void
   onContinueThread: (priorQuestion: string) => void
@@ -135,8 +140,7 @@ export default function ReturningDashboard({
     }
   }, [viewedIds])
 
-  const firstName = email.split('@')[0].split(/[._-]/)[0]
-  const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1)
+  const greeting = firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'
 
   return (
     <div className="w-full max-w-2xl mx-auto px-5 md:px-6 py-6 md:py-8 flex flex-col gap-8">
@@ -144,7 +148,7 @@ export default function ReturningDashboard({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold leading-tight mb-1">
-            Welcome back, {displayName}.
+            {greeting}
           </h1>
           {unreadCount > 0 ? (
             <p className="text-sm text-emerald-400">

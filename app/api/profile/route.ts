@@ -8,13 +8,18 @@ export async function GET(req: NextRequest) {
   const email = req.nextUrl.searchParams.get('email')
   if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
   const supabase = getSupabase()
-  // Only return non-sensitive fields — never subscription_status or stripe data
+  // Pull both the canonical first_name column AND the legacy `name` column —
+  // older onboarding flows wrote to the latter, so we coalesce to whichever
+  // is populated and expose a single first_name field to every caller.
   const { data } = await supabase
     .from('profiles')
-    .select('email, position, level, country, challenge, first_name')
+    .select('email, position, level, country, challenge, first_name, name')
     .eq('email', email.toLowerCase())
     .single()
-  return NextResponse.json(data || {})
+  if (!data) return NextResponse.json({})
+  const { name, ...rest } = data as { name?: string | null } & Record<string, unknown>
+  const merged = { ...rest, first_name: data.first_name || name || null }
+  return NextResponse.json(merged)
 }
 
 export async function POST(req: NextRequest) {

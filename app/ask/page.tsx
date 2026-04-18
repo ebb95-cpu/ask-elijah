@@ -364,6 +364,9 @@ function AskPageInner() {
   // Most-recent journal entry — drives the decision to land on the
   // returning-user dashboard vs the cold input chip-picker.
   const [lastEntry, setLastEntry] = useState<JournalEntry | null>(null)
+  // Student's actual first name, pulled from the profile so the welcome
+  // modes can say "Welcome back, Eli" instead of guessing from the email.
+  const [profileFirstName, setProfileFirstName] = useState<string | null>(null)
   const [draftAnswer, setDraftAnswer] = useState('')
   const [betaSpotsLeft, setBetaSpotsLeft] = useState<number | null>(null)
   const [waitlistEmail, setWaitlistEmail] = useState('')
@@ -495,6 +498,22 @@ function AskPageInner() {
       .catch(() => {})
   }, [])
 
+
+  // Fetch the student's first name once the stored email is known so every
+  // returning-user screen can greet them by their actual name rather than
+  // faking it from the email prefix.
+  useEffect(() => {
+    const storedEmail = getLocal('ask_elijah_email')
+    if (!storedEmail) return
+    let cancelled = false
+    fetch(`/api/profile?email=${encodeURIComponent(storedEmail)}`)
+      .then((r) => r.json())
+      .then((d: { first_name?: string | null }) => {
+        if (!cancelled && d?.first_name) setProfileFirstName(d.first_name)
+      })
+      .catch(() => { /* ignore */ })
+    return () => { cancelled = true }
+  }, [])
 
   // Hooked-style routing for returning users. Priority order (Nir Eyal's
   // "deliver the reward before asking for more investment"):
@@ -729,7 +748,10 @@ function AskPageInner() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               email: savedEmail,
-              name: onboardName,
+              // Canonical field is first_name — used by crons, home, ask API,
+              // and the returning-user welcome modes. Legacy `name` column
+              // still works but first_name is the source of truth.
+              first_name: onboardName,
               position: onboardPosition,
               level: onboardLevel,
               challenge: onboardChallenge,
@@ -1183,8 +1205,12 @@ function AskPageInner() {
   // Show a tight welcome that acknowledges them and points at trending peer
   // questions as the nudge to actually ask this time.
   if (mode === 'welcome_back') {
-    const firstName = (email || '').split('@')[0].split(/[._-]/)[0] || 'there'
-    const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1)
+    // Prefer the real name from their profile. If missing, show a clean
+    // "Welcome back." without a fake name — the email-prefix guess ("Ebb95")
+    // felt robotic and undercut the warmth the greeting is supposed to land.
+    const greeting = profileFirstName
+      ? `Welcome back, ${profileFirstName}.`
+      : 'Welcome back.'
     return (
       <div className="min-h-[100dvh] bg-black text-white flex flex-col">
         <nav className="flex items-center justify-between px-5 py-4 md:px-6 md:py-5 shrink-0">
@@ -1196,7 +1222,7 @@ function AskPageInner() {
         </nav>
         <div className="flex-1 overflow-y-auto px-5 md:px-6 pb-16">
           <div className="max-w-2xl mx-auto pt-8">
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">Welcome back, {displayName}.</h1>
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">{greeting}</h1>
             <p className="text-sm text-gray-500 mb-8">
               Last time you looked around but didn&apos;t ask. What&apos;s been sitting on your mind?
             </p>
@@ -1423,6 +1449,7 @@ function AskPageInner() {
         <div className="flex-1 overflow-y-auto">
           <ReturningDashboard
             email={email || getLocal('ask_elijah_email') || ''}
+            firstName={profileFirstName}
             trending={topQuestions}
             onAsk={() => {
               setMode('input')
