@@ -104,7 +104,7 @@ export default function HomePage() {
         {/* Locker room message */}
         <div className="bg-black text-white p-6 mb-8 text-sm leading-relaxed">
           <p className="mb-2">You're in the locker room. Athletes are waiting on the bench for your spot.</p>
-          <p>Ask questions. Act on the answers. <span className="font-semibold">Build faith and consistency.</span></p>
+          <p>Ask questions. Act on the answers. <span className="font-semibold">Build Faith + Consistency.</span></p>
         </div>
 
         {/* Ask box */}

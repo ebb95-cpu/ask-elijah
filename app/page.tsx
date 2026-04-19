@@ -500,7 +500,7 @@ export default function HomePage() {
             {hiddenText && (
               <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
                 <p className="text-white font-semibold text-base">Get Elijah's answer</p>
-                <p className="text-gray-500 text-sm leading-relaxed">You'll also be joined to the Consistency Club — his weekly newsletter on building your faith and consistency on and off the court.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">You'll also be joined to the Consistency Club — his weekly newsletter on building your Faith + Consistency on and off the court.</p>
                 <input
                   type="email"
                   placeholder="your@email.com"
