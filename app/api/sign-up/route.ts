@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
+import { verifyEmail } from '@/lib/email-verify'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -13,6 +14,15 @@ export async function POST(req: NextRequest) {
 
   const cleanEmail = email.trim().toLowerCase()
   const cleanFirstName = firstName.trim()
+
+  // Verify email is deliverable before we create an account or send mail.
+  // Protects Resend sender reputation from bouncing welcome emails to fake
+  // addresses.
+  const verify = await verifyEmail(cleanEmail)
+  if (!verify.ok) {
+    return NextResponse.json({ error: verify.reason }, { status: 400 })
+  }
+
   const supabase = getSupabase()
 
   const { data, error } = await supabase.auth.admin.createUser({
