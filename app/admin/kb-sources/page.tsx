@@ -66,13 +66,10 @@ export default function AdminKbSourcesPage() {
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<string>('all')
   const [search, setSearch] = useState('')
-  const [backfilling, setBackfilling] = useState(false)
-  const [refreshingTitles, setRefreshingTitles] = useState(false)
-  const [ingestingNewsletters, setIngestingNewsletters] = useState(false)
-  const [backfillingDates, setBackfillingDates] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const fetchedThumbsRef = useRef<Set<string>>(new Set())
+  const autoHealedRef = useRef(false)
 
   // Test query panel state
   const [testOpen, setTestOpen] = useState(false)
@@ -140,113 +137,70 @@ export default function AdminKbSourcesPage() {
     })
   }, [data])
 
-  async function backfillPublishDates() {
-    if (backfillingDates) return
-    setBackfillingDates(true)
-    try {
-      const totals = { updated: 0, failed: 0 }
-      let after: string | null = null
-      for (let iter = 0; iter < 20; iter++) {
-        setToast(
-          `Backfilling publish dates — so far: ${totals.updated} fixed, ${totals.failed} skipped...`,
-        )
-        const url =
-          '/api/admin/kb-sources/backfill-published-at' +
-          (after ? `?after=${encodeURIComponent(after)}` : '')
-        const res = await fetch(url, { method: 'POST' })
-        const json = await res.json()
-        if (!res.ok) throw new Error(json.error || `${res.status}`)
-        totals.updated += json.updated || 0
-        totals.failed += json.failed || 0
-        if (!json.partial) {
-          setToast(`Publish dates done: ${totals.updated} fixed, ${totals.failed} couldn't be resolved.`)
-          break
+  // Silent auto-heal: runs at most once per page load when data shows
+  // anything that needs fixing. User never sees a button for these — the
+  // weekly ingest cron handles steady-state, this just repairs one-time
+  // historical gaps (old "Video <id>" titles, missing publish dates,
+  // zero newsletters because the archive never got pulled).
+  useEffect(() => {
+    if (!data?.sources || autoHealedRef.current) return
+    autoHealedRef.current = true
+
+    const needsTitleFix = data.sources.some(
+      (s) => s.source_type === 'youtube' && /^Video [A-Za-z0-9_-]{11}$/.test(s.source_title),
+    )
+    const needsDateBackfill = data.sources.some((s) => !s.published_at)
+    const noNewsletters = !data.sources.some((s) => s.source_type === 'newsletter')
+
+    ;(async () => {
+      let changed = false
+      if (needsTitleFix) {
+        try {
+          const r = await fetch('/api/admin/kb-sources/refresh-youtube-titles', { method: 'POST' })
+          if (r.ok) changed = true
+        } catch {
+          /* silent */
         }
-        after = json.nextAfter
       }
-      await load()
-    } catch (e) {
-      setToast(`Publish date backfill failed: ${e instanceof Error ? e.message : 'unknown'}`)
-    } finally {
-      setBackfillingDates(false)
-      setTimeout(() => setToast(null), 10000)
-    }
-  }
-
-  async function ingestAllNewsletters() {
-    if (ingestingNewsletters) return
-    setIngestingNewsletters(true)
-    try {
-      let page = 1
-      const totals = { ingested: 0, skipped: 0, errors: 0, totalSeen: 0 }
-      for (let iter = 0; iter < 20; iter++) {
-        setToast(
-          `Pulling newsletters from Beehiiv (page ${page}) — so far: ${totals.ingested} new, ${totals.skipped} already had, ${totals.errors} errors.`,
-        )
-        const res = await fetch(
-          `/api/admin/kb-sources/ingest-all-newsletters?page=${page}`,
-          { method: 'POST' },
-        )
-        const json = await res.json()
-        if (!res.ok) throw new Error(json.error || `${res.status}`)
-        totals.ingested += json.ingested || 0
-        totals.skipped += json.skipped || 0
-        totals.errors += json.errors || 0
-        totals.totalSeen += json.totalSeen || 0
-        if (!json.partial) {
-          setToast(
-            `Done: ${totals.ingested} new newsletters, ${totals.skipped} already ingested, ${totals.errors} errors (${totals.totalSeen} total scanned).`,
-          )
-          break
+      if (noNewsletters) {
+        try {
+          let page = 1
+          for (let i = 0; i < 20; i++) {
+            const r = await fetch(
+              `/api/admin/kb-sources/ingest-all-newsletters?page=${page}`,
+              { method: 'POST' },
+            )
+            if (!r.ok) break
+            const j = await r.json()
+            if ((j.ingested || 0) > 0) changed = true
+            if (!j.partial) break
+            page = j.nextPage || page + 1
+          }
+        } catch {
+          /* silent */
         }
-        page = json.nextPage
       }
-      await load()
-    } catch (e) {
-      setToast(`Newsletter ingest failed: ${e instanceof Error ? e.message : 'unknown'}`)
-    } finally {
-      setIngestingNewsletters(false)
-      setTimeout(() => setToast(null), 10000)
-    }
-  }
-
-  async function refreshYoutubeTitles() {
-    if (refreshingTitles) return
-    setRefreshingTitles(true)
-    setToast('Fetching real YouTube titles from oEmbed...')
-    try {
-      const res = await fetch('/api/admin/kb-sources/refresh-youtube-titles', { method: 'POST' })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || `${res.status}`)
-      setToast(
-        `Titles refreshed: ${json.updated} fixed, ${json.failed} failed (${json.checked} checked).`,
-      )
-      await load()
-    } catch (e) {
-      setToast(`Refresh failed: ${e instanceof Error ? e.message : 'unknown'}`)
-    } finally {
-      setRefreshingTitles(false)
-      setTimeout(() => setToast(null), 6000)
-    }
-  }
-
-  async function runBackfill() {
-    if (backfilling) return
-    setBackfilling(true)
-    setToast('Backfilling from Pinecone — this can take a minute...')
-    try {
-      const res = await fetch('/api/admin/kb-sources/backfill', { method: 'POST' })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || `${res.status}`)
-      setToast(`Backfill done: ${json.inserted} inserted, ${json.updated} updated, ${json.skipped} skipped.`)
-      await load()
-    } catch (e) {
-      setToast(`Backfill failed: ${e instanceof Error ? e.message : 'unknown'}`)
-    } finally {
-      setBackfilling(false)
-      setTimeout(() => setToast(null), 6000)
-    }
-  }
+      if (needsDateBackfill) {
+        try {
+          let after: string | null = null
+          for (let i = 0; i < 20; i++) {
+            const url =
+              '/api/admin/kb-sources/backfill-published-at' +
+              (after ? `?after=${encodeURIComponent(after)}` : '')
+            const r = await fetch(url, { method: 'POST' })
+            if (!r.ok) break
+            const j = await r.json()
+            if ((j.updated || 0) > 0) changed = true
+            if (!j.partial) break
+            after = j.nextAfter
+          }
+        } catch {
+          /* silent */
+        }
+      }
+      if (changed) await load()
+    })()
+  }, [data])
 
   async function deleteSource(s: KbSource) {
     if (busyId) return
@@ -343,69 +297,6 @@ export default function AdminKbSourcesPage() {
             }}
           >
             {testOpen ? 'Hide test query' : 'Test query'}
-          </button>
-          <button
-            onClick={backfillPublishDates}
-            disabled={backfillingDates}
-            title="Fill in publish dates for rows missing them (Beehiiv for newsletters, YouTube page scrape for videos)"
-            style={{
-              fontSize: '12px',
-              padding: '6px 12px',
-              background: '#1a1a1a',
-              color: backfillingDates ? '#555555' : '#ffffff',
-              border: '1px solid #333333',
-              borderRadius: '4px',
-              cursor: backfillingDates ? 'wait' : 'pointer',
-            }}
-          >
-            {backfillingDates ? 'Fixing dates...' : 'Backfill publish dates'}
-          </button>
-          <button
-            onClick={ingestAllNewsletters}
-            disabled={ingestingNewsletters}
-            title="Paginate through every Beehiiv post and embed any not yet in Pinecone"
-            style={{
-              fontSize: '12px',
-              padding: '6px 12px',
-              background: '#1a1a1a',
-              color: ingestingNewsletters ? '#555555' : '#ffffff',
-              border: '1px solid #333333',
-              borderRadius: '4px',
-              cursor: ingestingNewsletters ? 'wait' : 'pointer',
-            }}
-          >
-            {ingestingNewsletters ? 'Pulling...' : 'Pull all newsletters'}
-          </button>
-          <button
-            onClick={refreshYoutubeTitles}
-            disabled={refreshingTitles}
-            title="Fix YouTube rows whose title is 'Video <id>'"
-            style={{
-              fontSize: '12px',
-              padding: '6px 12px',
-              background: '#1a1a1a',
-              color: refreshingTitles ? '#555555' : '#ffffff',
-              border: '1px solid #333333',
-              borderRadius: '4px',
-              cursor: refreshingTitles ? 'wait' : 'pointer',
-            }}
-          >
-            {refreshingTitles ? 'Refreshing...' : 'Refresh YouTube titles'}
-          </button>
-          <button
-            onClick={runBackfill}
-            disabled={backfilling}
-            style={{
-              fontSize: '12px',
-              padding: '6px 12px',
-              background: '#1a1a1a',
-              color: backfilling ? '#555555' : '#ffffff',
-              border: '1px solid #333333',
-              borderRadius: '4px',
-              cursor: backfilling ? 'wait' : 'pointer',
-            }}
-          >
-            {backfilling ? 'Backfilling...' : 'Backfill from Pinecone'}
           </button>
           <button
             onClick={load}
