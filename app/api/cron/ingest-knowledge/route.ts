@@ -250,7 +250,35 @@ async function getRecentVideosFromRSS(channelId: string): Promise<{ videoId: str
     const titleMatch = entry.match(/<media:title[^>]*>([^<]+)<\/media:title>/) || entry.match(/<title>([^<]+)<\/title>/)
     if (idMatch) videos.push({ videoId: idMatch[1], title: titleMatch?.[1] || '' })
   }
+
+  // If any titles came back empty, fill them in from YouTube's oEmbed
+  // endpoint so we don't end up storing "Video <id>" placeholders.
+  const missing = videos.filter((v) => !v.title)
+  if (missing.length > 0) {
+    await Promise.all(
+      missing.map(async (v) => {
+        v.title = (await fetchYouTubeTitle(v.videoId)) || ''
+      }),
+    )
+  }
   return videos
+}
+
+async function fetchYouTubeTitle(videoId: string): Promise<string | null> {
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=https://youtu.be/${videoId}&format=json`,
+      { signal: controller.signal },
+    )
+    clearTimeout(timeout)
+    if (!res.ok) return null
+    const data = (await res.json()) as { title?: string }
+    return data.title || null
+  } catch {
+    return null
+  }
 }
 
 async function isAlreadyIngested(videoId: string): Promise<boolean> {

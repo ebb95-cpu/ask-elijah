@@ -66,6 +66,7 @@ export default function AdminKbSourcesPage() {
   const [tab, setTab] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [backfilling, setBackfilling] = useState(false)
+  const [refreshingTitles, setRefreshingTitles] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const fetchedThumbsRef = useRef<Set<string>>(new Set())
@@ -135,6 +136,26 @@ export default function AdminKbSourcesPage() {
         .catch(() => {})
     })
   }, [data])
+
+  async function refreshYoutubeTitles() {
+    if (refreshingTitles) return
+    setRefreshingTitles(true)
+    setToast('Fetching real YouTube titles from oEmbed...')
+    try {
+      const res = await fetch('/api/admin/kb-sources/refresh-youtube-titles', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || `${res.status}`)
+      setToast(
+        `Titles refreshed: ${json.updated} fixed, ${json.failed} failed (${json.checked} checked).`,
+      )
+      await load()
+    } catch (e) {
+      setToast(`Refresh failed: ${e instanceof Error ? e.message : 'unknown'}`)
+    } finally {
+      setRefreshingTitles(false)
+      setTimeout(() => setToast(null), 6000)
+    }
+  }
 
   async function runBackfill() {
     if (backfilling) return
@@ -249,6 +270,22 @@ export default function AdminKbSourcesPage() {
             }}
           >
             {testOpen ? 'Hide test query' : 'Test query'}
+          </button>
+          <button
+            onClick={refreshYoutubeTitles}
+            disabled={refreshingTitles}
+            title="Fix YouTube rows whose title is 'Video <id>'"
+            style={{
+              fontSize: '12px',
+              padding: '6px 12px',
+              background: '#1a1a1a',
+              color: refreshingTitles ? '#555555' : '#ffffff',
+              border: '1px solid #333333',
+              borderRadius: '4px',
+              cursor: refreshingTitles ? 'wait' : 'pointer',
+            }}
+          >
+            {refreshingTitles ? 'Refreshing...' : 'Refresh YouTube titles'}
           </button>
           <button
             onClick={runBackfill}
