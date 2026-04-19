@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
           <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">${firstName}.</p>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-            First round is full. Faith and consistency aren't built fast. You're in the locker room. Your number gets called when we tip off the next game.
+            First round is full. Faith + Consistency aren't built fast. You're in the locker room. Your number gets called when we tip off the next game.
           </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
