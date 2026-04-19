@@ -40,14 +40,18 @@ export default function SignUpPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { first_name: firstName } },
+      options: {
+        data: { first_name: firstName },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/home`,
+      },
     })
 
     if (error) {
       setError(error.message)
       setLoading(false)
     } else if (data.user) {
-      router.push('/home')
+      // Email confirmation required - user will be redirected via email link
+      router.push('/ask')
     }
   }
 
