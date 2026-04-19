@@ -50,7 +50,7 @@ export default function SignUpPage() {
     if (error) {
       setError(error.message)
       setLoading(false)
-    } else if (data.user) {
+    } else {
       // Email confirmation required - user will be redirected via email link
       router.push('/ask')
     }
