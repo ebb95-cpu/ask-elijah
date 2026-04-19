@@ -17,6 +17,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Email and name are required' }, { status: 400 })
   }
 
+  if (process.env.SIGNUP_CLOSES_AT && new Date() > new Date(process.env.SIGNUP_CLOSES_AT)) {
+    return NextResponse.json({ error: 'Signups are now closed' }, { status: 403 })
+  }
+
   const cleanEmail = email.trim().toLowerCase()
 
   // Upsert — if they already signed up, just return ok (don't send another confirmation)
