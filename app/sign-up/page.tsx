@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from '@/lib/supabase-client'
 
 function Logo() {
   return (
@@ -26,14 +26,6 @@ export default function SignUpPage() {
   const [error, setError] = useState('')
   const router = useRouter()
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-        <p className="text-red-500">Configuration error: Missing Supabase credentials</p>
-      </div>
-    )
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password || !firstName) return
@@ -41,30 +33,21 @@ export default function SignUpPage() {
     setError('')
 
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
+      const supabase = getSupabaseClient()
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
-      const { data, error } = await supabase.auth.signUp({
-        email,
+      const { error: authError } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
         password,
         options: {
-          data: { first_name: firstName },
+          data: { first_name: firstName.trim() },
           emailRedirectTo: `${siteUrl}/auth/callback?next=/home`,
         },
       })
 
-      if (error) {
-        setError(error.message)
-        setLoading(false)
-      } else {
-        // Email confirmation required - user will be redirected via email link
-        router.push('/ask')
-      }
-    } catch (err: any) {
-      setError(err?.message || 'An error occurred')
+      if (authError) throw authError
+      router.push('/ask')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Try again.')
       setLoading(false)
     }
   }
