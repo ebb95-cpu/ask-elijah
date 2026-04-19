@@ -19,11 +19,9 @@ function Logo() {
   )
 }
 
-type Step = 'email' | 'password' | 'sent'
+type Step = 'email' | 'password' | 'reset-sent'
+type Role = 'admin' | 'user'
 
-// useSearchParams must be wrapped in a Suspense boundary at build time or
-// Next.js bails out of prerendering. Default export provides the boundary
-// so the hook can safely run inside SignInInner.
 export default function SignInPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-black" />}>
@@ -34,22 +32,14 @@ export default function SignInPage() {
 
 function SignInInner() {
   const [step, setStep] = useState<Step>('email')
+  const [role, setRole] = useState<Role>('user')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const router = useRouter()
-  // The admin simulator loads this page with ?simulated=1 inside an iframe.
-  // In that mode we skip Supabase magic-link entirely — any email is
-  // "accepted" so the admin can see the signed-in student experience without
-  // actually sending real emails or hitting auth.
   const searchParams = useSearchParams()
-  // Simulator mode is sticky: once we detect we're inside the admin simulator
-  // iframe, every subsequent navigation (including in-app ← Back, follow-ups,
-  // etc.) stays in simulated mode even if the URL ?simulated=1 gets stripped.
-  // We detect this by checking if we're rendered inside a same-origin iframe
-  // whose parent is at /admin/simulate.
   const [simulated, setSimulated] = useState<boolean>(
     () => searchParams?.get('simulated') === '1'
   )
@@ -62,14 +52,10 @@ function SignInInner() {
       const parentPath = window.parent.location.pathname
       if (parentPath.startsWith('/admin/simulate')) setSimulated(true)
     } catch {
-      // Cross-origin iframe — not our simulator. Leave simulated false.
+      /* cross-origin iframe */
     }
   }, [simulated])
 
-  // In simulator mode, prefill an email that actually has prior questions
-  // (so the returning-user dashboard triggers) and auto-tick the age check
-  // so the admin can hit the button without typing. Admin can edit the email
-  // before submitting to preview a different student state.
   useEffect(() => {
     if (!simulated) return
     setEmail((prev) => prev || 'ebb95@mac.com')
@@ -80,80 +66,66 @@ function SignInInner() {
     if (!email.trim()) return
     setLoading(true)
     setError('')
-    // In simulator mode we're always pretending to be a student — never
-    // route admin emails (like ebb95@mac.com) to the password prompt.
+
     if (simulated) {
-      await handleSendLink()
+      try {
+        setLocal('ask_elijah_email', email.trim().toLowerCase())
+      } catch {
+        /* localStorage blocked */
+      }
+      router.push('/ask?simulated=1')
       return
     }
+
     try {
-      const res = await fetch('/api/admin/check-email', {
+      const adminRes = await fetch('/api/admin/check-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
       })
-      const { isAdmin } = await res.json()
+      const { isAdmin } = await adminRes.json()
       if (isAdmin) {
+        setRole('admin')
         setStep('password')
         setLoading(false)
         return
       }
 
-      // Check if this email already has an account. If not, route them to
-      // /sign-up so we collect first name + password instead of silently
-      // creating a partial account via magic link.
-      try {
-        const checkRes = await fetch('/api/check-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim() }),
-        })
-        const { exists } = await checkRes.json()
-        if (!exists) {
-          router.push(`/sign-up?email=${encodeURIComponent(email.trim().toLowerCase())}`)
-          return
-        }
-      } catch {
-        /* fall through to magic link on lookup failure */
+      const checkRes = await fetch('/api/check-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+      const { exists } = await checkRes.json()
+
+      if (!exists) {
+        router.push(`/sign-up?email=${encodeURIComponent(email.trim().toLowerCase())}`)
+        return
       }
 
-      await handleSendLink()
+      setRole('user')
+      setStep('password')
+      setLoading(false)
     } catch {
-      await handleSendLink()
+      setError('Something went wrong. Try again.')
+      setLoading(false)
     }
   }
 
-  const isAdmin = step === 'password'
-
-  const handleSendLink = async () => {
+  const handleUserLogin = async () => {
+    if (!password.trim()) return
     setLoading(true)
-    // Simulator short-circuit: we don't want the iframe to actually call
-    // Supabase and burn a real magic-link email. Persist the email in
-    // localStorage (matches what /ask reads back for the display name) and
-    // jump straight to /ask so the admin can see the logged-in state.
-    if (simulated) {
-      try {
-        setLocal('ask_elijah_email', email.trim().toLowerCase())
-      } catch {
-        /* localStorage blocked — still navigate */
-      }
-      router.push('/ask?simulated=1')
-      return
-    }
+    setError('')
     try {
       const supabase = getSupabaseClient()
-      const { error: authError } = await supabase.auth.signInWithOtp({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/ask`,
-          shouldCreateUser: true,
-        },
+        password,
       })
-      if (authError) throw authError
-      setStep('sent')
+      if (signInError) throw signInError
+      router.push('/home')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Try again.')
-    } finally {
+      setError(err instanceof Error ? err.message : 'Wrong password.')
       setLoading(false)
     }
   }
@@ -169,8 +141,6 @@ function SignInInner() {
         body: JSON.stringify({ password }),
       })
       if (!res.ok) throw new Error('Wrong password')
-      // Hard-navigate so middleware re-evaluates with the fresh cookie.
-      // router.push can be cached by mobile Safari and bounce you back to /sign-in.
       window.location.href = '/admin/questions'
     } catch {
       setError('Wrong password.')
@@ -178,10 +148,36 @@ function SignInInner() {
     }
   }
 
+  const handlePasswordSubmit = () => {
+    if (role === 'admin') return handleAdminLogin()
+    return handleUserLogin()
+  }
+
+  const handleForgotPassword = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      })
+      if (!res.ok) {
+        const { error: apiError } = await res.json().catch(() => ({ error: 'Could not send reset link.' }))
+        throw new Error(apiError || 'Could not send reset link.')
+      }
+      setStep('reset-sent')
+      setLoading(false)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not send reset link.')
+      setLoading(false)
+    }
+  }
+
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       if (step === 'email') handleEmailNext()
-      if (step === 'password') handleAdminLogin()
+      if (step === 'password') handlePasswordSubmit()
     }
   }
 
@@ -196,7 +192,6 @@ function SignInInner() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20">
         <div className="w-full max-w-sm">
 
-          {/* Step 1: Email */}
           {step === 'email' && (
             <>
               {simulated && (
@@ -227,39 +222,26 @@ function SignInInner() {
 
               {error && <p className="text-red-400 text-xs text-center mb-4">{error}</p>}
 
-              {!isAdmin && (
-                <label className="flex items-start gap-3 mb-6 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    checked={ageConfirmed}
-                    onChange={(e) => setAgeConfirmed(e.target.checked)}
-                    className="mt-0.5 accent-white w-4 h-4 flex-shrink-0"
-                  />
-                  <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-300 transition-colors">
-                    I confirm I am 13 years of age or older. If you are under 13, please ask a parent or guardian to create an account.
-                  </span>
-                </label>
-              )}
+              <label className="flex items-start gap-3 mb-6 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={ageConfirmed}
+                  onChange={(e) => setAgeConfirmed(e.target.checked)}
+                  className="mt-0.5 accent-white w-4 h-4 flex-shrink-0"
+                />
+                <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-300 transition-colors">
+                  I confirm I am 13 years of age or older. If you are under 13, please ask a parent or guardian to create an account.
+                </span>
+              </label>
 
               <button
                 onClick={handleEmailNext}
-                disabled={!email.trim() || loading || (!isAdmin && !ageConfirmed)}
+                disabled={!email.trim() || loading || !ageConfirmed}
                 className="w-full bg-white text-black py-3 text-sm font-semibold tracking-tight disabled:opacity-30 hover:opacity-80 transition-opacity"
               >
-                {loading
-                  ? 'Sending...'
-                  : isAdmin
-                    ? 'Continue →'
-                    : simulated
-                      ? 'Simulated sign in →'
-                      : 'Send my link →'}
+                {loading ? 'Continuing...' : simulated ? 'Simulated sign in →' : 'Continue →'}
               </button>
 
-              {/* Always-visible admin path. Sign-in is mainly for regular
-                  users; admins have no reason to go through magic-link at
-                  all, so give them a direct button that bypasses the email
-                  detection (which depends on JS bundle freshness + env
-                  vars and has historically been fragile on mobile). */}
               <div className="mt-8 pt-6 border-t border-gray-900 text-center">
                 <Link
                   href="/admin/login"
@@ -271,11 +253,13 @@ function SignInInner() {
             </>
           )}
 
-          {/* Step 2: Admin password */}
           {step === 'password' && (
             <>
-              <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 text-center">Admin</p>
-              <h1 className="text-3xl font-bold text-center mb-10 leading-tight">Enter your password.</h1>
+              <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 text-center">
+                {role === 'admin' ? 'Admin' : 'Welcome back'}
+              </p>
+              <h1 className="text-3xl font-bold text-center mb-4 leading-tight">Enter your password.</h1>
+              <p className="text-gray-500 text-sm text-center mb-8 break-words">{email}</p>
 
               <input
                 type="password"
@@ -290,33 +274,42 @@ function SignInInner() {
               {error && <p className="text-red-400 text-xs text-center mb-4">{error}</p>}
 
               <button
-                onClick={handleAdminLogin}
+                onClick={handlePasswordSubmit}
                 disabled={!password.trim() || loading}
                 className="w-full bg-white text-black py-3 text-sm font-semibold tracking-tight disabled:opacity-30 hover:opacity-80 transition-opacity"
               >
                 {loading ? 'Signing in...' : 'Sign in →'}
               </button>
 
+              {role === 'user' && (
+                <button
+                  onClick={handleForgotPassword}
+                  disabled={loading}
+                  className="w-full text-xs text-gray-500 hover:text-white transition-colors mt-6 text-center"
+                >
+                  Forgot password?
+                </button>
+              )}
+
               <button
                 onClick={() => { setStep('email'); setPassword(''); setError('') }}
                 className="w-full text-xs text-gray-600 hover:text-white transition-colors mt-4 text-center"
               >
-                ← Back
+                ← Use a different email
               </button>
             </>
           )}
 
-          {/* Step 3: Magic link sent */}
-          {step === 'sent' && (
+          {step === 'reset-sent' && (
             <div className="text-center">
-              <h1 className="text-3xl font-bold mb-4">Your link is on the way.</h1>
+              <h1 className="text-3xl font-bold mb-4">Reset link is on the way.</h1>
               <p className="text-gray-500 text-sm leading-relaxed mb-2">We sent it to</p>
               <p className="text-white font-semibold mb-6">{email}</p>
               <p className="text-gray-600 text-sm leading-relaxed mb-10">
-                Click it and you&apos;re straight back in. Ask the question you&apos;ve been sitting on.
+                Click the link in the email to set a new password.
               </p>
               <button
-                onClick={() => { setStep('email'); setError('') }}
+                onClick={() => { setStep('email'); setError(''); setPassword('') }}
                 className="text-xs text-gray-600 hover:text-white transition-colors"
               >
                 Use a different email
