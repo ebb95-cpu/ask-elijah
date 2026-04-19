@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 
 // Only allow reading/writing non-sensitive profile fields
-const ALLOWED_WRITE_FIELDS = ['position', 'level', 'country', 'challenge', 'first_name', 'name', 'age', 'language']
+const ALLOWED_WRITE_FIELDS = ['position', 'level', 'country', 'challenge', 'first_name', 'name', 'age', 'language', 'timeline', 'system']
 
 export async function GET(req: NextRequest) {
   const email = req.nextUrl.searchParams.get('email')
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   // is populated and expose a single first_name field to every caller.
   const { data } = await supabase
     .from('profiles')
-    .select('email, position, level, country, challenge, first_name, name')
+    .select('email, position, level, country, challenge, first_name, name, timeline, system')
     .eq('email', email.toLowerCase())
     .single()
   if (!data) return NextResponse.json({})

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import { usePostHog } from 'posthog-js/react'
 import ThumbsFeedback from '@/components/ThumbsFeedback'
+import ProfileCapture from '@/components/ProfileCapture'
 
 type Question = {
   id: string
@@ -256,6 +257,13 @@ export default function HistoryPage() {
                 </div>
               )}
             </div>
+
+            {/* Post-answer profile capture — Hooked Investment phase. Only
+                shown after Elijah's approved answer; hides itself once the
+                user completes both stages. */}
+            {openQuestion.status === 'approved' && userEmail && (
+              <ProfileCapture email={userEmail} questionId={openQuestion.id} />
+            )}
 
             {/* Sources */}
             {openQuestion.sources && openQuestion.sources.length > 0 && (
