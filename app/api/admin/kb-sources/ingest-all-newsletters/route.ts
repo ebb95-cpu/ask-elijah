@@ -114,10 +114,12 @@ export async function POST(req: NextRequest) {
         continue
       }
 
+      const publishedAtIso = toIso(post.publish_date)
+
       const firstVectorId = `nl_${post.id}_0`
       if (await pineconeHas(firstVectorId)) {
         skipped++
-        // Still make sure the kb_sources row exists + has a thumbnail cached.
+        // Still make sure the kb_sources row exists + has a thumbnail/publish_date cached.
         await recordKbSource({
           supabase,
           source_title: post.title || 'Newsletter',
@@ -126,6 +128,7 @@ export async function POST(req: NextRequest) {
           chunk_count: 0, // unchanged unless we backfill; leave 0 as "unknown" trigger
           id_prefix: `nl_${post.id}_`,
           thumbnail_url: post.thumbnail_url || null,
+          published_at: publishedAtIso,
         })
         continue
       }
@@ -164,6 +167,7 @@ export async function POST(req: NextRequest) {
             chunk_count: vectors.length,
             id_prefix: `nl_${post.id}_`,
             thumbnail_url: post.thumbnail_url || null,
+            published_at: publishedAtIso,
           })
           ingested++
         }
@@ -197,6 +201,7 @@ async function recordKbSource(row: {
   chunk_count: number
   id_prefix: string
   thumbnail_url: string | null
+  published_at: string | null
 }) {
   const { supabase, ...data } = row
   try {
@@ -213,6 +218,7 @@ async function recordKbSource(row: {
       // Only overwrite chunk_count if the caller actually knows it (>0).
       if (data.chunk_count > 0) next.chunk_count = data.chunk_count
       if (data.thumbnail_url) next.thumbnail_url = data.thumbnail_url
+      if (data.published_at) next.published_at = data.published_at
       await supabase.from('kb_sources').update(next).eq('id', existing.id)
     } else {
       await supabase.from('kb_sources').insert({
@@ -222,11 +228,23 @@ async function recordKbSource(row: {
         chunk_count: data.chunk_count,
         id_prefix: data.id_prefix,
         thumbnail_url: data.thumbnail_url,
+        published_at: data.published_at,
       })
     }
   } catch (e) {
     console.error('recordKbSource failed:', e)
   }
+}
+
+function toIso(value: number | string | null | undefined): string | null {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'number') {
+    // Beehiiv returns unix seconds
+    const ms = value > 1e12 ? value : value * 1000
+    return new Date(ms).toISOString()
+  }
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString()
 }
 
 async function pineconeHas(vectorId: string): Promise<boolean> {

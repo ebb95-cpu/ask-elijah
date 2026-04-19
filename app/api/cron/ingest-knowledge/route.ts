@@ -16,6 +16,7 @@ async function recordKbSource(row: {
   id_prefix: string
   topic?: string | null
   level?: string | null
+  published_at?: string | null
 }): Promise<void> {
   try {
     const supabase = getSupabase()
@@ -25,10 +26,13 @@ async function recordKbSource(row: {
       .eq('id_prefix', row.id_prefix)
       .maybeSingle()
     if (existing) {
-      await supabase
-        .from('kb_sources')
-        .update({ chunk_count: row.chunk_count, source_title: row.source_title, source_url: row.source_url })
-        .eq('id', existing.id)
+      const update: Record<string, unknown> = {
+        chunk_count: row.chunk_count,
+        source_title: row.source_title,
+        source_url: row.source_url,
+      }
+      if (row.published_at) update.published_at = row.published_at
+      await supabase.from('kb_sources').update(update).eq('id', existing.id)
     } else {
       await supabase.from('kb_sources').insert({
         source_title: row.source_title,
@@ -38,6 +42,7 @@ async function recordKbSource(row: {
         id_prefix: row.id_prefix,
         topic: row.topic ?? null,
         level: row.level ?? null,
+        published_at: row.published_at ?? null,
       })
     }
   } catch (e) {
@@ -170,12 +175,23 @@ async function ingestNewsletters(): Promise<number> {
           source_url: issue.web_url || null,
           chunk_count: vectors.length,
           id_prefix: `nl_${issue.id}_`,
+          published_at: beehiivPublishToIso(issue.publish_date),
         })
       } catch (e) { console.error('Newsletter upsert error:', e) }
     }
   }
 
   return count
+}
+
+function beehiivPublishToIso(value: number | string | null | undefined): string | null {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'number') {
+    const ms = value > 1e12 ? value : value * 1000
+    return new Date(ms).toISOString()
+  }
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString()
 }
 
 // ── Lead Magnets (Beehiiv Products) ──────────────────────────────────────────
@@ -250,16 +266,23 @@ async function getChannelIdFromHandle(handle: string): Promise<string | null> {
   } catch { return null }
 }
 
-async function getRecentVideosFromRSS(channelId: string): Promise<{ videoId: string; title: string }[]> {
+async function getRecentVideosFromRSS(channelId: string): Promise<{ videoId: string; title: string; publishedAt: string | null }[]> {
   const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`)
   if (!res.ok) throw new Error(`RSS ${res.status}`)
   const xml = await res.text()
-  const videos: { videoId: string; title: string }[] = []
+  const videos: { videoId: string; title: string; publishedAt: string | null }[] = []
   const entries = xml.match(/<entry>[\s\S]*?<\/entry>/g) || []
   for (const entry of entries) {
     const idMatch = entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)
     const titleMatch = entry.match(/<media:title[^>]*>([^<]+)<\/media:title>/) || entry.match(/<title>([^<]+)<\/title>/)
-    if (idMatch) videos.push({ videoId: idMatch[1], title: titleMatch?.[1] || '' })
+    const publishedMatch = entry.match(/<published>([^<]+)<\/published>/)
+    if (idMatch) {
+      videos.push({
+        videoId: idMatch[1],
+        title: titleMatch?.[1] || '',
+        publishedAt: publishedMatch?.[1] || null,
+      })
+    }
   }
 
   // If any titles came back empty, fill them in from YouTube's oEmbed
@@ -333,12 +356,12 @@ async function ingestYouTube(): Promise<number> {
     const channelId = await getChannelIdFromHandle(channel.handle)
     if (!channelId) { console.error(`Could not get channel ID for @${channel.handle}`); continue }
 
-    let videos: { videoId: string; title: string }[]
+    let videos: { videoId: string; title: string; publishedAt: string | null }[]
     try {
       videos = await getRecentVideosFromRSS(channelId)
     } catch (e) { console.error(`RSS failed for @${channel.handle}:`, e); continue }
 
-    for (const { videoId, title } of videos) {
+    for (const { videoId, title, publishedAt } of videos) {
       // Skip Shorts
       if (/shorts?/i.test(title) || title.startsWith('#')) continue
 
@@ -387,6 +410,7 @@ async function ingestYouTube(): Promise<number> {
             source_url: `https://youtube.com/watch?v=${videoId}`,
             chunk_count: vectors.length,
             id_prefix: `yt_${videoId}_`,
+            published_at: publishedAt,
           })
           console.log(`✅ ${title || videoId} — ${vectors.length} chunks`)
         } catch (e) { console.error('YouTube upsert error:', e) }

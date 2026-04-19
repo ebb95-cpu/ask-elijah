@@ -14,9 +14,10 @@ export async function GET(_req: NextRequest) {
   const supabase = getSupabase()
   const { data, error } = await supabase
     .from('kb_sources')
-    .select('id, source_title, source_type, source_url, topic, level, chunk_count, created_at, thumbnail_url, id_prefix')
+    .select('id, source_title, source_type, source_url, topic, level, chunk_count, created_at, thumbnail_url, id_prefix, published_at')
+    .order('published_at', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
-    .limit(200)
+    .limit(500)
 
   if (error) return NextResponse.json({ error: 'Fetch failed' }, { status: 500 })
 

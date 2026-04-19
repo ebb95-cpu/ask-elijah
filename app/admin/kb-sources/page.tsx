@@ -14,6 +14,7 @@ interface KbSource {
   created_at: string
   thumbnail_url: string | null
   id_prefix: string | null
+  published_at: string | null
 }
 
 interface KbSourcesResponse {
@@ -68,6 +69,7 @@ export default function AdminKbSourcesPage() {
   const [backfilling, setBackfilling] = useState(false)
   const [refreshingTitles, setRefreshingTitles] = useState(false)
   const [ingestingNewsletters, setIngestingNewsletters] = useState(false)
+  const [backfillingDates, setBackfillingDates] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const fetchedThumbsRef = useRef<Set<string>>(new Set())
@@ -137,6 +139,39 @@ export default function AdminKbSourcesPage() {
         .catch(() => {})
     })
   }, [data])
+
+  async function backfillPublishDates() {
+    if (backfillingDates) return
+    setBackfillingDates(true)
+    try {
+      const totals = { updated: 0, failed: 0 }
+      let after: string | null = null
+      for (let iter = 0; iter < 20; iter++) {
+        setToast(
+          `Backfilling publish dates — so far: ${totals.updated} fixed, ${totals.failed} skipped...`,
+        )
+        const url =
+          '/api/admin/kb-sources/backfill-published-at' +
+          (after ? `?after=${encodeURIComponent(after)}` : '')
+        const res = await fetch(url, { method: 'POST' })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || `${res.status}`)
+        totals.updated += json.updated || 0
+        totals.failed += json.failed || 0
+        if (!json.partial) {
+          setToast(`Publish dates done: ${totals.updated} fixed, ${totals.failed} couldn't be resolved.`)
+          break
+        }
+        after = json.nextAfter
+      }
+      await load()
+    } catch (e) {
+      setToast(`Publish date backfill failed: ${e instanceof Error ? e.message : 'unknown'}`)
+    } finally {
+      setBackfillingDates(false)
+      setTimeout(() => setToast(null), 10000)
+    }
+  }
 
   async function ingestAllNewsletters() {
     if (ingestingNewsletters) return
@@ -308,6 +343,22 @@ export default function AdminKbSourcesPage() {
             }}
           >
             {testOpen ? 'Hide test query' : 'Test query'}
+          </button>
+          <button
+            onClick={backfillPublishDates}
+            disabled={backfillingDates}
+            title="Fill in publish dates for rows missing them (Beehiiv for newsletters, YouTube page scrape for videos)"
+            style={{
+              fontSize: '12px',
+              padding: '6px 12px',
+              background: '#1a1a1a',
+              color: backfillingDates ? '#555555' : '#ffffff',
+              border: '1px solid #333333',
+              borderRadius: '4px',
+              cursor: backfillingDates ? 'wait' : 'pointer',
+            }}
+          >
+            {backfillingDates ? 'Fixing dates...' : 'Backfill publish dates'}
           </button>
           <button
             onClick={ingestAllNewsletters}
@@ -629,7 +680,9 @@ export default function AdminKbSourcesPage() {
                     {s.topic ? ` · ${s.topic}` : ''}
                     {s.level ? ` · ${s.level}` : ''}
                     {' · '}
-                    Uploaded {formatDate(s.created_at)}
+                    {s.published_at
+                      ? `Published ${formatDate(s.published_at)}`
+                      : `Ingested ${formatDate(s.created_at)}`}
                     {' · '}
                     {s.chunk_count} chunk{s.chunk_count === 1 ? '' : 's'}
                   </div>
