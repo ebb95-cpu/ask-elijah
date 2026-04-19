@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 
 interface KbSource {
@@ -12,7 +12,7 @@ interface KbSource {
   level: string | null
   chunk_count: number
   created_at: string
-  is_about_elijah: boolean
+  thumbnail_url: string | null
   id_prefix: string | null
 }
 
@@ -23,11 +23,20 @@ interface KbSourcesResponse {
   totalChunks: number
 }
 
-type Tab = 'about' | 'other' | 'all'
+type QueryResult = {
+  id: string
+  score: number
+  wouldUse: boolean
+  title: string
+  type: string
+  url: string | null
+  topic: string | null
+  level: string | null
+  text: string
+}
 
 function youtubeIdFromUrl(url: string | null): string | null {
   if (!url) return null
-  // youtube.com/watch?v=XXX, youtu.be/XXX, youtube.com/embed/XXX, youtube.com/shorts/XXX
   const patterns = [
     /[?&]v=([^&]{11})/,
     /youtu\.be\/([^?&/]{11})/,
@@ -40,19 +49,33 @@ function youtubeIdFromUrl(url: string | null): string | null {
   return null
 }
 
+function thumbnailFor(s: KbSource): string | null {
+  const yt = youtubeIdFromUrl(s.source_url)
+  if (yt) return `https://i.ytimg.com/vi/${yt}/mqdefault.jpg`
+  return s.thumbnail_url
+}
+
 function formatDate(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export default function AdminKbSourcesPage() {
   const [data, setData] = useState<KbSourcesResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<Tab>('all')
+  const [tab, setTab] = useState<string>('all')
+  const [search, setSearch] = useState('')
   const [backfilling, setBackfilling] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const fetchedThumbsRef = useRef<Set<string>>(new Set())
+
+  // Test query panel state
+  const [testOpen, setTestOpen] = useState(false)
+  const [testQuery, setTestQuery] = useState('')
+  const [testResults, setTestResults] = useState<QueryResult[] | null>(null)
+  const [testMinScore, setTestMinScore] = useState(0.35)
+  const [testRunning, setTestRunning] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -73,6 +96,46 @@ export default function AdminKbSourcesPage() {
     load()
   }, [])
 
+  // Lazy-fetch og:image for non-YouTube sources missing a thumbnail.
+  // Fires once per page load per source, capped to prevent thundering-herd.
+  useEffect(() => {
+    if (!data?.sources) return
+    const toFetch = data.sources
+      .filter(
+        (s) =>
+          !s.thumbnail_url &&
+          !youtubeIdFromUrl(s.source_url) &&
+          s.source_url &&
+          !fetchedThumbsRef.current.has(s.id),
+      )
+      .slice(0, 10) // cap per tick
+
+    toFetch.forEach((s) => {
+      fetchedThumbsRef.current.add(s.id)
+      fetch('/api/admin/kb-sources/fetch-thumbnail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: s.id }),
+      })
+        .then((r) => r.ok && r.json())
+        .then((r) => {
+          if (r?.thumbnail_url) {
+            setData((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    sources: prev.sources.map((x) =>
+                      x.id === s.id ? { ...x, thumbnail_url: r.thumbnail_url } : x,
+                    ),
+                  }
+                : prev,
+            )
+          }
+        })
+        .catch(() => {})
+    })
+  }, [data])
+
   async function runBackfill() {
     if (backfilling) return
     setBackfilling(true)
@@ -81,54 +144,22 @@ export default function AdminKbSourcesPage() {
       const res = await fetch('/api/admin/kb-sources/backfill', { method: 'POST' })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || `${res.status}`)
-      setToast(
-        `Backfill done: ${json.inserted} inserted, ${json.updated} updated, ${json.skipped} skipped.`,
-      )
+      setToast(`Backfill done: ${json.inserted} inserted, ${json.updated} updated, ${json.skipped} skipped.`)
       await load()
     } catch (e) {
-      setToast(`Backfill failed: ${e instanceof Error ? e.message : 'unknown error'}`)
+      setToast(`Backfill failed: ${e instanceof Error ? e.message : 'unknown'}`)
     } finally {
       setBackfilling(false)
       setTimeout(() => setToast(null), 6000)
     }
   }
 
-  async function toggleClassification(s: KbSource) {
-    if (busyId) return
-    setBusyId(s.id)
-    const next = !s.is_about_elijah
-    try {
-      const res = await fetch('/api/admin/kb-sources/classify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: s.id, is_about_elijah: next }),
-      })
-      if (!res.ok) throw new Error('classify failed')
-      // Optimistic update
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              sources: prev.sources.map((r) =>
-                r.id === s.id ? { ...r, is_about_elijah: next } : r,
-              ),
-            }
-          : prev,
-      )
-    } catch {
-      setToast('Could not update classification.')
-      setTimeout(() => setToast(null), 4000)
-    } finally {
-      setBusyId(null)
-    }
-  }
-
   async function deleteSource(s: KbSource) {
     if (busyId) return
-    const confirmed = window.confirm(
-      `Delete "${s.source_title}" from the knowledge base?\n\nThis removes ${s.chunk_count} vector${s.chunk_count === 1 ? '' : 's'} from Pinecone AND the metadata row. Elijah's answers will no longer pull from this source.\n\nThis can't be undone.`,
+    const ok = window.confirm(
+      `Delete "${s.source_title}"?\n\nRemoves ${s.chunk_count} vector${s.chunk_count === 1 ? '' : 's'} from Pinecone AND the metadata row. Can't be undone.`,
     )
-    if (!confirmed) return
+    if (!ok) return
 
     setBusyId(s.id)
     try {
@@ -159,23 +190,66 @@ export default function AdminKbSourcesPage() {
     }
   }
 
+  async function runTestQuery() {
+    if (testRunning || !testQuery.trim()) return
+    setTestRunning(true)
+    setTestResults(null)
+    try {
+      const res = await fetch('/api/admin/kb-sources/test-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: testQuery }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'query failed')
+      setTestResults(json.results)
+      setTestMinScore(json.minScore ?? 0.35)
+    } catch (e) {
+      setToast(`Test query failed: ${e instanceof Error ? e.message : 'unknown'}`)
+      setTimeout(() => setToast(null), 5000)
+    } finally {
+      setTestRunning(false)
+    }
+  }
+
   const rows = data?.sources || []
-  const aboutCount = rows.filter((r) => r.is_about_elijah).length
-  const otherCount = rows.length - aboutCount
-  const filtered =
-    tab === 'all' ? rows : tab === 'about' ? rows.filter((r) => r.is_about_elijah) : rows.filter((r) => !r.is_about_elijah)
+  const typeList = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const r of rows) counts[r.source_type] = (counts[r.source_type] || 0) + 1
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])
+  }, [rows])
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return rows.filter((r) => {
+      if (tab !== 'all' && r.source_type !== tab) return false
+      if (q && !r.source_title.toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [rows, tab, search])
 
   return (
     <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Knowledge Base</h1>
-        <Link
-          href="/admin/questions"
-          style={{ fontSize: '12px', color: '#555555', textDecoration: 'none' }}
-        >
+        <Link href="/admin/questions" style={{ fontSize: '12px', color: '#555555', textDecoration: 'none' }}>
           ← Queue
         </Link>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
+          <button
+            onClick={() => setTestOpen((v) => !v)}
+            style={{
+              fontSize: '12px',
+              padding: '6px 12px',
+              background: testOpen ? '#ffffff' : '#1a1a1a',
+              color: testOpen ? '#000000' : '#ffffff',
+              border: '1px solid #333333',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            {testOpen ? 'Hide test query' : 'Test query'}
+          </button>
           <button
             onClick={runBackfill}
             disabled={backfilling}
@@ -223,6 +297,103 @@ export default function AdminKbSourcesPage() {
         </div>
       )}
 
+      {testOpen && (
+        <div
+          style={{
+            marginBottom: '16px',
+            padding: '16px',
+            background: '#0a0a0a',
+            border: '1px solid #1a1a1a',
+            borderRadius: '6px',
+          }}
+        >
+          <p style={{ fontSize: '11px', color: '#888888', marginBottom: '8px', margin: 0 }}>
+            Type a student question. See which KB chunks Elijah&apos;s retrieval would pull (top 10, unfiltered).
+          </p>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+            <input
+              type="text"
+              value={testQuery}
+              onChange={(e) => setTestQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && runTestQuery()}
+              placeholder="e.g. how do I stay confident after a bad game?"
+              style={{
+                flex: 1,
+                fontSize: '13px',
+                padding: '8px 12px',
+                background: '#0a0a0a',
+                color: '#ffffff',
+                border: '1px solid #333333',
+                borderRadius: '4px',
+              }}
+            />
+            <button
+              onClick={runTestQuery}
+              disabled={testRunning || !testQuery.trim()}
+              style={{
+                fontSize: '12px',
+                padding: '8px 16px',
+                background: '#ffffff',
+                color: '#000000',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: testRunning ? 'wait' : 'pointer',
+                opacity: !testQuery.trim() ? 0.3 : 1,
+              }}
+            >
+              {testRunning ? 'Searching...' : 'Search'}
+            </button>
+          </div>
+
+          {testResults && (
+            <div style={{ marginTop: '16px' }}>
+              <p style={{ fontSize: '11px', color: '#888888', marginBottom: '8px' }}>
+                {testResults.filter((r) => r.wouldUse).length} / {testResults.length} would be cited
+                (min score: {testMinScore})
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {testResults.map((r) => (
+                  <div
+                    key={r.id}
+                    style={{
+                      padding: '10px 12px',
+                      background: r.wouldUse ? '#0a1a0a' : '#0a0a0a',
+                      border: `1px solid ${r.wouldUse ? '#1a3a1a' : '#1a1a1a'}`,
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 500 }}>
+                        {r.url ? (
+                          <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ color: '#ffffff', textDecoration: 'none' }}>
+                            {r.title}
+                          </a>
+                        ) : (
+                          r.title
+                        )}
+                      </span>
+                      <span style={{ color: r.wouldUse ? '#4ade80' : '#888888', fontFamily: 'monospace' }}>
+                        {r.score.toFixed(3)}
+                      </span>
+                    </div>
+                    <div style={{ color: '#666666', fontSize: '10px', marginBottom: '6px' }}>
+                      {r.type}
+                      {r.topic ? ` · ${r.topic}` : ''}
+                      {r.level ? ` · ${r.level}` : ''}
+                    </div>
+                    <div style={{ color: '#aaaaaa', fontSize: '11px', lineHeight: '1.5' }}>
+                      {r.text}
+                      {r.text.length >= 300 ? '…' : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {data && (
         <div
           style={{
@@ -247,33 +418,48 @@ export default function AdminKbSourcesPage() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-        <TabChip
-          label={`About Elijah (${aboutCount})`}
-          active={tab === 'about'}
-          onClick={() => setTab('about')}
-        />
-        <TabChip
-          label={`Other (${otherCount})`}
-          active={tab === 'other'}
-          onClick={() => setTab('other')}
-        />
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
         <TabChip label={`All (${rows.length})`} active={tab === 'all'} onClick={() => setTab('all')} />
+        {typeList.map(([type, count]) => (
+          <TabChip
+            key={type}
+            label={`${type} (${count})`}
+            active={tab === type}
+            onClick={() => setTab(type)}
+          />
+        ))}
       </div>
+
+      <input
+        type="text"
+        placeholder="Search titles..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{
+          width: '100%',
+          fontSize: '13px',
+          padding: '8px 12px',
+          background: '#0a0a0a',
+          color: '#ffffff',
+          border: '1px solid #1a1a1a',
+          borderRadius: '4px',
+          marginBottom: '16px',
+        }}
+      />
 
       {loading && <div style={{ color: '#555555', fontSize: '13px' }}>Loading...</div>}
       {error && <div style={{ color: '#ff6666', fontSize: '13px' }}>Error: {error}</div>}
 
       {!loading && !error && filtered.length === 0 && (
         <div style={{ color: '#555555', fontSize: '13px', padding: '24px 0' }}>
-          No sources in this view yet.
+          No sources match this filter.
         </div>
       )}
 
       {filtered.length > 0 && (
         <div style={{ border: '1px solid #1a1a1a', borderRadius: '6px', overflow: 'hidden' }}>
           {filtered.map((s, i) => {
-            const ytId = youtubeIdFromUrl(s.source_url)
+            const thumb = thumbnailFor(s)
             const isBusy = busyId === s.id
             return (
               <div
@@ -287,7 +473,7 @@ export default function AdminKbSourcesPage() {
                   opacity: isBusy ? 0.5 : 1,
                 }}
               >
-                {ytId ? (
+                {thumb ? (
                   <a
                     href={s.source_url || '#'}
                     target="_blank"
@@ -296,7 +482,7 @@ export default function AdminKbSourcesPage() {
                       flexShrink: 0,
                       width: '120px',
                       height: '68px',
-                      background: `url(https://i.ytimg.com/vi/${ytId}/mqdefault.jpg) center/cover`,
+                      background: `url(${thumb}) center/cover`,
                       borderRadius: '4px',
                       border: '1px solid #1a1a1a',
                     }}
@@ -359,24 +545,6 @@ export default function AdminKbSourcesPage() {
                 </div>
 
                 <button
-                  onClick={() => toggleClassification(s)}
-                  disabled={isBusy}
-                  title={s.is_about_elijah ? 'Mark as NOT about Elijah' : 'Mark as about Elijah'}
-                  style={{
-                    fontSize: '11px',
-                    padding: '4px 10px',
-                    background: s.is_about_elijah ? '#4ade80' : 'transparent',
-                    color: s.is_about_elijah ? '#000000' : '#888888',
-                    border: `1px solid ${s.is_about_elijah ? '#4ade80' : '#333333'}`,
-                    borderRadius: '999px',
-                    cursor: isBusy ? 'wait' : 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {s.is_about_elijah ? '✓ About Elijah' : 'Mark about Elijah'}
-                </button>
-
-                <button
                   onClick={() => deleteSource(s)}
                   disabled={isBusy}
                   title="Delete from knowledge base + Pinecone"
@@ -421,6 +589,7 @@ function TabChip({
         border: `1px solid ${active ? '#ffffff' : '#333333'}`,
         borderRadius: '999px',
         cursor: 'pointer',
+        textTransform: 'lowercase',
       }}
     >
       {label}

@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest) {
   const supabase = getSupabase()
   const { data, error } = await supabase
     .from('kb_sources')
-    .select('id, source_title, source_type, source_url, topic, level, chunk_count, created_at, is_about_elijah, id_prefix')
+    .select('id, source_title, source_type, source_url, topic, level, chunk_count, created_at, thumbnail_url, id_prefix')
     .order('created_at', { ascending: false })
     .limit(200)
 
