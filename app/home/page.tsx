@@ -39,9 +39,12 @@ export default function HomePage() {
         .eq('id', user.id)
         .single()
 
+      const metadataFirstName = (user.user_metadata as { first_name?: string } | null)?.first_name || ''
       if (profile) {
-        setFirstName(profile.first_name || '')
+        setFirstName(profile.first_name || metadataFirstName)
         setStreak(profile.streak_count || 0)
+      } else {
+        setFirstName(metadataFirstName)
       }
     }
     fetchProfile()
