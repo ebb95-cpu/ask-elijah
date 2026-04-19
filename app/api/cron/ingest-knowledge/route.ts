@@ -120,7 +120,18 @@ async function ingestNewsletters(): Promise<number> {
   if (!res.ok) { console.error('Newsletter fetch failed:', res.status); return 0 }
 
   const data = await res.json()
-  const issues: any[] = data.data || []
+  const allIssues: any[] = data.data || []
+  // Beehiiv's status=confirmed includes scheduled posts whose publish_date
+  // is still in the future. Skip those — only ingest posts that have
+  // actually gone live to subscribers.
+  const nowSeconds = Math.floor(Date.now() / 1000)
+  const issues = allIssues.filter((p) => {
+    if (!p.publish_date) return false
+    const ts = typeof p.publish_date === 'number'
+      ? p.publish_date
+      : Math.floor(new Date(p.publish_date).getTime() / 1000)
+    return Number.isFinite(ts) && ts <= nowSeconds
+  })
   let count = 0
 
   for (const issue of issues) {
