@@ -67,6 +67,7 @@ export default function AdminKbSourcesPage() {
   const [search, setSearch] = useState('')
   const [backfilling, setBackfilling] = useState(false)
   const [refreshingTitles, setRefreshingTitles] = useState(false)
+  const [ingestingNewsletters, setIngestingNewsletters] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const fetchedThumbsRef = useRef<Set<string>>(new Set())
@@ -136,6 +137,43 @@ export default function AdminKbSourcesPage() {
         .catch(() => {})
     })
   }, [data])
+
+  async function ingestAllNewsletters() {
+    if (ingestingNewsletters) return
+    setIngestingNewsletters(true)
+    try {
+      let page = 1
+      const totals = { ingested: 0, skipped: 0, errors: 0, totalSeen: 0 }
+      for (let iter = 0; iter < 20; iter++) {
+        setToast(
+          `Pulling newsletters from Beehiiv (page ${page}) — so far: ${totals.ingested} new, ${totals.skipped} already had, ${totals.errors} errors.`,
+        )
+        const res = await fetch(
+          `/api/admin/kb-sources/ingest-all-newsletters?page=${page}`,
+          { method: 'POST' },
+        )
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || `${res.status}`)
+        totals.ingested += json.ingested || 0
+        totals.skipped += json.skipped || 0
+        totals.errors += json.errors || 0
+        totals.totalSeen += json.totalSeen || 0
+        if (!json.partial) {
+          setToast(
+            `Done: ${totals.ingested} new newsletters, ${totals.skipped} already ingested, ${totals.errors} errors (${totals.totalSeen} total scanned).`,
+          )
+          break
+        }
+        page = json.nextPage
+      }
+      await load()
+    } catch (e) {
+      setToast(`Newsletter ingest failed: ${e instanceof Error ? e.message : 'unknown'}`)
+    } finally {
+      setIngestingNewsletters(false)
+      setTimeout(() => setToast(null), 10000)
+    }
+  }
 
   async function refreshYoutubeTitles() {
     if (refreshingTitles) return
@@ -270,6 +308,22 @@ export default function AdminKbSourcesPage() {
             }}
           >
             {testOpen ? 'Hide test query' : 'Test query'}
+          </button>
+          <button
+            onClick={ingestAllNewsletters}
+            disabled={ingestingNewsletters}
+            title="Paginate through every Beehiiv post and embed any not yet in Pinecone"
+            style={{
+              fontSize: '12px',
+              padding: '6px 12px',
+              background: '#1a1a1a',
+              color: ingestingNewsletters ? '#555555' : '#ffffff',
+              border: '1px solid #333333',
+              borderRadius: '4px',
+              cursor: ingestingNewsletters ? 'wait' : 'pointer',
+            }}
+          >
+            {ingestingNewsletters ? 'Pulling...' : 'Pull all newsletters'}
           </button>
           <button
             onClick={refreshYoutubeTitles}
