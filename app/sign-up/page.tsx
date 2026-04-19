@@ -26,33 +26,46 @@ export default function SignUpPage() {
   const [error, setError] = useState('')
   const router = useRouter()
 
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
+        <p className="text-red-500">Configuration error: Missing Supabase credentials</p>
+      </div>
+    )
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password || !firstName) return
     setLoading(true)
     setError('')
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { first_name: firstName },
-        emailRedirectTo: `${siteUrl}/auth/callback?next=/home`,
-      },
-    })
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { first_name: firstName },
+          emailRedirectTo: `${siteUrl}/auth/callback?next=/home`,
+        },
+      })
 
-    if (error) {
-      setError(error.message)
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+      } else {
+        // Email confirmation required - user will be redirected via email link
+        router.push('/ask')
+      }
+    } catch (err: any) {
+      setError(err?.message || 'An error occurred')
       setLoading(false)
-    } else {
-      // Email confirmation required - user will be redirected via email link
-      router.push('/ask')
     }
   }
 
