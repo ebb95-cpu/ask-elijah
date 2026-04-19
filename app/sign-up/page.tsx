@@ -33,19 +33,32 @@ export default function SignUpPage() {
     setError('')
 
     try {
+      const res = await fetch('/api/sign-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, firstName }),
+      })
+      const result = await res.json()
+
+      if (!res.ok) {
+        setError(result.error || 'Something went wrong. Try again.')
+        setLoading(false)
+        return
+      }
+
       const supabase = getSupabaseClient()
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
-      const { error: authError } = await supabase.auth.signUp({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
-        options: {
-          data: { first_name: firstName.trim() },
-          emailRedirectTo: `${siteUrl}/auth/callback?next=/home`,
-        },
       })
 
-      if (authError) throw authError
-      router.push('/ask')
+      if (signInError) {
+        setError(signInError.message)
+        setLoading(false)
+        return
+      }
+
+      router.push('/home')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Try again.')
       setLoading(false)
