@@ -96,9 +96,28 @@ function SignInInner() {
       if (isAdmin) {
         setStep('password')
         setLoading(false)
-      } else {
-        await handleSendLink()
+        return
       }
+
+      // Check if this email already has an account. If not, route them to
+      // /sign-up so we collect first name + password instead of silently
+      // creating a partial account via magic link.
+      try {
+        const checkRes = await fetch('/api/check-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim() }),
+        })
+        const { exists } = await checkRes.json()
+        if (!exists) {
+          router.push(`/sign-up?email=${encodeURIComponent(email.trim().toLowerCase())}`)
+          return
+        }
+      } catch {
+        /* fall through to magic link on lookup failure */
+      }
+
+      await handleSendLink()
     } catch {
       await handleSendLink()
     }

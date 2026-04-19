@@ -1,9 +1,9 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
 
 function Logo() {
@@ -19,8 +19,18 @@ function Logo() {
 }
 
 export default function SignUpPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <SignUpInner />
+    </Suspense>
+  )
+}
+
+function SignUpInner() {
+  const searchParams = useSearchParams()
+  const prefillEmail = searchParams?.get('email') ?? ''
   const [firstName, setFirstName] = useState('')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(prefillEmail)
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
