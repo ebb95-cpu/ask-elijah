@@ -184,15 +184,16 @@ export default function AdminKbSourcesPage() {
         try {
           let after: string | null = null
           for (let i = 0; i < 20; i++) {
-            const url =
+            const url: string =
               '/api/admin/kb-sources/backfill-published-at' +
               (after ? `?after=${encodeURIComponent(after)}` : '')
-            const r = await fetch(url, { method: 'POST' })
+            const r: Response = await fetch(url, { method: 'POST' })
             if (!r.ok) break
-            const j = await r.json()
+            const j: { updated?: number; partial?: boolean; nextAfter?: string | null } =
+              await r.json()
             if ((j.updated || 0) > 0) changed = true
             if (!j.partial) break
-            after = j.nextAfter
+            after = j.nextAfter ?? null
           }
         } catch {
           /* silent */
