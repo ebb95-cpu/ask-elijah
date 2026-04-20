@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'node:crypto'
+import { ADMIN_COOKIE, ADMIN_COOKIE_MAX_AGE, issueAdminSession } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
+
+function passwordsMatch(got: string, expected: string): boolean {
+  const a = Buffer.from(got)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length || a.length === 0) return false
+  try {
+    return timingSafeEqual(a, b)
+  } catch {
+    return false
+  }
+}
 
 /**
  * Admin login. Accepts either:
@@ -43,7 +56,8 @@ export async function POST(req: NextRequest) {
       : NextResponse.json({ error: message }, { status: 500 })
   }
 
-  if (!password || password !== process.env.ADMIN_PASSWORD) {
+  const expected = process.env.ADMIN_PASSWORD || ''
+  if (!password || !passwordsMatch(password, expected)) {
     if (isForm) {
       // Send them back to login with an error flag so the page can surface it
       const redirectUrl = new URL('/admin/login', req.url)
@@ -59,11 +73,13 @@ export async function POST(req: NextRequest) {
   // navigate.
   const redirectTarget = new URL(next, req.url)
   const res = isForm ? NextResponse.redirect(redirectTarget, 303) : NextResponse.json({ ok: true })
-  res.cookies.set('admin_token', process.env.ADMIN_PASSWORD, {
+  // Stateless HMAC-signed session token — the cookie is NOT the password.
+  // Rotating ADMIN_PASSWORD on Vercel invalidates all existing sessions.
+  res.cookies.set(ADMIN_COOKIE, await issueAdminSession(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    maxAge: ADMIN_COOKIE_MAX_AGE,
     path: '/',
   })
   // Belt-and-braces: tell browsers + CDNs to never cache this response

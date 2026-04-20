@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { getSupabase } from '@/lib/supabase-server'
+import { ADMIN_COOKIE, verifyAdminSession } from '@/lib/admin-auth'
 
 /**
  * Safe-to-expose diagnostic for admin login. Reveals whether env vars are
@@ -14,13 +15,13 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(_req: NextRequest) {
   const cookieStore = cookies()
-  const tokenCookie = cookieStore.get('admin_token')
+  const tokenCookie = cookieStore.get(ADMIN_COOKIE)
 
   const adminPasswordSet = typeof process.env.ADMIN_PASSWORD === 'string' && process.env.ADMIN_PASSWORD.length > 0
   const adminEmailSet = typeof process.env.ADMIN_EMAIL === 'string' && process.env.ADMIN_EMAIL.length > 0
 
   const cookiePresent = !!tokenCookie
-  const cookieMatchesEnv = cookiePresent && adminPasswordSet && tokenCookie.value === process.env.ADMIN_PASSWORD
+  const cookieValid = await verifyAdminSession(tokenCookie?.value)
 
   return NextResponse.json({
     // Env status — booleans only, never the values
@@ -33,7 +34,7 @@ export async function GET(_req: NextRequest) {
     // Cookie status — presence only, never value
     cookie: {
       present: cookiePresent,
-      matchesEnv: cookieMatchesEnv,
+      valid: cookieValid,
     },
     // Deployment marker — tells you which build answered this request
     deployment: {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyBearer } from '@/lib/admin-auth'
 import { getSupabase } from '@/lib/supabase-server'
 import { logError } from '@/lib/log-error'
 import { collectYouTube } from '@/lib/research/youtube'
@@ -21,9 +22,7 @@ export const maxDuration = 300
  * Returns quickly with a summary so Vercel's 300s budget is rarely tested.
  */
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get('authorization') || ''
-  const expected = process.env.CRON_SECRET
-  if (!expected || auth !== `Bearer ${expected}`) {
+  if (!verifyBearer(req.headers.get('authorization'), process.env.CRON_SECRET)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

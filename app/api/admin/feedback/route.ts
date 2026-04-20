@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { getSupabase } from '@/lib/supabase-server'
 import { fetchSentryIssues, isSentryConfigured, sentryDashboardUrl } from '@/lib/sentry'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,11 +14,9 @@ export const dynamic = 'force-dynamic'
  *   - open + recently-resolved bug reports
  */
 export async function GET() {
-  const cookieStore = cookies()
-  const adminToken = cookieStore.get('admin_token')?.value
-  if (!adminToken || adminToken !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const unauthorized = await requireAdmin()
+
+  if (unauthorized) return unauthorized
 
   const supabase = getSupabase()
 
@@ -96,11 +94,9 @@ export async function GET() {
  * Mark a bug report as resolved. Body: { id: string }
  */
 export async function POST(req: NextRequest) {
-  const cookieStore = cookies()
-  const adminToken = cookieStore.get('admin_token')?.value
-  if (!adminToken || adminToken !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const unauthorized = await requireAdmin()
+
+  if (unauthorized) return unauthorized
 
   const { id, action } = (await req.json()) as { id?: string; action?: 'resolve' | 'reopen' }
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })

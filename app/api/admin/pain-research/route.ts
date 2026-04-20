@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { getSupabase } from '@/lib/supabase-server'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,11 +21,9 @@ function getSiteUrl(): string {
 }
 
 export async function GET() {
-  const cookieStore = cookies()
-  const adminToken = cookieStore.get('admin_token')?.value
-  if (!adminToken || adminToken !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const unauthorized = await requireAdmin()
+
+  if (unauthorized) return unauthorized
 
   const supabase = getSupabase()
   const { data: runs, error } = await supabase
@@ -55,11 +53,9 @@ export async function GET() {
 }
 
 export async function POST() {
-  const cookieStore = cookies()
-  const adminToken = cookieStore.get('admin_token')?.value
-  if (!adminToken || adminToken !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const unauthorized = await requireAdmin()
+
+  if (unauthorized) return unauthorized
   if (!process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 })
   }

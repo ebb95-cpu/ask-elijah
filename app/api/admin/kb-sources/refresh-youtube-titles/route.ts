@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { getSupabase } from '@/lib/supabase-server'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -15,11 +15,9 @@ export const maxDuration = 300
  * titles in admin views, and rewriting vectors would require re-embedding.
  */
 export async function POST(_req: NextRequest) {
-  const cookieStore = cookies()
-  const adminToken = cookieStore.get('admin_token')?.value
-  if (!adminToken || adminToken !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const unauthorized = await requireAdmin()
+
+  if (unauthorized) return unauthorized
 
   const supabase = getSupabase()
   const { data: stuck, error } = await supabase

@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
 function getStripe() {
-  // Lazy init so build doesn't fail without STRIPE_SECRET_KEY
-  return new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
+  // Lazy init so build doesn't fail without STRIPE_SECRET_KEY. Throw
+  // (rather than silently falling back to a placeholder key) so a
+  // misconfigured prod deploy surfaces immediately instead of pretending
+  // Stripe is working.
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key) throw new Error('STRIPE_SECRET_KEY is not set')
+  return new Stripe(key, {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     apiVersion: '2026-03-25.dahlia' as any,
   })

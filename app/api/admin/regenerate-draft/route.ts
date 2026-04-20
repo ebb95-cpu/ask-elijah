@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import Anthropic from '@anthropic-ai/sdk'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -49,11 +49,9 @@ function extractSources(content: Anthropic.Messages.ContentBlock[]): Source[] {
 }
 
 export async function POST(req: NextRequest) {
-  const cookieStore = cookies()
-  const adminToken = cookieStore.get('admin_token')?.value
-  if (!adminToken || adminToken !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const unauthorized = await requireAdmin()
+
+  if (unauthorized) return unauthorized
 
   const { question, context } = await req.json()
   if (!question || !context) {

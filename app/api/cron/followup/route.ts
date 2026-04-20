@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyBearer } from '@/lib/admin-auth'
 import { getSupabase } from '@/lib/supabase-server'
 import { Resend } from 'resend'
 import { escapeHtml } from '@/lib/escape-html'
@@ -14,7 +15,7 @@ export const maxDuration = 300
  */
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!verifyBearer(auth, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
 import { getSupabase } from '@/lib/supabase-server'
+import { verifyBearer } from '@/lib/admin-auth'
 
 /**
  * Record a source row in kb_sources so it shows up in the admin inventory.
@@ -564,7 +565,7 @@ async function ingestGoogleDrivePdfs(): Promise<number> {
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!verifyBearer(authHeader, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

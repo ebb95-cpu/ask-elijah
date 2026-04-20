@@ -1,4 +1,5 @@
 import { escapeHtml } from '@/lib/escape-html'
+import { verifyBearer } from '@/lib/admin-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 import { Resend } from 'resend'
@@ -10,7 +11,7 @@ const BROADCAST_THRESHOLD = 20  // broadcast to everyone
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!verifyBearer(authHeader, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { getSupabase } from '@/lib/supabase-server'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -31,11 +31,9 @@ interface BeehiivPost {
  * timeout hits mid-sync. Response reports which page to call next.
  */
 export async function POST(req: NextRequest) {
-  const cookieStore = cookies()
-  const adminToken = cookieStore.get('admin_token')?.value
-  if (!adminToken || adminToken !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const unauthorized = await requireAdmin()
+
+  if (unauthorized) return unauthorized
 
   const startPage = Number(req.nextUrl.searchParams.get('page') || '1')
   const startedAt = Date.now()

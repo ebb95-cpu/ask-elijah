@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-
+import { requireAdmin } from '@/lib/admin-auth'
 export const dynamic = 'force-dynamic'
 
 function getSiteUrl() {
@@ -9,11 +8,9 @@ function getSiteUrl() {
 }
 
 export async function POST(req: NextRequest) {
-  const cookieStore = cookies()
-  const adminToken = cookieStore.get('admin_token')?.value
-  if (!adminToken || adminToken !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const unauthorized = await requireAdmin()
+
+  if (unauthorized) return unauthorized
 
   const { questionIds, finalAnswer } = await req.json()
   if (!questionIds?.length || !finalAnswer) {

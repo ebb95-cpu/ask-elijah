@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logError } from '@/lib/log-error'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,11 +29,9 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   const { cookies } = await import('next/headers')
-  const cookieStore = cookies()
-  const token = cookieStore.get('admin_token')?.value
-  if (!token || token !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const unauthorized = await requireAdmin()
+
+  if (unauthorized) return unauthorized
 
   const { getSupabase } = await import('@/lib/supabase-server')
   const supabase = getSupabase()

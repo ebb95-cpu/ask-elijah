@@ -2,6 +2,7 @@ import { escapeHtml } from '@/lib/escape-html'
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { getSupabase } from '@/lib/supabase-server'
+import { verifyBearer } from '@/lib/admin-auth'
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY)
@@ -89,7 +90,7 @@ function buildEmail(
 export async function GET(req: NextRequest) {
   // Protect the cron endpoint
   const secret = req.headers.get('x-cron-secret') || req.nextUrl.searchParams.get('secret')
-  if (secret !== process.env.CRON_SECRET) {
+  if (!verifyBearer(`Bearer ${secret}`, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

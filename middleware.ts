@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { ADMIN_COOKIE, verifyAdminSession } from '@/lib/admin-auth'
 
 /**
  * Middleware-level gate for the admin surface.
@@ -13,7 +14,7 @@ import type { NextRequest } from 'next/server'
  * redirect to /admin/login — a loop risk. Middleware sidesteps that
  * by matching on pathname directly.
  */
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl
 
   // /sign-in must not be CDN-cached: the page reads ?simulated=1 client-side
@@ -32,14 +33,12 @@ export function middleware(req: NextRequest) {
   // Only guard the admin surface. Everything else passes through.
   if (!pathname.startsWith('/admin')) return NextResponse.next()
 
-  // The login page and the direct-login endpoint are both public. /admin/direct
-  // is a GET endpoint that sets the admin cookie and redirects; it must not
-  // be gated by this middleware or the cookie never gets a chance to land.
+  // The login page is public. (/admin/direct has been removed — it passed
+  // the admin password in the URL query string, which ends up in Vercel
+  // access logs. Use /admin/login.)
   if (
     pathname === '/admin/login' ||
-    pathname.startsWith('/admin/login/') ||
-    pathname === '/admin/direct' ||
-    pathname.startsWith('/admin/direct/')
+    pathname.startsWith('/admin/login/')
   ) {
     const res = NextResponse.next()
     // Aggressive no-cache so mobile Safari can't serve a stale copy of the
@@ -52,10 +51,10 @@ export function middleware(req: NextRequest) {
     return res
   }
 
-  const token = req.cookies.get('admin_token')?.value
-  const expected = process.env.ADMIN_PASSWORD
+  const token = req.cookies.get(ADMIN_COOKIE)?.value
+  const valid = await verifyAdminSession(token)
 
-  if (!expected || token !== expected) {
+  if (!valid) {
     const next = pathname + (search || '')
     const loginUrl = new URL('/admin/login', req.url)
     loginUrl.searchParams.set('next', next)

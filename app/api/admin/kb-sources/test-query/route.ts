@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-
+import { requireAdmin } from '@/lib/admin-auth'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
@@ -10,11 +9,9 @@ export const maxDuration = 30
  * so admins can audit whether the KB is surfacing the right sources.
  */
 export async function POST(req: NextRequest) {
-  const cookieStore = cookies()
-  const adminToken = cookieStore.get('admin_token')?.value
-  if (!adminToken || adminToken !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const unauthorized = await requireAdmin()
+
+  if (unauthorized) return unauthorized
 
   const { question } = await req.json()
   if (!question?.trim()) {

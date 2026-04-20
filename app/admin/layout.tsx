@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import AdminNav from '@/components/AdminNav'
+import { ADMIN_COOKIE, verifyAdminSession } from '@/lib/admin-auth'
 
 /**
  * Auth gating for /admin/* lives in middleware.ts — that runs before any
@@ -12,7 +13,7 @@ import AdminNav from '@/components/AdminNav'
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies()
-  const hasAdmin = cookieStore.get('admin_token')?.value === process.env.ADMIN_PASSWORD
+  const hasAdmin = await verifyAdminSession(cookieStore.get(ADMIN_COOKIE)?.value)
 
   // If there's no cookie, we're rendering /admin/login (middleware allowed
   // it through). Don't wrap it in admin chrome.
