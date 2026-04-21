@@ -197,7 +197,7 @@ function ReturningView({
             <p className="text-gray-600 text-xs uppercase tracking-widest mb-3">How did it go?</p>
             <p className="text-gray-500 text-sm mb-4">
               {eventMemory
-                ? `${eventMemory.fact_text} — how did it go?`
+                ? `${eventMemory.fact_text}. How did it go?`
                 : `Last time you asked about "${prevQuestion.slice(0, 60)}${prevQuestion.length > 60 ? '...' : ''}". What happened when you tried it?`
               }
             </p>
@@ -536,7 +536,7 @@ export default function HomePage() {
             {hiddenText && !revealed && (
               <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
                 <p className="text-white font-semibold text-base">Get Elijah's answer</p>
-                <p className="text-gray-500 text-sm leading-relaxed">You'll also be joined to the Consistency Club — his weekly newsletter on building your Faith + Consistency on and off the court.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">You'll also be joined to the Consistency Club, his weekly newsletter on building your Faith + Consistency on and off the court.</p>
                 <input
                   type="email"
                   placeholder="your@email.com"
@@ -571,7 +571,7 @@ export default function HomePage() {
             {revealed && (
               <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
                 <p className="text-white font-semibold text-base">Elijah is writing you personally.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">The version above is a first take. Elijah reviews every one. When he sends his real reply, it'll land in your inbox.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">The version above is a first take. Elijah reviews every one. When he sends his personal reply, it'll land in your inbox.</p>
                 <a href="/history" className="text-sm font-semibold text-white hover:opacity-70 transition-opacity mt-2">
                   Track your question →
                 </a>
@@ -715,7 +715,7 @@ export default function HomePage() {
           <p className="text-xs text-gray-600 uppercase tracking-widest mb-4">Here&apos;s what I told a player last week →</p>
           <div className="relative">
             <p className="text-gray-300 text-base leading-relaxed">
-              &ldquo;The freeze-up in games but not practice is almost always one thing: your brain is trying to protect you from judgment. In practice there&apos;s no scoreboard. In games there is. So it switches into threat mode — cortisol spikes, your body tightens, your instincts shut down...&rdquo;
+              &ldquo;The freeze-up in games but not practice is almost always one thing: your brain is trying to protect you from judgment. In practice there&apos;s no scoreboard. In games there is. So it switches into threat mode. Cortisol spikes, your body tightens, your instincts shut down...&rdquo;
             </p>
             <div
               className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none"
@@ -744,7 +744,7 @@ export default function HomePage() {
 
           <div className="bg-black text-white px-8 py-8">
             <p className="text-white text-base md:text-lg leading-relaxed mb-4">
-              Elijah has been in EuroLeague finals. NBA locker rooms. High-pressure moments most coaches have only watched on TV. Ask him what&apos;s going on in your head — and what to do about it.
+              Elijah has been in EuroLeague finals. NBA locker rooms. High-pressure moments most coaches have only watched on TV. Ask him what&apos;s going on in your head, and what to do about it.
             </p>
             <p className="text-gray-400 text-xs font-semibold tracking-widest uppercase">
               NBA · EuroLeague Champion · 3 continents
@@ -760,7 +760,7 @@ export default function HomePage() {
           <p className="text-2xl md:text-3xl font-semibold italic tracking-tight text-white leading-snug mb-4">
             &ldquo;First time I felt like I was getting real advice, not just content.&rdquo;
           </p>
-          <cite className="text-sm text-gray-500 not-italic">— Marcus, 17, Chicago</cite>
+          <cite className="text-sm text-gray-500 not-italic">Marcus, 17, Chicago</cite>
         </blockquote>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-px max-w-2xl mx-auto bg-gray-900">
