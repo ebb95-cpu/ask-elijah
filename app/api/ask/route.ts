@@ -7,8 +7,50 @@ import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { checkLimit } from '@/lib/rate-limit'
 import { logError } from '@/lib/log-error'
 
+// Draft generation now uses web_search/web_fetch to ground mechanism claims
+// in real research. Search + weave adds 5–10s of latency per answer, so the
+// function needs headroom beyond the default Vercel serverless limit.
+export const maxDuration = 60
+
 function getAnthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+}
+
+type WebSource = { title: string; url: string; type: string }
+
+function harvestWebSources(content: Anthropic.Messages.ContentBlock[]): WebSource[] {
+  const out: WebSource[] = []
+  const seen = new Set<string>()
+  for (const block of content) {
+    if (block.type === 'web_search_tool_result') {
+      const items = (block as unknown as { content: Array<{ url?: string; title?: string }> }).content || []
+      for (const item of items) {
+        if (item.url && !seen.has(item.url)) {
+          seen.add(item.url)
+          out.push({ url: item.url, title: item.title || item.url, type: 'web' })
+        }
+      }
+    }
+    if (block.type === 'web_fetch_tool_result') {
+      const fetched = (block as unknown as { content?: { url?: string; title?: string } }).content
+      if (fetched?.url && !seen.has(fetched.url)) {
+        seen.add(fetched.url)
+        out.push({ url: fetched.url, title: fetched.title || fetched.url, type: 'web' })
+      }
+    }
+    if (block.type === 'text') {
+      const citations = (block as unknown as { citations?: Array<{ url?: string; title?: string }> }).citations
+      if (Array.isArray(citations)) {
+        for (const c of citations) {
+          if (c.url && !seen.has(c.url)) {
+            seen.add(c.url)
+            out.push({ url: c.url, title: c.title || c.url, type: 'web' })
+          }
+        }
+      }
+    }
+  }
+  return out
 }
 
 // Strip <<VERIFY:...>> markers for the clean answer stored/sent to user
@@ -842,31 +884,49 @@ export async function POST(req: NextRequest) {
 
     // Use preview answer if already generated on the frontend, otherwise generate fresh
     let draft = ''
+    let webSources: WebSource[] = []
     if (previewAnswer?.trim()) {
       draft = previewAnswer.trim()
     } else {
-      const generate = async (extraInstructions: string) => {
+      const generate = async (extraInstructions: string): Promise<{ text: string; webSources: WebSource[] }> => {
         const message = userMessage + langInstruction + extraInstructions
         try {
+          const response = await getAnthropic().messages.create({
+            model: 'claude-sonnet-4-5',
+            max_tokens: 2000,
+            system: SYSTEM_PROMPT,
+            tools: [
+              { type: 'web_search_20250305', name: 'web_search', max_uses: 3 },
+              { type: 'web_fetch_20250910', name: 'web_fetch', max_uses: 5 },
+            ],
+            messages: [{ role: 'user', content: message }],
+          })
+          const textBlocks = response.content.filter(
+            (b): b is Anthropic.Messages.TextBlock => b.type === 'text'
+          )
+          return {
+            text: textBlocks.map((b) => b.text).join('\n\n').trim(),
+            webSources: harvestWebSources(response.content),
+          }
+        } catch {
+          // Fallback without web tools if Sonnet fails — better an un-sourced
+          // answer than no answer.
           const response = await getAnthropic().messages.create({
             model: 'claude-haiku-4-5',
             max_tokens: 1024,
             system: SYSTEM_PROMPT,
             messages: [{ role: 'user', content: message }],
           })
-          return response.content[0].type === 'text' ? response.content[0].text : ''
-        } catch {
-          const response = await getAnthropic().messages.create({
-            model: 'claude-sonnet-4-5',
-            max_tokens: 1024,
-            system: SYSTEM_PROMPT,
-            messages: [{ role: 'user', content: message }],
-          })
-          return response.content[0].type === 'text' ? response.content[0].text : ''
+          return {
+            text: response.content[0].type === 'text' ? response.content[0].text : '',
+            webSources: [],
+          }
         }
       }
 
-      draft = await generate('')
+      const first = await generate('')
+      draft = first.text
+      webSources = first.webSources
 
       // If the draft came back valid, run it through the self-critique pass.
       // If the critic flags issues, regenerate once with those issues injected
@@ -876,13 +936,28 @@ export async function POST(req: NextRequest) {
         if (!critique.ok && critique.issues.length > 0) {
           const issuesText = critique.issues.map((i) => `- ${i}`).join('\n')
           const retry = await generate(`\n\nYour first attempt had these specific issues — fix them in the rewrite:\n${issuesText}\n\nWrite the answer again addressing each.`)
-          if (retry.trim() && retry.trim().length >= 30) draft = retry
+          if (retry.text.trim() && retry.text.trim().length >= 30) {
+            draft = retry.text
+            webSources = retry.webSources
+          }
         }
       }
 
       // If Claude returned empty for any reason, use the fallback
       if (!draft.trim() || draft.trim().length < 30) {
         draft = FALLBACK
+      }
+    }
+
+    // Merge web sources harvested during generation with RAG sources from
+    // Pinecone. Both get stored on the question so the player can see receipts.
+    if (webSources.length > 0) {
+      const seen = new Set(sources.map((s) => s.url))
+      for (const ws of webSources) {
+        if (!seen.has(ws.url)) {
+          seen.add(ws.url)
+          sources.push(ws)
+        }
       }
     }
 

@@ -180,12 +180,11 @@ Keep each pushback under 20 words, in the player's voice, specific to what they 
 
     const finalPrompt = `Write a completely new polished answer to the player's question. Weave in Elijah's notes AND everything he said during the refinement conversation. Do not reference the old draft, do not append — produce ONE cohesive final answer as if you knew all this from the start. Structure: pain → mechanism → solution → one concrete action today.
 
-You have access to web_search and web_fetch. Use them only when:
-- The notes or Q&A mention a book, study, article, or person by name and a specific quote or fact would strengthen the answer
-- A URL is present (fetch it with web_fetch to pull the relevant passage)
-- A claim needs verification before you state it
+You have web_search and web_fetch. USE THEM proactively. Before you state any mechanism claim (how the brain works under pressure, sleep architecture, nervous-system regulation, HRV, visualization, confidence, recovery — any physiological or psychological "why this works"), verify it with a web lookup. Two to four searches is the norm for a good answer, not the exception.
 
-Do NOT search for general advice — Elijah's own experience is enough. One or two lookups is plenty.
+But never read like a research paper. Elijah's voice wins every time. Weave the science into first-person phrasing — "the reason this works is your nervous system actually..." or "I read something from a Stanford lab that said...". Never "studies show" or footnote-style citations in the body. The research makes the mechanism credible; the voice keeps it human.
+
+Also use web_fetch when a URL is present in the notes, and verify any specific name, quote, or stat before you put it in Elijah's mouth.
 
 Player's question:
 "${question}"

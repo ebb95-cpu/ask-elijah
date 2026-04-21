@@ -62,12 +62,11 @@ export async function POST(req: NextRequest) {
 
   const prompt = `Write a completely new answer from scratch to this player's question. Use the context below as your raw material — it may contain a previous draft, notes Elijah jotted in, or a mix of both. Weave it all together into one cohesive, polished answer. Do not append or reference anything. Just write a single complete answer as if you knew all of this from the start. Same voice, same directness as Elijah.
 
-You have access to web_search and web_fetch. Use them when:
-- Elijah's notes mention a book, study, article, or person by name and a specific quote or fact would make the answer stronger
-- A URL is pasted in the notes (fetch it with web_fetch and pull the relevant passage)
-- A fact, stat, or claim needs verification before you say it
+You have web_search and web_fetch. USE THEM proactively. Before stating any mechanism claim (how the brain works under pressure, sleep, nervous-system regulation, HRV, visualization, confidence, recovery — any physiological or psychological "why this works"), verify it with a lookup. Two to four searches is the norm, not the exception.
 
-Do NOT use the web for general advice Elijah could give from his own experience. Only for specific external references. Keep searches minimal — one or two is plenty.
+But the voice always wins. Never say "studies show" or use footnote-style citations inside the answer. Phrase research in first-person Elijah voice: "the reason this works is your nervous system..." or "I read something from a Stanford lab that said...". The science makes the mechanism credible; Elijah's voice keeps it human. Weave, don't stack.
+
+Also use web_fetch when a URL is pasted in the notes, and verify any specific name, quote, or stat before putting it in Elijah's mouth.
 
 Player's question:
 "${question}"

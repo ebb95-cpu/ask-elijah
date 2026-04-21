@@ -265,8 +265,10 @@ export default function HomePage() {
   const [streamedText, setStreamedText] = useState('')
   const [email, setEmail] = useState('')
   const [emailLoading, setEmailLoading] = useState(false)
+  const [emailError, setEmailError] = useState('')
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const [newsletterOptIn, setNewsletterOptIn] = useState(false)
+  const [revealed, setRevealed] = useState(false)
   const fullAnswerRef = useRef('')
   const prevQuestionRef = useRef('')
   const prevAnswerRef = useRef('')
@@ -362,9 +364,25 @@ export default function HomePage() {
 
   const handleEmailSubmit = async () => {
     if (!email.trim() || !ageConfirmed || emailLoading) return
+    setEmailError('')
     setEmailLoading(true)
 
     try {
+      // Verify the email is real BEFORE we commit the question to the DB
+      // and notify Elijah. Kickbox-backed syntax + disposable + MX + mailbox
+      // check. Fails open on upstream errors — see lib/email-verify.ts.
+      const verifyRes = await fetch('/api/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+      const verifyData = await verifyRes.json().catch(() => ({ ok: false, reason: 'Could not verify email. Try again.' }))
+      if (!verifyRes.ok || !verifyData?.ok) {
+        setEmailError(verifyData?.reason || 'That email doesn\'t look right. Double-check it.')
+        setEmailLoading(false)
+        return
+      }
+
       let utm: Record<string, unknown> = {}
       try {
         utm = JSON.parse(getLocal('ask_elijah_utm') || '{}')
@@ -386,10 +404,15 @@ export default function HomePage() {
       prevAnswerRef.current = fullAnswerRef.current
       userEmailRef.current = email.trim()
       setLocal('ask_elijah_email', email.trim())
-      setMode('submitted')
+      // Unblur the answer in-place instead of jumping to a success screen —
+      // the player sees the full thing they unlocked, with a small confirmation
+      // that Elijah's personal reply is on the way.
+      setRevealed(true)
     } catch {
-      // still show submitted — question was received
-      setMode('submitted')
+      // Network error after verification passed — still reveal so they see
+      // what they paid for with their email. Elijah-notify will retry via
+      // whatever mechanism eventually catches the failure.
+      setRevealed(true)
     } finally {
       setEmailLoading(false)
     }
@@ -409,6 +432,8 @@ export default function HomePage() {
     setStreamedText('')
     setEmail('')
     setAgeConfirmed(false)
+    setRevealed(false)
+    setEmailError('')
     fullAnswerRef.current = ''
   }
 
@@ -420,6 +445,8 @@ export default function HomePage() {
     setStreamedText('')
     setEmail('')
     setAgeConfirmed(false)
+    setRevealed(false)
+    setEmailError('')
     fullAnswerRef.current = ''
   }
 
@@ -474,30 +501,39 @@ export default function HomePage() {
           <div className="w-full">
             <p className="text-gray-500 text-xs uppercase tracking-widest mb-4">Elijah says</p>
 
-            {/* Visible part */}
-            <div className="text-white text-base leading-relaxed mb-2">
-              {visibleText}
-              {!isDone && <span className="inline-block w-1 h-4 bg-white ml-1 animate-pulse" />}
-            </div>
-
-            {/* Blurred fade — no overlay, just visual hint there's more */}
-            {hiddenText && (
-              <div
-                className="text-white text-base leading-relaxed select-none pointer-events-none mb-6"
-                style={{
-                  maskImage: 'linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, transparent 80%)',
-                  WebkitMaskImage: 'linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, transparent 80%)',
-                  filter: 'blur(5px)',
-                  maxHeight: '80px',
-                  overflow: 'hidden',
-                }}
-              >
-                {hiddenText}
+            {revealed ? (
+              // Full answer, unblurred. Shown after email verification succeeds.
+              <div className="text-white text-base leading-relaxed mb-6 whitespace-pre-wrap">
+                {streamedText}
               </div>
+            ) : (
+              <>
+                {/* Visible part */}
+                <div className="text-white text-base leading-relaxed mb-2">
+                  {visibleText}
+                  {!isDone && <span className="inline-block w-1 h-4 bg-white ml-1 animate-pulse" />}
+                </div>
+
+                {/* Blurred fade — no overlay, just visual hint there's more */}
+                {hiddenText && (
+                  <div
+                    className="text-white text-base leading-relaxed select-none pointer-events-none mb-6"
+                    style={{
+                      maskImage: 'linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, transparent 80%)',
+                      WebkitMaskImage: 'linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, transparent 80%)',
+                      filter: 'blur(5px)',
+                      maxHeight: '80px',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {hiddenText}
+                  </div>
+                )}
+              </>
             )}
 
-            {/* Email gate — stacked below, not overlaid */}
-            {hiddenText && (
+            {/* Email gate — stacked below. Hidden once revealed. */}
+            {hiddenText && !revealed && (
               <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
                 <p className="text-white font-semibold text-base">Get Elijah's answer</p>
                 <p className="text-gray-500 text-sm leading-relaxed">You'll also be joined to the Consistency Club — his weekly newsletter on building your Faith + Consistency on and off the court.</p>
@@ -505,9 +541,9 @@ export default function HomePage() {
                   type="email"
                   placeholder="your@email.com"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={e => { setEmail(e.target.value); if (emailError) setEmailError('') }}
                   onKeyDown={e => { if (e.key === 'Enter') handleEmailSubmit() }}
-                  className="w-full px-4 py-3 bg-transparent border border-gray-700 text-white placeholder-gray-600 outline-none focus:border-white transition-colors text-sm"
+                  className={`w-full px-4 py-3 bg-transparent border ${emailError ? 'border-red-500' : 'border-gray-700 focus:border-white'} text-white placeholder-gray-600 outline-none transition-colors text-sm`}
                 />
                 <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer">
                   <input
@@ -518,13 +554,27 @@ export default function HomePage() {
                   />
                   I confirm I am 13 years of age or older
                 </label>
+                {emailError && (
+                  <p className="text-red-400 text-xs">{emailError}</p>
+                )}
                 <button
                   onClick={handleEmailSubmit}
                   disabled={!email.trim() || !ageConfirmed || emailLoading}
                   className="w-full bg-white text-black py-3 text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
                 >
-                  {emailLoading ? 'Sending...' : 'Get my answer →'}
+                  {emailLoading ? 'Verifying...' : 'Get my answer →'}
                 </button>
+              </div>
+            )}
+
+            {/* Post-reveal confirmation — answer is now fully visible above. */}
+            {revealed && (
+              <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
+                <p className="text-white font-semibold text-base">Elijah is writing you personally.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">The version above is a first take. Elijah reviews every one. When he sends his real reply, it'll land in your inbox.</p>
+                <a href="/history" className="text-sm font-semibold text-white hover:opacity-70 transition-opacity mt-2">
+                  Track your question →
+                </a>
               </div>
             )}
           </div>
@@ -629,12 +679,18 @@ export default function HomePage() {
               )}
               <textarea
                 value={question}
-                onChange={(e) => setQuestion(e.target.value)}
+                onChange={(e) => {
+                  setQuestion(e.target.value)
+                  // Auto-grow so long questions stay fully visible as the user types.
+                  const el = e.target
+                  el.style.height = 'auto'
+                  el.style.height = `${el.scrollHeight}px`
+                }}
                 onKeyDown={handleKey}
                 placeholder=""
                 rows={1}
                 autoFocus
-                className="w-full text-white text-base sm:text-lg leading-relaxed resize-none outline-none bg-transparent"
+                className="w-full text-white text-base sm:text-lg leading-relaxed resize-none outline-none bg-transparent overflow-hidden"
               />
             </div>
             <button
