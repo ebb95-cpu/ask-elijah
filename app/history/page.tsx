@@ -29,6 +29,53 @@ function formatDate(iso: string) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+/**
+ * Share an approved answer via the public /browse/[id] page. Uses the
+ * native Web Share sheet on mobile, falls back to clipboard copy on
+ * desktop. "Copied" feedback resets after 2s.
+ */
+function ShareAnswerButton({ questionId, question }: { questionId: string; question: string }) {
+  const [copied, setCopied] = useState(false)
+  const handleShare = async () => {
+    const url = `${window.location.origin}/browse/${questionId}`
+    const shareText = `"${question}" — Elijah's answer:`
+    // Prefer the native share sheet on mobile; it looks native and gives
+    // the user all their installed apps as share targets.
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: 'Ask Elijah', text: shareText, url })
+        return
+      } catch {
+        // User cancelled or share failed — fall through to clipboard.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard can fail in some embedded contexts — last-resort fallback
+      // is opening the URL in a new tab so the user can copy it manually.
+      window.open(url, '_blank', 'noopener')
+    }
+  }
+  return (
+    <button
+      onClick={handleShare}
+      className="text-xs text-gray-500 hover:text-white transition-colors flex items-center gap-1.5 shrink-0"
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="18" cy="5" r="3" />
+        <circle cx="6" cy="12" r="3" />
+        <circle cx="18" cy="19" r="3" />
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+      </svg>
+      {copied ? 'Link copied' : 'Share'}
+    </button>
+  )
+}
+
 export default function HistoryPage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
@@ -109,17 +156,31 @@ export default function HistoryPage() {
         <button onClick={handleSignOut} className="text-xs text-gray-600 hover:text-white transition-colors">Sign out</button>
       </nav>
 
-      {/* Header */}
+      {/* Header — retention anchor. Totals + prominent Ask CTA up top so
+          returning users are one tap from asking the next question instead
+          of having to scroll past their grid to find it. */}
       <div className="px-5 pb-5 shrink-0">
-        <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Your questions</p>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {questions.length > 0 ? `${questions.length} question${questions.length === 1 ? '' : 's'}` : 'No questions yet'}
-        </h1>
-        {questions.filter((q) => q.status === 'approved').length > 0 && (
-          <p className="text-xs text-gray-500 mt-1">
-            {questions.filter((q) => q.status === 'approved').length} answered by Elijah
-          </p>
-        )}
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div>
+            <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Your questions</p>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {questions.length > 0 ? `${questions.length} question${questions.length === 1 ? '' : 's'}` : 'No questions yet'}
+            </h1>
+            {questions.filter((q) => q.status === 'approved').length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {questions.filter((q) => q.status === 'approved').length} answered by Elijah
+              </p>
+            )}
+          </div>
+          {questions.length > 0 && (
+            <Link
+              href="/ask"
+              className="shrink-0 bg-white text-black px-4 py-2 text-xs font-bold rounded-full hover:opacity-80 transition-opacity whitespace-nowrap"
+            >
+              Ask Elijah →
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -250,10 +311,13 @@ export default function HistoryPage() {
                 {openQuestion.answer}
               </p>
               {/* Answer feedback — only for approved answers. Silent thumbs-up,
-                  thumbs-down prompts for a comment that emails Elijah. */}
+                  thumbs-down prompts for a comment that emails Elijah.
+                  Share button next to it points to the public /browse/[id]
+                  page for that answer. */}
               {openQuestion.status === 'approved' && (
-                <div className="mt-5 pt-4 border-t border-gray-900">
+                <div className="mt-5 pt-4 border-t border-gray-900 flex items-center justify-between gap-4">
                   <ThumbsFeedback questionId={openQuestion.id} email={userEmail} />
+                  <ShareAnswerButton questionId={openQuestion.id} question={openQuestion.question} />
                 </div>
               )}
             </div>
