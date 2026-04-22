@@ -269,6 +269,7 @@ export default function HomePage() {
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const [newsletterOptIn, setNewsletterOptIn] = useState(false)
   const [revealed, setRevealed] = useState(false)
+  const [askError, setAskError] = useState('')
   const fullAnswerRef = useRef('')
   const prevQuestionRef = useRef('')
   const prevAnswerRef = useRef('')
@@ -321,9 +322,32 @@ export default function HomePage() {
 
   const handleSubmit = async () => {
     if (!question.trim() || (mode !== 'idle' && mode !== 'returning')) return
+    setAskError('')
     setMode('loading')
     setStreamedText('')
     fullAnswerRef.current = ''
+
+    // Gatekeeper — semantic classifier that blocks abuse, gibberish, and
+    // off-topic questions before we spend tokens on a preview. Fails open on
+    // network/service errors (returns legit) so a classifier outage never
+    // blocks real players.
+    try {
+      const gkRes = await fetch('/api/gatekeep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: question.trim(), profile: profileRef.current }),
+      })
+      if (gkRes.ok) {
+        const gk = await gkRes.json()
+        if (gk?.classification && gk.classification !== 'legit') {
+          setAskError(gk.reason || "I can't answer that one. Try asking me something real about your game.")
+          setMode('idle')
+          return
+        }
+      }
+    } catch {
+      // Fail open — proceed to preview if gatekeep itself errored.
+    }
 
     try {
       const res = await fetch('/api/preview', {
@@ -681,6 +705,7 @@ export default function HomePage() {
                 value={question}
                 onChange={(e) => {
                   setQuestion(e.target.value)
+                  if (askError) setAskError('')
                   // Auto-grow so long questions stay fully visible as the user types.
                   const el = e.target
                   el.style.height = 'auto'
@@ -701,6 +726,9 @@ export default function HomePage() {
               Ask →
             </button>
           </div>
+          {askError && (
+            <p className="mt-3 text-sm text-red-400 leading-relaxed">{askError}</p>
+          )}
         </div>
       </section>
 
