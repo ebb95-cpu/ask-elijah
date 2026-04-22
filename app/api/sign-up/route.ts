@@ -6,7 +6,7 @@ import { Resend } from 'resend'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: NextRequest) {
-  const { email, password, firstName } = await req.json()
+  const { email, password, firstName, challenge, skipEmailVerify } = await req.json()
 
   if (!email?.trim() || !password || !firstName?.trim()) {
     return NextResponse.json({ error: 'Email, password, and first name are required' }, { status: 400 })
@@ -14,13 +14,18 @@ export async function POST(req: NextRequest) {
 
   const cleanEmail = email.trim().toLowerCase()
   const cleanFirstName = firstName.trim()
+  const cleanChallenge = typeof challenge === 'string' ? challenge.trim() : ''
 
   // Verify email is deliverable before we create an account or send mail.
   // Protects Resend sender reputation from bouncing welcome emails to fake
-  // addresses.
-  const verify = await verifyEmail(cleanEmail)
-  if (!verify.ok) {
-    return NextResponse.json({ error: verify.reason }, { status: 400 })
+  // addresses. Caller can pass skipEmailVerify:true when the email was
+  // already Kickbox-verified earlier in the flow (e.g. the post-ask account
+  // setup) to avoid spending a second Kickbox credit on the same address.
+  if (!skipEmailVerify) {
+    const verify = await verifyEmail(cleanEmail)
+    if (!verify.ok) {
+      return NextResponse.json({ error: verify.reason }, { status: 400 })
+    }
   }
 
   const supabase = getSupabase()
@@ -40,11 +45,13 @@ export async function POST(req: NextRequest) {
   }
 
   if (data.user) {
-    await supabase.from('profiles').upsert({
+    const upsertRow: Record<string, unknown> = {
       id: data.user.id,
       first_name: cleanFirstName,
       email: cleanEmail,
-    }).then(() => {}, () => {})
+    }
+    if (cleanChallenge) upsertRow.challenge = cleanChallenge
+    await supabase.from('profiles').upsert(upsertRow).then(() => {}, () => {})
   }
 
   resend.emails.send({

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { getLocal, setLocal } from '@/lib/safe-storage'
+import AccountSetupForm from '@/components/AccountSetupForm'
 
 function Logo({ dark = false }: { dark?: boolean }) {
   const c = dark ? '#fff' : '#000'
@@ -255,7 +256,7 @@ function ReturningView({
   )
 }
 
-type Mode = 'idle' | 'returning' | 'loading' | 'preview' | 'email_gate' | 'submitted'
+type Mode = 'idle' | 'returning' | 'loading' | 'preview' | 'email_gate' | 'account_setup' | 'submitted'
 
 const PREVIEW_CHARS = 300 // how many chars to show before blur
 
@@ -429,14 +430,16 @@ export default function HomePage() {
       userEmailRef.current = email.trim()
       setLocal('ask_elijah_email', email.trim())
 
-      // Redirect to their court (the dashboard they'll come back to) instead
-      // of unblurring in place. The first-take still renders — it shows up
-      // inside the pending card on /track — so the reveal moment is preserved
-      // in the context of their home. Fallback: if /api/ask failed, stay on
-      // the homepage and unblur so the player is never stranded without
-      // seeing the answer they unlocked.
+      // Investment phase: before handing off to /track, ask them to set up
+      // an account (name + challenge + password OR Apple/Google OAuth).
+      // The question is already saved + the first-take is already rendered
+      // above — the reward has been delivered. This is textbook Hooked
+      // Investment: ask for commitment after the reward, not before.
+      //
+      // Fallback: if /api/ask failed, unblur in place so the player isn't
+      // stranded without the answer they unlocked.
       if (askRes.ok) {
-        window.location.assign('/track')
+        setMode('account_setup')
         return
       }
       setRevealed(true)
@@ -503,6 +506,31 @@ export default function HomePage() {
             <p className="text-gray-600 text-xs uppercase tracking-widest mb-2">Your question</p>
             <p className="text-gray-400 text-sm italic">&ldquo;{question}&rdquo;</p>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Account setup (post-verify Investment phase) ──────────────────────────
+  if (mode === 'account_setup') {
+    return (
+      <div className="min-h-[100dvh] bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-6 py-5">
+          <button onClick={() => setRevealed(true)} className="text-gray-500 hover:text-white transition-colors text-sm">
+            ← Back
+          </button>
+          <Logo dark />
+          <div className="w-16" />
+        </nav>
+        <div className="flex-1 flex items-center justify-center">
+          <AccountSetupForm
+            email={email.trim().toLowerCase()}
+            onDone={() => {
+              // Password path succeeded + session is set. Hand off to their
+              // court.
+              window.location.assign('/track')
+            }}
+          />
         </div>
       </div>
     )

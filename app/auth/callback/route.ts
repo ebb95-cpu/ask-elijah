@@ -5,7 +5,9 @@ import { Resend } from 'resend'
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = req.nextUrl
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/ask'
+  // Default destination after auth is the player's court. Callers can
+  // override with ?next=... (e.g. old sign-up flow used /ask).
+  const next = searchParams.get('next') ?? '/track'
 
   if (code) {
     const res = NextResponse.redirect(`${origin}${next}`)
@@ -37,6 +39,33 @@ export async function GET(req: NextRequest) {
         const isNewUser = now - createdAt < 5 * 60 * 1000 // 5 minutes
 
         if (isNewUser) {
+          // Provision a profiles row for OAuth signups. The email/password
+          // path does this in /api/sign-up; OAuth users land here without
+          // going through that route, so we insert here. Uses the provider's
+          // display name (from user_metadata) as first_name when available.
+          // Fire-and-forget — if the insert fails we'd rather not block the
+          // redirect, and /track has a fallback "finish your profile" nudge.
+          const meta = (user.user_metadata || {}) as Record<string, unknown>
+          const rawName = (meta.full_name as string)
+            || (meta.name as string)
+            || (meta.given_name as string)
+            || ''
+          const firstName = typeof rawName === 'string' && rawName.trim()
+            ? rawName.trim().split(/\s+/)[0]
+            : null
+          try {
+            await supabase.from('profiles').upsert(
+              {
+                id: user.id,
+                email: user.email,
+                ...(firstName ? { first_name: firstName } : {}),
+              },
+              { onConflict: 'email' },
+            )
+          } catch {
+            /* non-fatal, /track handles incomplete profiles */
+          }
+
           const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
           const resend = new Resend(process.env.RESEND_API_KEY)
 
