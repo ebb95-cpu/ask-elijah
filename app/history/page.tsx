@@ -18,6 +18,13 @@ type Question = {
   approved_at?: string | null
 }
 
+type PopularQuestion = {
+  id: string
+  question: string
+  topic: string | null
+  upvote_count: number
+}
+
 function formatDate(iso: string) {
   const d = new Date(iso)
   const now = new Date()
@@ -78,6 +85,7 @@ function ShareAnswerButton({ questionId, question }: { questionId: string; quest
 
 export default function HistoryPage() {
   const [questions, setQuestions] = useState<Question[]>([])
+  const [popular, setPopular] = useState<PopularQuestion[]>([])
   const [loading, setLoading] = useState(true)
   const [openId, setOpenId] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState('')
@@ -101,6 +109,13 @@ export default function HistoryPage() {
       if (!user) { router.push('/sign-in'); return }
       setUserEmail(user.email || '')
       if (user.email) posthog?.identify(user.email, { email: user.email })
+      // Kick off the popular-questions fetch in parallel with the user's own
+      // history — it isn't render-critical for the top of the page so it can
+      // finish whenever.
+      void fetch(`/api/browse?email=${encodeURIComponent(user.email || '')}`)
+        .then((r) => r.ok ? r.json() : { questions: [] })
+        .then((data) => setPopular((data?.questions || []).slice(0, 6)))
+        .catch(() => setPopular([]))
       const qs = await fetchQuestions()
       setQuestions(qs)
       knownIdsRef.current = new Set(qs.map((q: Question) => q.id))
@@ -203,6 +218,18 @@ export default function HistoryPage() {
           </div>
         ) : (
           <>
+            {/* ── Hooked-style investment prompt ──
+                Shown between the header and the grid while Elijah is reviewing
+                their question. Frames the capture as self-serving ("my real
+                answer will hit specifically") rather than a form tax. The
+                component internally hides itself once the profile is complete
+                or the user skips for this scope. */}
+            {userEmail && (
+              <div className="mb-8">
+                <ProfileCapture email={userEmail} dismissScope="history-inline" />
+              </div>
+            )}
+
             {/* ── Flashcard grid ── */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {questions.map((q) => {
@@ -267,6 +294,43 @@ export default function HistoryPage() {
                 Ask another question →
               </Link>
             </div>
+
+            {/* ── Questions from players like you ──
+                Tribe reward + next-trigger loader. Top upvoted approved
+                questions from the community. Clicking a card pre-fills the
+                ask input (via ?followup=) so the next question is one tap
+                away. Filtered to exclude anything they already asked. */}
+            {popular.length > 0 && (() => {
+              const ownIds = new Set(questions.map((q) => q.id))
+              const feed = popular.filter((p) => !ownIds.has(p.id)).slice(0, 6)
+              if (feed.length === 0) return null
+              return (
+                <div className="mt-16">
+                  <div className="flex items-baseline justify-between mb-4">
+                    <p className="text-[10px] text-gray-600 uppercase tracking-widest">Questions players like you are asking</p>
+                    <Link href="/browse" className="text-[10px] text-gray-600 hover:text-white transition-colors uppercase tracking-widest">
+                      Browse all →
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {feed.map((p) => (
+                      <Link
+                        key={p.id}
+                        href={`/ask?followup=${encodeURIComponent(p.question)}`}
+                        className="group flex items-start justify-between gap-3 border border-gray-900 hover:border-gray-700 rounded-xl p-4 transition-colors"
+                      >
+                        <p className="text-sm text-gray-300 italic leading-snug group-hover:text-white transition-colors">
+                          &ldquo;{p.question}&rdquo;
+                        </p>
+                        <span className="shrink-0 text-[10px] text-gray-600 uppercase tracking-widest whitespace-nowrap mt-0.5">
+                          Ask →
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
           </>
         )}
       </div>

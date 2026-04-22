@@ -18,10 +18,22 @@ const TIMELINES = ['1 week', '1 month', 'This season', 'Offseason']
 
 interface Props {
   email: string
-  questionId: string
+  /**
+   * Per-question context. When provided, dismissing the capture only hides it
+   * for that specific question's detail view — the next approved answer will
+   * re-show it. Omit for inline usage (e.g. at the top of /history) and pass
+   * a stable `dismissScope` instead so skip persists across renders without
+   * being tied to a single answer.
+   */
+  questionId?: string
+  /**
+   * Override for the session-storage dismissal key. Defaults to the
+   * per-question key when questionId is set, otherwise "history-inline".
+   */
+  dismissScope?: string
 }
 
-export default function ProfileCapture({ email, questionId }: Props) {
+export default function ProfileCapture({ email, questionId, dismissScope }: Props) {
   const [profile, setProfile] = useState<CaptureProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -36,9 +48,9 @@ export default function ProfileCapture({ email, questionId }: Props) {
   const [timeline, setTimeline] = useState('')
   const [system, setSystem] = useState('')
 
-  // Per-question dismissal (user can skip on THIS answer but we'll re-show on
-  // the next approved answer until they complete).
-  const dismissKey = `kb_capture_dismissed_${questionId}`
+  const dismissKey = dismissScope
+    ? `kb_capture_dismissed_${dismissScope}`
+    : `kb_capture_dismissed_${questionId || 'history-inline'}`
 
   useEffect(() => {
     if (typeof window !== 'undefined' && sessionStorage.getItem(dismissKey)) {
