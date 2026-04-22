@@ -514,20 +514,22 @@ export default function HomePage() {
   // ── Account setup (peak-investment onboarding flow) ──────────────────────
   // Opens when the player taps "Continue →" below the blurred preview.
   // Six-step Endel-style flow inside AccountSetupForm handles email verify,
-  // profile capture (goal / weakness / strength / name), and auth.
+  // profile capture, and auth.
+  //
+  // Navigation uses a single Back button that lives inside each step
+  // (component-level). The outer nav only shows the logo — no page-level
+  // Back button to avoid duplicating controls. Step 1's Back calls onExit
+  // which drops us back to the preview view.
   if (mode === 'account_setup') {
     return (
       <div className="min-h-[100dvh] bg-black text-white flex flex-col">
-        <nav className="flex items-center justify-between px-6 py-5">
-          <button onClick={() => setMode('preview')} className="text-gray-500 hover:text-white transition-colors text-sm">
-            ← Back
-          </button>
+        <nav className="flex items-center justify-center px-6 py-5">
           <Logo dark />
-          <div className="w-16" />
         </nav>
         <div className="flex-1 flex items-center justify-center">
           <AccountSetupForm
             question={question.trim()}
+            onExit={() => setMode('preview')}
             onDone={() => {
               // Password path succeeded + Supabase session is set. Hand off
               // to their court. OAuth paths redirect via /auth/callback and

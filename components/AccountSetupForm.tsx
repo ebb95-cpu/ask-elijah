@@ -59,11 +59,18 @@ type Step = 1 | 2 | 3 | 4 | 5 | 6
 export default function AccountSetupForm({
   question,
   onDone,
+  onExit,
 }: {
   /** The just-asked question, saved to /api/ask at the email step. */
   question: string
   /** Called after email+password signup + session is set. */
   onDone: () => void
+  /**
+   * Called when the player taps Back on step 1 (exits onboarding back to
+   * the blurred preview). Parent is responsible for restoring the preview
+   * view (setMode('preview')).
+   */
+  onExit: () => void
 }) {
   const [step, setStep] = useState<Step>(1)
   const [age, setAge] = useState('')
@@ -217,7 +224,7 @@ export default function AccountSetupForm({
             value={age}
             setValue={setAge}
             onAdvance={advance}
-            showBack={false}
+            onBack={onExit}
           />
         )}
         {step === 2 && (
@@ -312,7 +319,6 @@ function StepTapChoice({
   setValue,
   onAdvance,
   onBack,
-  showBack = true,
 }: {
   title: string
   subtitle: string
@@ -320,26 +326,26 @@ function StepTapChoice({
   value: string
   setValue: (v: string) => void
   onAdvance: () => void
-  onBack?: () => void
-  showBack?: boolean
+  onBack: () => void
 }) {
   const canAdvance = value.trim().length > 0
   return (
     <>
-      {showBack && onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="text-gray-600 hover:text-white text-xs mb-6 self-start transition-colors"
-        >
-          ← Back
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={onBack}
+        className="text-gray-600 hover:text-white text-xs mb-6 self-start transition-colors"
+      >
+        ← Back
+      </button>
 
       <h1 className="text-3xl font-bold tracking-tight leading-tight mb-3">{title}</h1>
       <p className="text-gray-500 text-sm mb-10">{subtitle}</p>
 
-      <div className="flex flex-wrap gap-2.5">
+      {/* 3-column grid, equal width — uniform pills read as "equal choices"
+          (Gestalt: similarity + prägnanz). Ragged-edge flex-wrap is
+          visually noisy for short fixed labels like ages / positions. */}
+      <div className="grid grid-cols-3 gap-3">
         {chips.map((chip) => {
           const active = value === chip.value
           return (
@@ -347,10 +353,10 @@ function StepTapChoice({
               key={chip.value}
               type="button"
               onClick={() => setValue(chip.value)}
-              className={`text-base px-5 py-3 rounded-full border transition-colors ${
+              className={`text-base font-semibold py-4 rounded-full border transition-all ${
                 active
-                  ? 'bg-white text-black border-white'
-                  : 'bg-transparent text-gray-300 border-gray-800 hover:border-gray-600'
+                  ? 'bg-white text-black border-white scale-[1.02]'
+                  : 'bg-transparent text-gray-300 border-gray-800 hover:border-gray-500 active:scale-95'
               }`}
             >
               {chip.label}
