@@ -40,6 +40,15 @@ function Logo() {
   )
 }
 
+function Stat({ value, label }: { value: number | string; label: string }) {
+  return (
+    <div className="flex flex-col items-start">
+      <span className="text-lg font-bold tabular-nums leading-none">{value}</span>
+      <span className="text-[10px] text-gray-500 uppercase tracking-widest mt-1.5">{label}</span>
+    </div>
+  )
+}
+
 /**
  * "Your court" — the player's home, not a tracker.
  *
@@ -116,28 +125,56 @@ async function fetchPopular(): Promise<PopularQuestion[]> {
   }
 }
 
-async function fetchFirstName(email: string): Promise<string | null> {
+type PlayerProfile = {
+  firstName: string | null
+  position: string | null
+  level: string | null
+  challenge: string | null
+}
+
+const LEVEL_LABELS: Record<string, string> = {
+  middle_school: 'Middle school',
+  jv: 'JV',
+  varsity: 'Varsity',
+  aau: 'AAU',
+  college: 'College',
+  pro: 'Pro',
+  rec: 'Rec',
+}
+
+function prettyLevel(raw: string | null): string | null {
+  if (!raw) return null
+  const normalized = raw.toLowerCase().trim()
+  return LEVEL_LABELS[normalized] || raw
+}
+
+async function fetchProfile(email: string): Promise<PlayerProfile> {
   try {
     const supabase = getSupabase()
     const { data } = await supabase
       .from('profiles')
-      .select('first_name, name')
+      .select('first_name, name, position, level, challenge')
       .eq('email', email)
       .single()
-    if (!data) return null
+    if (!data) return { firstName: null, position: null, level: null, challenge: null }
     const raw = (data.first_name || data.name || '').trim()
-    if (!raw) return null
     // If they registered with a full name, just take the first token so the
     // greeting stays personal ("Hey Marcus") rather than formal.
-    return raw.split(/\s+/)[0]
+    const firstName = raw ? raw.split(/\s+/)[0] : null
+    return {
+      firstName,
+      position: data.position || null,
+      level: data.level || null,
+      challenge: data.challenge || null,
+    }
   } catch {
-    return null
+    return { firstName: null, position: null, level: null, challenge: null }
   }
 }
 
 async function SignedInState({ email }: { email: string }) {
   const supabase = getSupabase()
-  const [{ data: myData }, popular, firstName] = await Promise.all([
+  const [{ data: myData }, popular, profile] = await Promise.all([
     supabase
       .from('questions')
       .select('id, question, answer, status, created_at, approved_at')
@@ -146,7 +183,7 @@ async function SignedInState({ email }: { email: string }) {
       .order('created_at', { ascending: false })
       .limit(30),
     fetchPopular(),
-    fetchFirstName(email),
+    fetchProfile(email),
   ])
 
   const questions = (myData || []) as QuestionRow[]
@@ -161,7 +198,17 @@ async function SignedInState({ email }: { email: string }) {
   const freshAnswer = approved[0] || null
   const libraryAnswers = approved.slice(1)
 
-  const greeting = firstName ? `Hey ${firstName}` : 'Your court'
+  // Member-since = oldest question they've submitted. Cheap "you've been
+  // here" signal without a separate users.created_at query.
+  const oldestQuestion = questions[questions.length - 1]
+  const joinedLabel = oldestQuestion
+    ? new Date(oldestQuestion.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : null
+
+  const greeting = profile.firstName ? `Hey ${profile.firstName}` : 'Your court'
+  const initial = (profile.firstName || email)[0].toUpperCase()
+  const profileLine = [prettyLevel(profile.level), profile.position].filter(Boolean).join(' · ')
+  const profileComplete = Boolean(profile.firstName && profile.level && profile.position && profile.challenge)
 
   if (questions.length === 0) {
     return (
@@ -181,14 +228,65 @@ async function SignedInState({ email }: { email: string }) {
 
   return (
     <div className="flex-1 px-5 pt-6 max-w-xl mx-auto w-full pb-32">
-      {/* Header — personal greeting, small meta line. */}
-      <div className="mb-6">
-        <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Your court</p>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">{greeting}.</h1>
-        <p className="text-xs text-gray-500 leading-relaxed">
-          I answer every one personally. My queue runs 24&ndash;48 hours. When I reply, it&apos;ll land in your inbox.
-        </p>
+      {/* Small page label — "Your court" identity, not a greeting. */}
+      <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-3">Your court</p>
+
+      {/* Profile card — dashboard-style identity block. Avatar + greeting
+          + level/position line + stats row + edit link. If the profile is
+          incomplete, the bottom of the card softly nudges them to finish
+          it (never blocking). */}
+      <div className="rounded-2xl border border-gray-800 bg-gradient-to-b from-[#0d0d0d] to-[#070707] p-5 mb-6">
+        <div className="flex items-start gap-4">
+          <div
+            className="shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold"
+            style={{ background: 'linear-gradient(135deg, #2a2a2a 0%, #0a0a0a 100%)', border: '1px solid #2a2a2a' }}
+          >
+            {initial}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-2xl font-bold tracking-tight leading-tight">{greeting}.</h1>
+              <Link
+                href="/profile"
+                className="text-[10px] text-gray-600 hover:text-white transition-colors uppercase tracking-widest whitespace-nowrap shrink-0 mt-1.5"
+              >
+                Edit →
+              </Link>
+            </div>
+            {profileLine && (
+              <p className="text-xs text-gray-400 mt-1">{profileLine}</p>
+            )}
+            {profile.challenge && (
+              <p className="text-xs text-gray-500 mt-1 italic">Working on: {profile.challenge}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Stats row — asked / answered / joined. Not a streak or badge
+            system (those belong in v2 after retention data proves out). */}
+        <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-gray-900">
+          <Stat value={questions.length} label={questions.length === 1 ? 'Asked' : 'Asked'} />
+          <Stat value={approved.length} label={approved.length === 1 ? 'Answered' : 'Answered'} />
+          <Stat value={joinedLabel || '—'} label="Joined" />
+        </div>
+
+        {!profileComplete && (
+          <div className="mt-4 pt-4 border-t border-gray-900">
+            <Link
+              href="/profile"
+              className="flex items-center justify-between text-xs text-gray-500 hover:text-white transition-colors group"
+            >
+              <span>Finish your profile so my answers hit more specifically</span>
+              <span className="text-gray-600 group-hover:text-white transition-colors">→</span>
+            </Link>
+          </div>
+        )}
       </div>
+
+      {/* Expectation line — single source of truth for queue timing. */}
+      <p className="text-xs text-gray-500 leading-relaxed mb-6">
+        I answer every one personally. My queue runs 24&ndash;48 hours. When I reply, it&apos;ll land in your inbox.
+      </p>
 
       {/* First-visit welcome banner. Dismissible, localStorage-gated. */}
       <CourtWelcomeBanner />
