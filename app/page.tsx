@@ -599,13 +599,16 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Post-reveal confirmation — answer is now fully visible above. */}
+            {/* Post-reveal confirmation — answer above IS the personal reply
+                from Elijah, so don't frame it as a "first take" waiting for a
+                "real" one. The player got their answer. Small acknowledgement
+                that it's saved to their inbox + court for later. */}
             {revealed && (
               <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
-                <p className="text-white font-semibold text-base">Elijah is writing you personally.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">The version above is a first take. Elijah reviews every one. When he sends his personal reply, it'll land in your inbox.</p>
+                <p className="text-white font-semibold text-base">That&apos;s my answer.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">I sent a copy to your inbox. Everything I tell you lives on your court so you can come back to it any time.</p>
                 <a href="/track" className="text-sm font-semibold text-white hover:opacity-70 transition-opacity mt-2">
-                  Track your question →
+                  Your court →
                 </a>
               </div>
             )}
@@ -626,9 +629,9 @@ export default function HomePage() {
         </nav>
         <div className="flex-1 flex flex-col items-center justify-center px-5 text-center gap-6 max-w-sm mx-auto">
           <div>
-            <h2 className="text-3xl font-bold mb-2">Elijah got your question.</h2>
-            <p className="text-gray-500 text-base leading-relaxed mt-4">He reads every one personally.</p>
-            <p className="text-gray-500 text-base leading-relaxed">When he writes back, it&apos;ll be in your inbox.</p>
+            <h2 className="text-3xl font-bold mb-2">Got your question.</h2>
+            <p className="text-gray-500 text-base leading-relaxed mt-4">I read every one. I&apos;ll send you something real.</p>
+            <p className="text-gray-500 text-base leading-relaxed">Keep an eye on your inbox.</p>
           </div>
 
           <div className="border-l-2 border-gray-800 pl-4 text-left w-full">
@@ -636,7 +639,7 @@ export default function HomePage() {
           </div>
 
           <a href="/track" className="text-sm font-semibold text-white hover:opacity-70 transition-opacity">
-            Track your question →
+            Your court →
           </a>
         </div>
       </div>
