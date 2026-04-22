@@ -511,12 +511,15 @@ export default function HomePage() {
     )
   }
 
-  // ── Account setup (post-verify Investment phase) ──────────────────────────
+  // ── Account setup (peak-investment onboarding flow) ──────────────────────
+  // Opens when the player taps "Continue →" below the blurred preview.
+  // Six-step Endel-style flow inside AccountSetupForm handles email verify,
+  // profile capture (goal / weakness / strength / name), and auth.
   if (mode === 'account_setup') {
     return (
       <div className="min-h-[100dvh] bg-black text-white flex flex-col">
         <nav className="flex items-center justify-between px-6 py-5">
-          <button onClick={() => setRevealed(true)} className="text-gray-500 hover:text-white transition-colors text-sm">
+          <button onClick={() => setMode('preview')} className="text-gray-500 hover:text-white transition-colors text-sm">
             ← Back
           </button>
           <Logo dark />
@@ -524,10 +527,11 @@ export default function HomePage() {
         </nav>
         <div className="flex-1 flex items-center justify-center">
           <AccountSetupForm
-            email={email.trim().toLowerCase()}
+            question={question.trim()}
             onDone={() => {
-              // Password path succeeded + session is set. Hand off to their
-              // court.
+              // Password path succeeded + Supabase session is set. Hand off
+              // to their court. OAuth paths redirect via /auth/callback and
+              // never invoke this callback.
               window.location.assign('/track')
             }}
           />
@@ -592,37 +596,20 @@ export default function HomePage() {
               </>
             )}
 
-            {/* Email gate — stacked below. Hidden once revealed. */}
+            {/* Onboarding CTA — stacked below. Hidden once revealed. Replaces
+                the old inline email gate because email + profile + account
+                now collect inside the Endel-style AccountSetupForm, opened
+                on click. Peak-investment moment: they've just seen the first
+                part of the answer. One tap takes them into onboarding. */}
             {hiddenText && !revealed && (
               <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
-                <p className="text-white font-semibold text-base">Get my answer</p>
-                <p className="text-gray-500 text-sm leading-relaxed">You'll also join the Consistency Club, my weekly newsletter on building Faith + Consistency on and off the court.</p>
-                <input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={e => { setEmail(e.target.value); if (emailError) setEmailError('') }}
-                  onKeyDown={e => { if (e.key === 'Enter') handleEmailSubmit() }}
-                  className={`w-full px-4 py-3 bg-transparent border ${emailError ? 'border-red-500' : 'border-gray-700 focus:border-white'} text-white placeholder-gray-600 outline-none transition-colors text-sm`}
-                />
-                <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={ageConfirmed}
-                    onChange={e => setAgeConfirmed(e.target.checked)}
-                    className="mt-0.5 accent-white"
-                  />
-                  I confirm I am 13 years of age or older
-                </label>
-                {emailError && (
-                  <p className="text-red-400 text-xs">{emailError}</p>
-                )}
+                <p className="text-white font-semibold text-base">Get the rest of my answer.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">Set up your court so I can write back to you. Takes under a minute.</p>
                 <button
-                  onClick={handleEmailSubmit}
-                  disabled={!email.trim() || !ageConfirmed || emailLoading}
-                  className="w-full bg-white text-black py-3 text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
+                  onClick={() => setMode('account_setup')}
+                  className="w-full bg-white text-black py-3 text-sm font-semibold hover:opacity-80 transition-opacity mt-1 rounded-full"
                 >
-                  {emailLoading ? 'Verifying...' : 'Get my answer →'}
+                  Continue →
                 </button>
               </div>
             )}

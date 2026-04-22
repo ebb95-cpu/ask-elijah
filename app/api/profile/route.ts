@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 
-// Only allow reading/writing non-sensitive profile fields
-const ALLOWED_WRITE_FIELDS = ['position', 'level', 'country', 'challenge', 'first_name', 'name', 'age', 'language', 'timeline', 'system']
+// Only allow reading/writing non-sensitive profile fields.
+// `weaknesses` and `strengths` are captured during the post-verify Endel-style
+// onboarding flow. Make sure the corresponding columns exist in the Supabase
+// `profiles` table — see scripts/add-profile-columns.sql for the migration.
+const ALLOWED_WRITE_FIELDS = ['position', 'level', 'country', 'challenge', 'first_name', 'name', 'age', 'language', 'timeline', 'system', 'weaknesses', 'strengths']
 
 export async function GET(req: NextRequest) {
   const email = req.nextUrl.searchParams.get('email')

@@ -92,6 +92,13 @@ details summary::-webkit-details-marker { display: none; }
 .ticker-in  { animation: tickerSlide 0.4s ease forwards; }
 .ticker-out { opacity: 0; transition: opacity 0.3s ease; }
 
+/* Onboarding step transition — Endel-style gentle fade + rise per step. */
+@keyframes stepIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.step-in { animation: stepIn 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
 /* Loading logo line animations (moved from inline JSX) */
 @keyframes drawLeft {
   0%   { stroke-dashoffset: 12; }

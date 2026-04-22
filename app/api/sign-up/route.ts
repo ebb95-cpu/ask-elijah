@@ -6,7 +6,7 @@ import { Resend } from 'resend'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: NextRequest) {
-  const { email, password, firstName, challenge, skipEmailVerify } = await req.json()
+  const { email, password, firstName, challenge, weaknesses, strengths, skipEmailVerify } = await req.json()
 
   if (!email?.trim() || !password || !firstName?.trim()) {
     return NextResponse.json({ error: 'Email, password, and first name are required' }, { status: 400 })
@@ -15,6 +15,8 @@ export async function POST(req: NextRequest) {
   const cleanEmail = email.trim().toLowerCase()
   const cleanFirstName = firstName.trim()
   const cleanChallenge = typeof challenge === 'string' ? challenge.trim() : ''
+  const cleanWeaknesses = typeof weaknesses === 'string' ? weaknesses.trim() : ''
+  const cleanStrengths = typeof strengths === 'string' ? strengths.trim() : ''
 
   // Verify email is deliverable before we create an account or send mail.
   // Protects Resend sender reputation from bouncing welcome emails to fake
@@ -51,6 +53,11 @@ export async function POST(req: NextRequest) {
       email: cleanEmail,
     }
     if (cleanChallenge) upsertRow.challenge = cleanChallenge
+    if (cleanWeaknesses) upsertRow.weaknesses = cleanWeaknesses
+    if (cleanStrengths) upsertRow.strengths = cleanStrengths
+    // Fire-and-forget — if `weaknesses`/`strengths` columns don't exist yet
+    // in Supabase, the upsert will fail silently and the rest of the row
+    // still saves. See scripts/add-profile-columns.sql for the migration.
     await supabase.from('profiles').upsert(upsertRow).then(() => {}, () => {})
   }
 
