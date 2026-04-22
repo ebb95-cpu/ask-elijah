@@ -132,6 +132,7 @@ type PlayerProfile = {
   position: string | null
   level: string | null
   challenge: string | null
+  isFoundingMember: boolean
 }
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -155,10 +156,12 @@ async function fetchProfile(email: string): Promise<PlayerProfile> {
     const supabase = getSupabase()
     const { data } = await supabase
       .from('profiles')
-      .select('first_name, name, position, level, challenge')
+      .select('first_name, name, position, level, challenge, is_founding_member')
       .eq('email', email)
       .single()
-    if (!data) return { firstName: null, position: null, level: null, challenge: null }
+    if (!data) {
+      return { firstName: null, position: null, level: null, challenge: null, isFoundingMember: false }
+    }
     const raw = (data.first_name || data.name || '').trim()
     // If they registered with a full name, just take the first token so the
     // greeting stays personal ("Hey Marcus") rather than formal.
@@ -168,9 +171,10 @@ async function fetchProfile(email: string): Promise<PlayerProfile> {
       position: data.position || null,
       level: data.level || null,
       challenge: data.challenge || null,
+      isFoundingMember: data.is_founding_member === true,
     }
   } catch {
-    return { firstName: null, position: null, level: null, challenge: null }
+    return { firstName: null, position: null, level: null, challenge: null, isFoundingMember: false }
   }
 }
 
@@ -255,6 +259,15 @@ async function SignedInState({ email }: { email: string }) {
                 Edit →
               </Link>
             </div>
+            {profile.isFoundingMember && (
+              // First-30-members flag lives on profiles.is_founding_member
+              // (set by ask/route.ts maybeMarkFoundingMember). Badge is the
+              // retention perk — "I was here early" is the reward.
+              <p className="mt-1.5 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold text-amber-400">
+                <span aria-hidden="true">★</span>
+                Founding member
+              </p>
+            )}
             {profileLine && (
               <p className="text-xs text-gray-400 mt-1">{profileLine}</p>
             )}

@@ -767,6 +767,56 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Grand Slam Offer stack — what you actually get, framed by Hormozi's
+          value equation (reduce time delay, stack outcomes, anchor price).
+          Kept in Elijah's voice: short sentences, no fluff, first-person. */}
+      <section className="bg-black px-5 py-16 border-t border-gray-900">
+        <div className="max-w-xl mx-auto">
+          <p className="text-xs text-gray-600 uppercase tracking-widest mb-10">What you get</p>
+
+          <div className="space-y-8">
+            <div className="flex items-start gap-5">
+              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0 tabular-nums">30s</span>
+              <div>
+                <p className="text-white text-lg font-semibold leading-tight mb-1">An AI first-take on your screen.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">Grounded in my videos, my newsletters, and real neuroscience research. Not vibes.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-5">
+              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0 tabular-nums">24-48h</span>
+              <div>
+                <p className="text-white text-lg font-semibold leading-tight mb-1">My personal reply in your inbox.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">Every single one. I read them all. I answer them all.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-5">
+              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0">Forever</span>
+              <div>
+                <p className="text-white text-lg font-semibold leading-tight mb-1">Every answer saved to your court.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">Go back any time. Any device. Your library of what I&apos;ve told you.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-5">
+              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0">$0</span>
+              <div>
+                <p className="text-white text-lg font-semibold leading-tight mb-1">Free while I&apos;m building this.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">A mental-performance coach charges $100+/hour. This costs you an email.</p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => (document.querySelector('textarea') as HTMLTextAreaElement | null)?.focus()}
+            className="mt-12 text-xs text-gray-500 hover:text-white transition-colors uppercase tracking-widest"
+          >
+            Ask me something →
+          </button>
+        </div>
+      </section>
+
       {/* Below fold */}
       <section className="bg-[#F7F5F0] px-5 py-16 md:py-20">
         <div className="max-w-2xl mx-auto">
