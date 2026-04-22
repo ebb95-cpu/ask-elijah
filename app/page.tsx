@@ -779,7 +779,7 @@ export default function HomePage() {
               <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0 tabular-nums">30s</span>
               <div>
                 <p className="text-white text-lg font-semibold leading-tight mb-1">My first take on your screen.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">Grounded in my videos, my newsletters, and real neuroscience research. Not vibes.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">The first thing I&apos;d tell you if you asked me in person.</p>
               </div>
             </div>
 
