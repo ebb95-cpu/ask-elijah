@@ -304,7 +304,7 @@ async function SignedInState({ email }: { email: string }) {
       </p>
 
       {/* First-visit welcome banner. Dismissible, localStorage-gated. */}
-      <CourtWelcomeBanner />
+      <CourtWelcomeBanner struggle={profile.challenge} />
 
       {/* Fresh answer — the latest reward, green glow + pulsing dot. Only
           the newest approved one gets this treatment so the signal stays
