@@ -98,7 +98,7 @@ export default function BugReportButton() {
 
             {sent ? (
               <div style={{ fontSize: 13, color: '#34d399', padding: '12px 0' }}>
-                Got it — Elijah will take a look.
+                Got it. Elijah will take a look.
               </div>
             ) : (
               <>

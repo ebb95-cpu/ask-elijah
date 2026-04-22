@@ -282,7 +282,7 @@ async function SignedInState({ email }: { email: string }) {
         <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-gray-900">
           <Stat value={questions.length} label={questions.length === 1 ? 'Asked' : 'Asked'} />
           <Stat value={approved.length} label={approved.length === 1 ? 'Answered' : 'Answered'} />
-          <Stat value={joinedLabel || '—'} label="Joined" />
+          <Stat value={joinedLabel || '·'} label="Joined" />
         </div>
 
         {!profileComplete && (
@@ -300,7 +300,7 @@ async function SignedInState({ email }: { email: string }) {
 
       {/* Expectation line — single source of truth for queue timing. */}
       <p className="text-xs text-gray-500 leading-relaxed mb-6">
-        I answer every one personally. My queue runs 24&ndash;48 hours. When I reply, it&apos;ll land in your inbox.
+        I answer every one personally. My queue runs 24 to 48 hours. When I reply, it&apos;ll land in your inbox.
       </p>
 
       {/* First-visit welcome banner. Dismissible, localStorage-gated. */}
@@ -387,7 +387,7 @@ async function SignedInState({ email }: { email: string }) {
                 {q.answer && (
                   <>
                     <p className="text-[10px] uppercase tracking-widest text-gray-600 mb-2">
-                      My AI draft — I&apos;m rewriting this one personally
+                      My first take. Writing the full one now.
                     </p>
                     <p className="text-sm text-gray-400 leading-relaxed whitespace-pre-wrap">
                       {q.answer}

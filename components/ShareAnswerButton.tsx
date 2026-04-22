@@ -21,7 +21,7 @@ export default function ShareAnswerButton({
 
   const handleShare = async () => {
     const url = `${window.location.origin}/browse/${questionId}`
-    const shareText = `"${question}" — Elijah's answer:`
+    const shareText = `"${question}" Elijah's answer:`
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
         await navigator.share({ title: 'Ask Elijah', text: shareText, url })

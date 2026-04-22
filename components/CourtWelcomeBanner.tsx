@@ -38,7 +38,7 @@ export default function CourtWelcomeBanner() {
   return (
     <div className="mb-6 rounded-xl border border-gray-800 bg-[#0a0a0a] p-4 flex items-start gap-3">
       <p className="flex-1 text-xs text-gray-400 leading-relaxed">
-        Welcome to your court. Your answers land at the top when I reply (24&ndash;48 hours). Scroll down to see what other players are asking while you wait.
+        Welcome to your court. Your answers land at the top when I reply (24 to 48 hours). Scroll down to see what other players are asking while you wait.
       </p>
       <button
         onClick={dismiss}

@@ -98,7 +98,7 @@ export default function ThumbsFeedback({
   if (done && !showComment) {
     return (
       <div style={{ fontSize: compact ? 11 : 12, color: '#888', padding: compact ? '4px 0' : '8px 0' }}>
-        Thanks — logged.
+        Thanks. Logged.
       </div>
     )
   }
