@@ -5,61 +5,53 @@ import { getSupabaseClient } from '@/lib/supabase-client'
 import { setLocal } from '@/lib/safe-storage'
 
 /**
- * Endel-style onboarding flow launched at peak investment moment: right
- * after the player has seen the first part of their personalized answer
- * and wants the rest. One question per screen, tap-forward, fade-in
- * transitions. Six steps:
+ * Endel-style onboarding flow — launched at peak-investment moment, right
+ * after the player has seen the first part of their answer and wants the
+ * rest. One question per screen, tap-forward, fade-in transitions.
  *
- *   1. Email (+ Kickbox verify + tracking cookie set)
- *   2. Goal — what they want to achieve
- *   3. Weakness — what's hurting their game
- *   4. Strength — what's actually working
- *   5. Name — first name
- *   6. Save — Apple / Google OAuth, or email + password
+ * Step order is intentional: easiest taps first, hardest typing last.
+ * This builds yes-commitment momentum before asking for friction-heavy
+ * inputs (email, password). Per Nir Eyal, each "yes" lowers the bar for
+ * the next one; per Hormozi Value Equation, effort rises only after
+ * they're already invested.
  *
- * Why this works (per Hooked + Hormozi):
- *   - Reward was already delivered (first-take on screen) BEFORE this flow
- *     runs — the investment request comes when the player is most receptive.
- *   - One field per screen = low perceived effort, high momentum. Each tap
- *     is a micro-commitment; sunk cost compounds.
- *   - Chips keep each step tap-only where possible.
- *   - Progress dots give the "I'm almost there" dopamine.
+ *   1. Age           — tap
+ *   2. Position      — tap
+ *   3. Struggle      — tap + optional free-type
+ *   4. Name          — type
+ *   5. Email + age   — type + Kickbox verify + save question
+ *   6. Save          — Apple / Google OAuth or password
  *
  * Data flow:
- *   - Step 1 calls /api/verify-email which sets the `ae_track` cookie so
- *     /track works even if they bounce mid-flow.
- *   - Step 1 also calls /api/ask to save the question under their verified
- *     email so it persists regardless of how/whether they finish.
- *   - Steps 2-5 gather profile data in local state.
- *   - Step 6 submits everything to /api/sign-up (email+password) or kicks
- *     off OAuth with the profile data saved to /api/profile first.
+ *   - Steps 1-4 are pure UI state.
+ *   - Step 5 (email) calls /api/verify-email (sets ae_track cookie) and
+ *     /api/ask to persist the question under the verified email. If they
+ *     bounce after this step, question still lives on /track.
+ *   - Step 6 email/password → POST /api/sign-up with all fields, then
+ *     signInWithPassword → redirect /track.
+ *   - Step 6 OAuth → POST /api/profile with fields (keyed by email) so
+ *     the callback has them, then signInWithOAuth → /auth/callback →
+ *     /track.
  */
 
-const GOAL_CHIPS = [
-  'Clutch confidence',
-  'Starting varsity',
-  'More minutes',
-  'Play in college',
+const AGE_CHIPS = ['13', '14', '15', '16', '17', '18+']
+
+const POSITION_CHIPS = [
+  { value: 'PG', label: 'PG' },
+  { value: 'SG', label: 'SG' },
+  { value: 'SF', label: 'SF' },
+  { value: 'PF', label: 'PF' },
+  { value: 'C', label: 'C' },
+  { value: 'Combo', label: 'Combo' },
+]
+
+const STRUGGLE_CHIPS = [
+  'Confidence',
+  'Clutch moments',
   'Consistency',
-  'Mental toughness',
-]
-
-const WEAKNESS_CHIPS = [
-  'Freeze in clutch',
-  'Inconsistent shot',
-  'Slow decisions',
-  'Turnovers',
-  'Defense',
-  'Conditioning',
-]
-
-const STRENGTH_CHIPS = [
-  'Shooting',
-  'Ball-handling',
-  'Court IQ',
-  'Hustle',
-  'Leadership',
-  'Speed',
+  'Playing time',
+  'Overthinking',
+  'Coach trust',
 ]
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6
@@ -68,18 +60,18 @@ export default function AccountSetupForm({
   question,
   onDone,
 }: {
-  /** The just-asked question, saved to /api/ask at the end of step 1. */
+  /** The just-asked question, saved to /api/ask at the email step. */
   question: string
-  /** Called after email+password signup succeeds and session is set. */
+  /** Called after email+password signup + session is set. */
   onDone: () => void
 }) {
   const [step, setStep] = useState<Step>(1)
+  const [age, setAge] = useState('')
+  const [position, setPosition] = useState('')
+  const [struggle, setStruggle] = useState('')
+  const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState('')
   const [ageConfirmed, setAgeConfirmed] = useState(false)
-  const [goal, setGoal] = useState('')
-  const [weakness, setWeakness] = useState('')
-  const [strength, setStrength] = useState('')
-  const [firstName, setFirstName] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState<null | 'next' | 'password' | 'google' | 'apple'>(null)
   const [error, setError] = useState('')
@@ -95,7 +87,7 @@ export default function AccountSetupForm({
     setStep((s) => Math.min(s + 1, 6) as Step)
   }
 
-  // Step 1: verify email + save the question + advance.
+  // Step 5 — verify email + save the question + advance to save step.
   const submitEmailStep = async () => {
     const cleanEmail = email.trim().toLowerCase()
     if (!cleanEmail) return setError('Enter your email')
@@ -115,8 +107,8 @@ export default function AccountSetupForm({
         return
       }
 
-      // Save the question under the verified email so it persists even if
-      // they bounce out before completing the rest of onboarding.
+      // Question gets saved under the verified email so it persists if
+      // they bounce before the final save step.
       try {
         await fetch('/api/ask', {
           method: 'POST',
@@ -124,7 +116,7 @@ export default function AccountSetupForm({
           body: JSON.stringify({ question, email: cleanEmail, newsletterOptIn: true }),
         })
       } catch {
-        // Non-fatal — question save is best-effort from here.
+        /* non-fatal */
       }
       setLocal('ask_elijah_email', cleanEmail)
       setLoading(null)
@@ -149,9 +141,10 @@ export default function AccountSetupForm({
           email: cleanEmail,
           password,
           firstName: firstName.trim(),
-          challenge: goal.trim(),
-          weaknesses: weakness.trim(),
-          strengths: strength.trim(),
+          // Map onboarding inputs to existing profile columns.
+          age: age.trim(),
+          position: position.trim(),
+          challenge: struggle.trim(),
           skipEmailVerify: true,
         }),
       })
@@ -180,18 +173,19 @@ export default function AccountSetupForm({
     setError('')
     setLoading(provider)
     try {
-      // Persist profile data now so the OAuth callback has it available.
-      // /api/profile upserts by email.
       const cleanEmail = email.trim().toLowerCase()
+      // Persist profile data before the OAuth redirect — the /auth/callback
+      // runs server-side and can't see local state. /api/profile upserts by
+      // email so it's safe to call even before the Supabase Auth user exists.
       await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: cleanEmail,
           first_name: firstName.trim(),
-          challenge: goal.trim(),
-          weaknesses: weakness.trim(),
-          strengths: strength.trim(),
+          age: age.trim(),
+          position: position.trim(),
+          challenge: struggle.trim(),
         }),
       }).catch(() => {})
 
@@ -216,55 +210,56 @@ export default function AccountSetupForm({
 
       <div key={step} className="step-in flex-1 flex flex-col mt-10">
         {step === 1 && (
+          <StepTapChoice
+            title="How old are you?"
+            subtitle="So I can talk to you the right way."
+            chips={AGE_CHIPS.map((c) => ({ value: c, label: c }))}
+            value={age}
+            setValue={setAge}
+            onAdvance={advance}
+            showBack={false}
+          />
+        )}
+        {step === 2 && (
+          <StepTapChoice
+            title="What position do you play?"
+            subtitle="Answers hit different for guards vs bigs."
+            chips={POSITION_CHIPS}
+            value={position}
+            setValue={setPosition}
+            onAdvance={advance}
+            onBack={goBack}
+          />
+        )}
+        {step === 3 && (
+          <StepChipOrType
+            title="What do you struggle with?"
+            subtitle="The thing you wish you could fix tomorrow."
+            chips={STRUGGLE_CHIPS}
+            value={struggle}
+            setValue={setStruggle}
+            onAdvance={advance}
+            onBack={goBack}
+          />
+        )}
+        {step === 4 && (
+          <StepName
+            firstName={firstName}
+            setFirstName={(v) => { setFirstName(v); if (error) setError('') }}
+            onAdvance={advance}
+            onBack={goBack}
+          />
+        )}
+        {step === 5 && (
           <StepEmail
             email={email}
             setEmail={(v) => { setEmail(v); if (error) setError('') }}
             ageConfirmed={ageConfirmed}
             setAgeConfirmed={setAgeConfirmed}
             onAdvance={submitEmailStep}
+            onBack={goBack}
             loading={loading === 'next'}
             error={error}
-          />
-        )}
-        {step === 2 && (
-          <StepChipChoice
-            title="What do you want to achieve?"
-            subtitle="So every answer I give points at the real thing."
-            chips={GOAL_CHIPS}
-            value={goal}
-            setValue={setGoal}
-            onAdvance={advance}
-            onBack={goBack}
-          />
-        )}
-        {step === 3 && (
-          <StepChipChoice
-            title="What's hurting your game?"
-            subtitle="The thing you wish you could fix tomorrow."
-            chips={WEAKNESS_CHIPS}
-            value={weakness}
-            setValue={setWeakness}
-            onAdvance={advance}
-            onBack={goBack}
-          />
-        )}
-        {step === 4 && (
-          <StepChipChoice
-            title="What's actually working for you?"
-            subtitle="I want to lean into what you've got."
-            chips={STRENGTH_CHIPS}
-            value={strength}
-            setValue={setStrength}
-            onAdvance={advance}
-            onBack={goBack}
-          />
-        )}
-        {step === 5 && (
-          <StepName
-            firstName={firstName}
-            setFirstName={(v) => { setFirstName(v); if (error) setError('') }}
-            onAdvance={advance}
-            onBack={goBack}
           />
         )}
         {step === 6 && (
@@ -305,73 +300,82 @@ function ProgressDots({ step, total }: { step: number; total: number }) {
   )
 }
 
-// ── Step 1: Email ────────────────────────────────────────────────────────
-function StepEmail({
-  email,
-  setEmail,
-  ageConfirmed,
-  setAgeConfirmed,
+// ── Pure tap-chip step (age, position) ──────────────────────────────────
+// Single-select, advances on tap when that's the whole answer — no "Next"
+// wait. Used for age + position because there's literally nothing else to
+// say once they've picked.
+function StepTapChoice({
+  title,
+  subtitle,
+  chips,
+  value,
+  setValue,
   onAdvance,
-  loading,
-  error,
+  onBack,
+  showBack = true,
 }: {
-  email: string
-  setEmail: (v: string) => void
-  ageConfirmed: boolean
-  setAgeConfirmed: (v: boolean) => void
+  title: string
+  subtitle: string
+  chips: { value: string; label: string }[]
+  value: string
+  setValue: (v: string) => void
   onAdvance: () => void
-  loading: boolean
-  error: string
+  onBack?: () => void
+  showBack?: boolean
 }) {
-  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !loading) onAdvance()
-  }
+  const canAdvance = value.trim().length > 0
   return (
     <>
-      <h1 className="text-3xl font-bold tracking-tight leading-tight mb-3">
-        Where do I send it?
-      </h1>
-      <p className="text-gray-500 text-sm mb-10">So my full answer lands in your inbox.</p>
+      {showBack && onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-gray-600 hover:text-white text-xs mb-6 self-start transition-colors"
+        >
+          ← Back
+        </button>
+      )}
 
-      <input
-        type="email"
-        autoFocus
-        placeholder="your@email.com"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        onKeyDown={onKey}
-        autoComplete="email"
-        className="w-full px-0 py-3 bg-transparent border-0 border-b border-gray-700 focus:border-white text-white text-xl placeholder-gray-700 outline-none transition-colors mb-6"
-      />
+      <h1 className="text-3xl font-bold tracking-tight leading-tight mb-3">{title}</h1>
+      <p className="text-gray-500 text-sm mb-10">{subtitle}</p>
 
-      <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={ageConfirmed}
-          onChange={(e) => setAgeConfirmed(e.target.checked)}
-          className="mt-0.5 accent-white"
-        />
-        I confirm I am 13 years of age or older
-      </label>
-
-      {error && <p className="text-red-400 text-xs mt-4">{error}</p>}
+      <div className="flex flex-wrap gap-2.5">
+        {chips.map((chip) => {
+          const active = value === chip.value
+          return (
+            <button
+              key={chip.value}
+              type="button"
+              onClick={() => setValue(chip.value)}
+              className={`text-base px-5 py-3 rounded-full border transition-colors ${
+                active
+                  ? 'bg-white text-black border-white'
+                  : 'bg-transparent text-gray-300 border-gray-800 hover:border-gray-600'
+              }`}
+            >
+              {chip.label}
+            </button>
+          )
+        })}
+      </div>
 
       <div className="mt-auto pt-8">
         <button
           type="button"
           onClick={onAdvance}
-          disabled={!email.trim() || !ageConfirmed || loading}
+          disabled={!canAdvance}
           className="w-full bg-white text-black py-4 text-sm font-bold rounded-full disabled:opacity-20 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
         >
-          {loading ? 'Checking...' : 'Next →'}
+          Next →
         </button>
       </div>
     </>
   )
 }
 
-// ── Steps 2-4: Tap-to-choose chip step (goal, weakness, strength) ───────
-function StepChipChoice({
+// ── Chip-or-type step (struggle) ────────────────────────────────────────
+// Chips for common answers + free-text fallback for anything not listed.
+function StepChipOrType({
   title,
   subtitle,
   chips,
@@ -444,7 +448,7 @@ function StepChipChoice({
   )
 }
 
-// ── Step 5: Name ─────────────────────────────────────────────────────────
+// ── Name step ────────────────────────────────────────────────────────────
 function StepName({
   firstName,
   setFirstName,
@@ -499,7 +503,83 @@ function StepName({
   )
 }
 
-// ── Step 6: Auth ─────────────────────────────────────────────────────────
+// ── Email step ───────────────────────────────────────────────────────────
+function StepEmail({
+  email,
+  setEmail,
+  ageConfirmed,
+  setAgeConfirmed,
+  onAdvance,
+  onBack,
+  loading,
+  error,
+}: {
+  email: string
+  setEmail: (v: string) => void
+  ageConfirmed: boolean
+  setAgeConfirmed: (v: boolean) => void
+  onAdvance: () => void
+  onBack: () => void
+  loading: boolean
+  error: string
+}) {
+  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !loading) onAdvance()
+  }
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onBack}
+        disabled={loading}
+        className="text-gray-600 hover:text-white text-xs mb-6 self-start transition-colors disabled:opacity-40"
+      >
+        ← Back
+      </button>
+
+      <h1 className="text-3xl font-bold tracking-tight leading-tight mb-3">
+        Where do I send it?
+      </h1>
+      <p className="text-gray-500 text-sm mb-10">So my full answer lands in your inbox.</p>
+
+      <input
+        type="email"
+        autoFocus
+        placeholder="your@email.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        onKeyDown={onKey}
+        autoComplete="email"
+        className="w-full px-0 py-3 bg-transparent border-0 border-b border-gray-700 focus:border-white text-white text-xl placeholder-gray-700 outline-none transition-colors mb-6"
+      />
+
+      <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={ageConfirmed}
+          onChange={(e) => setAgeConfirmed(e.target.checked)}
+          className="mt-0.5 accent-white"
+        />
+        I confirm I am 13 years of age or older
+      </label>
+
+      {error && <p className="text-red-400 text-xs mt-4">{error}</p>}
+
+      <div className="mt-auto pt-8">
+        <button
+          type="button"
+          onClick={onAdvance}
+          disabled={!email.trim() || !ageConfirmed || loading}
+          className="w-full bg-white text-black py-4 text-sm font-bold rounded-full disabled:opacity-20 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
+        >
+          {loading ? 'Checking...' : 'Next →'}
+        </button>
+      </div>
+    </>
+  )
+}
+
+// ── Save step (auth) ────────────────────────────────────────────────────
 function StepAuth({
   email,
   password,
