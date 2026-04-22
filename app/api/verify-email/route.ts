@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyEmail } from '@/lib/email-verify'
 import { checkLimit } from '@/lib/rate-limit'
 import { attachTrackCookie } from '@/lib/track-cookie'
+import { logError } from '@/lib/log-error'
 
 // Thin wrapper around lib/email-verify so the homepage email-gate can check
 // deliverability (syntax + disposable blocklist + MX lookup + Kickbox) before
@@ -39,10 +40,11 @@ export async function POST(req: NextRequest) {
   if (result.ok) {
     try {
       await attachTrackCookie(res, email)
-    } catch {
-      // JWT_SECRET missing or signing failed — degrade silently. The /track
-      // page simply won't load their questions, but /history still works for
-      // signed-up users.
+    } catch (err) {
+      // Most likely JWT_SECRET missing or signing failed. Degrade gracefully
+      // so the request still succeeds, but log so we notice the misconfig —
+      // silently swallowing here is how the cookie-not-set bug hid in prod.
+      await logError('verify-email:track-cookie', err, { email: email.slice(0, 60) })
     }
   }
   return res
