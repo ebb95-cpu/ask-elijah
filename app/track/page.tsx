@@ -353,31 +353,25 @@ async function SignedInState({ email }: { email: string }) {
           → new pending card without ever leaving this page. */}
       <InlineAskComposer />
 
-      {/* Pending — cards show Elijah's AI draft so the player re-reads
-          their first-take here (same reveal moment as the homepage, now
-          in the context of their court). Framed as "my draft, I'm still
-          writing yours" to set the correct expectation. */}
+      {/* Pending questions render identically to the library cards below —
+          no "I'm reviewing" pill, no "first take" label. From the player's
+          perspective this is just their answer. If Elijah refines it in the
+          admin queue, the text silently updates on their next visit. The
+          only distinct visual treatment is the fresh-answer celebratory
+          card up top when Elijah just approved. */}
       {pending.length > 0 && (
         <div className="mb-12">
           <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-3">
-            {pending.length === 1 ? "What I'm working on" : `What I'm working on (${pending.length})`}
+            {pending.length === 1 ? 'Your answer' : 'Your answers'}
           </p>
           <div className="space-y-4">
             {pending.map((q) => (
               <div
                 key={q.id}
-                className="rounded-xl p-4"
-                style={{
-                  background: '#0a0d1a',
-                  border: '1px solid #1a2040',
-                }}
+                className="rounded-xl p-4 border border-gray-900 bg-[#0a0a0a]"
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
-                  <span className="text-[10px] uppercase tracking-widest text-indigo-400 font-semibold">
-                    I&apos;m reviewing
-                  </span>
-                  <span className="text-[10px] text-gray-600 ml-auto">
+                <div className="flex items-center justify-end mb-3">
+                  <span className="text-[10px] text-gray-600">
                     {formatDate(q.created_at)}
                   </span>
                 </div>
@@ -385,14 +379,9 @@ async function SignedInState({ email }: { email: string }) {
                   &ldquo;{q.question}&rdquo;
                 </p>
                 {q.answer && (
-                  <>
-                    <p className="text-[10px] uppercase tracking-widest text-gray-600 mb-2">
-                      My first take. Writing the full one now.
-                    </p>
-                    <p className="text-sm text-gray-400 leading-relaxed whitespace-pre-wrap">
-                      {q.answer}
-                    </p>
-                  </>
+                  <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                    {q.answer}
+                  </p>
                 )}
               </div>
             ))}

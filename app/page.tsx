@@ -599,14 +599,15 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Post-reveal confirmation — answer above IS the personal reply
-                from Elijah, so don't frame it as a "first take" waiting for a
-                "real" one. The player got their answer. Small acknowledgement
-                that it's saved to their inbox + court for later. */}
+            {/* Post-reveal confirmation — the answer above IS the answer.
+                No follow-up promise, no "first take" framing. If Elijah
+                refines it later in the admin queue, the update silently
+                replaces what's on /track — the player just sees the
+                current best answer whenever they come back. */}
             {revealed && (
               <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
                 <p className="text-white font-semibold text-base">That&apos;s my answer.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">I sent a copy to your inbox. Everything I tell you lives on your court so you can come back to it any time.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">Saved to your court any time you need it.</p>
                 <a href="/track" className="text-sm font-semibold text-white hover:opacity-70 transition-opacity mt-2">
                   Your court →
                 </a>
