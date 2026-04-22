@@ -7,6 +7,7 @@ import { getSupabaseClient } from '@/lib/supabase-client'
 import { usePostHog } from 'posthog-js/react'
 import ThumbsFeedback from '@/components/ThumbsFeedback'
 import ProfileCapture from '@/components/ProfileCapture'
+import ShareAnswerButton from '@/components/ShareAnswerButton'
 
 type Question = {
   id: string
@@ -36,52 +37,6 @@ function formatDate(iso: string) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-/**
- * Share an approved answer via the public /browse/[id] page. Uses the
- * native Web Share sheet on mobile, falls back to clipboard copy on
- * desktop. "Copied" feedback resets after 2s.
- */
-function ShareAnswerButton({ questionId, question }: { questionId: string; question: string }) {
-  const [copied, setCopied] = useState(false)
-  const handleShare = async () => {
-    const url = `${window.location.origin}/browse/${questionId}`
-    const shareText = `"${question}" — Elijah's answer:`
-    // Prefer the native share sheet on mobile; it looks native and gives
-    // the user all their installed apps as share targets.
-    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-      try {
-        await navigator.share({ title: 'Ask Elijah', text: shareText, url })
-        return
-      } catch {
-        // User cancelled or share failed — fall through to clipboard.
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Clipboard can fail in some embedded contexts — last-resort fallback
-      // is opening the URL in a new tab so the user can copy it manually.
-      window.open(url, '_blank', 'noopener')
-    }
-  }
-  return (
-    <button
-      onClick={handleShare}
-      className="text-xs text-gray-500 hover:text-white transition-colors flex items-center gap-1.5 shrink-0"
-    >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="18" cy="5" r="3" />
-        <circle cx="6" cy="12" r="3" />
-        <circle cx="18" cy="19" r="3" />
-        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-      </svg>
-      {copied ? 'Link copied' : 'Share'}
-    </button>
-  )
-}
 
 export default function HistoryPage() {
   const [questions, setQuestions] = useState<Question[]>([])

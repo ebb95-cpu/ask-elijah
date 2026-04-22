@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { readTrackEmail } from '@/lib/track-cookie'
 import { getSupabase } from '@/lib/supabase-server'
 import CourtWelcomeBanner from '@/components/CourtWelcomeBanner'
+import ShareAnswerButton from '@/components/ShareAnswerButton'
+import InlineAskComposer from '@/components/InlineAskComposer'
 
 export const dynamic = 'force-dynamic'
 
@@ -326,9 +328,17 @@ async function SignedInState({ email }: { email: string }) {
                 {freshAnswer.answer}
               </p>
             )}
+            <div className="mt-4 pt-4 border-t border-green-900/40 flex justify-end">
+              <ShareAnswerButton questionId={freshAnswer.id} question={freshAnswer.question} />
+            </div>
           </div>
         </div>
       )}
+
+      {/* Inline ask composer — post-reward moment is when the "ask another"
+          impulse is highest. Keeps the Hooked loop tight: reward → compose
+          → new pending card without ever leaving this page. */}
+      <InlineAskComposer />
 
       {/* Pending — cards show Elijah's AI draft so the player re-reads
           their first-take here (same reveal moment as the homepage, now
@@ -409,6 +419,9 @@ async function SignedInState({ email }: { email: string }) {
                     {q.answer}
                   </p>
                 )}
+                <div className="mt-3 pt-3 border-t border-gray-900 flex justify-end">
+                  <ShareAnswerButton questionId={q.id} question={q.question} />
+                </div>
               </div>
             ))}
           </div>
@@ -441,14 +454,9 @@ async function SignedInState({ email }: { email: string }) {
         </div>
       )}
 
-      {/* Terminal CTA + soft upgrade path */}
+      {/* Soft upgrade path. The primary "ask another" action lives in the
+          InlineAskComposer up top — no need for a redundant bottom pill. */}
       <div className="flex flex-col items-center gap-4">
-        <Link
-          href="/"
-          className="w-full max-w-xs text-center bg-white text-black px-6 py-3 text-sm font-bold rounded-full hover:opacity-80 transition-opacity"
-        >
-          Ask me another →
-        </Link>
         <Link
           href="/sign-up"
           className="text-xs text-gray-500 hover:text-white transition-colors text-center"
