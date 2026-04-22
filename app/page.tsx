@@ -596,7 +596,7 @@ export default function HomePage() {
               <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
                 <p className="text-white font-semibold text-base">Elijah is writing you personally.</p>
                 <p className="text-gray-500 text-sm leading-relaxed">The version above is a first take. Elijah reviews every one. When he sends his personal reply, it'll land in your inbox.</p>
-                <a href="/history" className="text-sm font-semibold text-white hover:opacity-70 transition-opacity mt-2">
+                <a href="/track" className="text-sm font-semibold text-white hover:opacity-70 transition-opacity mt-2">
                   Track your question →
                 </a>
               </div>
@@ -627,7 +627,7 @@ export default function HomePage() {
             <p className="text-gray-600 text-sm italic">&ldquo;{question}&rdquo;</p>
           </div>
 
-          <a href="/history" className="text-sm font-semibold text-white hover:opacity-70 transition-opacity">
+          <a href="/track" className="text-sm font-semibold text-white hover:opacity-70 transition-opacity">
             Track your question →
           </a>
         </div>

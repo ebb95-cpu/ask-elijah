@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyEmail } from '@/lib/email-verify'
 import { checkLimit } from '@/lib/rate-limit'
+import { attachTrackCookie } from '@/lib/track-cookie'
 
 // Thin wrapper around lib/email-verify so the homepage email-gate can check
 // deliverability (syntax + disposable blocklist + MX lookup + Kickbox) before
 // we commit the question to the DB and email Elijah. Fails open on Kickbox
 // service issues so a verification outage never blocks the funnel.
+//
+// On ok:true we also set a signed tracking cookie so the just-verified user
+// can hit /track (no account required) to check their question status.
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
 
@@ -29,5 +33,17 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await verifyEmail(email)
-  return NextResponse.json(result)
+  const res = NextResponse.json(result)
+  // Only drop the tracking cookie when the address is verified. Junk/fake
+  // emails should not get tracking access.
+  if (result.ok) {
+    try {
+      await attachTrackCookie(res, email)
+    } catch {
+      // JWT_SECRET missing or signing failed — degrade silently. The /track
+      // page simply won't load their questions, but /history still works for
+      // signed-up users.
+    }
+  }
+  return res
 }
