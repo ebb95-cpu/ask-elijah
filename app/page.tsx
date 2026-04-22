@@ -413,7 +413,7 @@ export default function HomePage() {
       } catch {
         // Bad JSON — fine, just no UTM.
       }
-      await fetch('/api/ask', {
+      const askRes = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -428,9 +428,17 @@ export default function HomePage() {
       prevAnswerRef.current = fullAnswerRef.current
       userEmailRef.current = email.trim()
       setLocal('ask_elijah_email', email.trim())
-      // Unblur the answer in-place instead of jumping to a success screen —
-      // the player sees the full thing they unlocked, with a small confirmation
-      // that Elijah's personal reply is on the way.
+
+      // Redirect to their court (the dashboard they'll come back to) instead
+      // of unblurring in place. The first-take still renders — it shows up
+      // inside the pending card on /track — so the reveal moment is preserved
+      // in the context of their home. Fallback: if /api/ask failed, stay on
+      // the homepage and unblur so the player is never stranded without
+      // seeing the answer they unlocked.
+      if (askRes.ok) {
+        window.location.assign('/track')
+        return
+      }
       setRevealed(true)
     } catch {
       // Network error after verification passed — still reveal so they see
