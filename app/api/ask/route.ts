@@ -290,16 +290,25 @@ async function getPlayerContext(email: string): Promise<string> {
   const now = new Date().toISOString()
 
   const [profileRes, memoriesRes, historyRes] = await Promise.all([
-    supabase.from('profiles').select('position, level, country, challenge').eq('email', clean).single(),
+    supabase.from('profiles').select('age, position, level, country, challenge').eq('email', clean).single(),
     supabase.from('player_memories').select('fact_type, fact_text').eq('email', clean).or(`expires_at.is.null,expires_at.gt.${now}`).order('created_at', { ascending: false }).limit(10),
     supabase.from('questions').select('question, answer').eq('email', clean).eq('status', 'approved').order('updated_at', { ascending: false }).limit(3),
   ])
 
   const lines: string[] = []
 
-  const p = profileRes.data
+  const p = profileRes.data as { age?: string; position?: string; level?: string; country?: string; challenge?: string } | null
   if (p) {
-    const parts = [p.position, p.level, p.country, p.challenge ? `struggles with ${p.challenge}` : null].filter(Boolean)
+    // Age first — it's the single most context-shaping detail (you'd
+    // write to a 14-year-old very differently than a 22-year-old), so it
+    // leads the player-context line Elijah sees when reviewing drafts.
+    const parts = [
+      p.age ? `age ${p.age}` : null,
+      p.position,
+      p.level,
+      p.country,
+      p.challenge ? `struggles with ${p.challenge}` : null,
+    ].filter(Boolean)
     if (parts.length) lines.push(`Profile: ${parts.join(', ')}`)
   }
 
