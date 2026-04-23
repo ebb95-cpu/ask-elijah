@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { readTrackEmail } from '@/lib/track-cookie'
 import { getSupabase } from '@/lib/supabase-server'
-import CourtWelcomeBanner from '@/components/CourtWelcomeBanner'
+import LockerRoomWelcomeBanner from '@/components/LockerRoomWelcomeBanner'
 import ShareAnswerButton from '@/components/ShareAnswerButton'
 import InlineAskComposer from '@/components/InlineAskComposer'
 
@@ -52,7 +52,7 @@ function Stat({ value, label }: { value: number | string; label: string }) {
 }
 
 /**
- * "Your court" — the player's home, not a tracker.
+ * "Your locker room" — the player's home, not a tracker.
  *
  * Reframed from the earlier /track "status page" identity. The URL stays
  * `/track` (email links, the verify cookie, and the homepage CTA all point
@@ -87,10 +87,10 @@ export default async function TrackPage() {
 function NoCookieState() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-      <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-4">Your court</p>
+      <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-4">Your locker room</p>
       <h1 className="text-3xl font-bold mb-4 max-w-md">Ask me something first.</h1>
       <p className="text-gray-500 text-sm leading-relaxed mb-10 max-w-sm">
-        Once you send me a question I&apos;ll set up your court. No account needed.
+        Once you send me a question I&apos;ll set up your locker room. No account needed.
       </p>
       <Link
         href="/"
@@ -211,7 +211,7 @@ async function SignedInState({ email }: { email: string }) {
     ? new Date(oldestQuestion.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : null
 
-  const greeting = profile.firstName ? `Hey ${profile.firstName}` : 'Your court'
+  const greeting = profile.firstName ? `Hey ${profile.firstName}` : 'Your locker room'
   const initial = (profile.firstName || email)[0].toUpperCase()
   const profileLine = [prettyLevel(profile.level), profile.position].filter(Boolean).join(' · ')
   const profileComplete = Boolean(profile.firstName && profile.level && profile.position && profile.challenge)
@@ -219,9 +219,9 @@ async function SignedInState({ email }: { email: string }) {
   if (questions.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-4">Your court</p>
+        <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-4">Your locker room</p>
         <h1 className="text-2xl font-bold mb-3">No questions here yet.</h1>
-        <p className="text-gray-500 text-sm mb-10">Ask me something and I&apos;ll set up your court.</p>
+        <p className="text-gray-500 text-sm mb-10">Ask me something and I&apos;ll set up your locker room.</p>
         <Link
           href="/"
           className="bg-white text-black px-6 py-3 text-sm font-bold rounded-full hover:opacity-80 transition-opacity"
@@ -234,8 +234,8 @@ async function SignedInState({ email }: { email: string }) {
 
   return (
     <div className="flex-1 px-5 pt-6 max-w-xl mx-auto w-full pb-32">
-      {/* Small page label — "Your court" identity, not a greeting. */}
-      <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-3">Your court</p>
+      {/* Small page label — "Your locker room" identity, not a greeting. */}
+      <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-3">Your locker room</p>
 
       {/* Profile card — dashboard-style identity block. Avatar + greeting
           + level/position line + stats row + edit link. If the profile is
@@ -304,7 +304,7 @@ async function SignedInState({ email }: { email: string }) {
       </p>
 
       {/* First-visit welcome banner. Dismissible, localStorage-gated. */}
-      <CourtWelcomeBanner struggle={profile.challenge} />
+      <LockerRoomWelcomeBanner struggle={profile.challenge} />
 
       {/* Fresh answer — the latest reward, green glow + pulsing dot. Only
           the newest approved one gets this treatment so the signal stays
@@ -463,7 +463,7 @@ async function SignedInState({ email }: { email: string }) {
           href="/sign-up"
           className="text-xs text-gray-500 hover:text-white transition-colors text-center"
         >
-          Save your court to an account &rarr;
+          Save your locker room to an account &rarr;
         </Link>
       </div>
     </div>

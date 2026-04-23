@@ -532,7 +532,7 @@ export default function HomePage() {
             onExit={() => setMode('preview')}
             onDone={() => {
               // Password path succeeded + Supabase session is set. Hand off
-              // to their court. OAuth paths redirect via /auth/callback and
+              // to their locker room. OAuth paths redirect via /auth/callback and
               // never invoke this callback.
               window.location.assign('/track')
             }}
@@ -606,7 +606,7 @@ export default function HomePage() {
             {hiddenText && !revealed && (
               <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
                 <p className="text-white font-semibold text-base">Get the rest of my answer.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">Set up your court so I can write back to you. Takes under a minute.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">Set up your locker room so I can write back to you. Takes under a minute.</p>
                 <button
                   onClick={() => setMode('account_setup')}
                   className="w-full bg-white text-black py-3 text-sm font-semibold hover:opacity-80 transition-opacity mt-1 rounded-full"
@@ -624,9 +624,9 @@ export default function HomePage() {
             {revealed && (
               <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
                 <p className="text-white font-semibold text-base">That&apos;s my answer.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">Saved to your court any time you need it.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">Saved to your locker room any time you need it.</p>
                 <a href="/track" className="text-sm font-semibold text-white hover:opacity-70 transition-opacity mt-2">
-                  Your court →
+                  Your locker room →
                 </a>
               </div>
             )}
@@ -657,7 +657,7 @@ export default function HomePage() {
           </div>
 
           <a href="/track" className="text-sm font-semibold text-white hover:opacity-70 transition-opacity">
-            Your court →
+            Your locker room →
           </a>
         </div>
       </div>
@@ -815,7 +815,7 @@ export default function HomePage() {
             <div className="flex items-start gap-5">
               <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0">Forever</span>
               <div>
-                <p className="text-white text-lg font-semibold leading-tight mb-1">Every answer saved to your court.</p>
+                <p className="text-white text-lg font-semibold leading-tight mb-1">Every answer saved to your locker room.</p>
                 <p className="text-gray-500 text-sm leading-relaxed">Go back any time. Any device. Your library of what I&apos;ve told you.</p>
               </div>
             </div>

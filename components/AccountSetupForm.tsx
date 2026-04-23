@@ -143,7 +143,7 @@ export default function AccountSetupForm({
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(data?.error || 'Could not set up your court. Try again.')
+        setError(data?.error || 'Could not set up your locker room. Try again.')
         setLoading(null)
         return
       }
@@ -156,7 +156,7 @@ export default function AccountSetupForm({
       }
       onDone()
     } catch {
-      setError('Could not set up your court. Try again.')
+      setError('Could not set up your locker room. Try again.')
       setLoading(null)
     }
   }
@@ -595,7 +595,7 @@ function StepEmailAuth({
         disabled={!password.trim() || loading !== null || !canAct}
         className="w-full bg-white text-black py-3 text-sm font-bold rounded-full disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
       >
-        {loading === 'password' ? 'Setting up...' : 'Save my court →'}
+        {loading === 'password' ? 'Setting up...' : 'Save my locker room →'}
       </button>
     </>
   )
