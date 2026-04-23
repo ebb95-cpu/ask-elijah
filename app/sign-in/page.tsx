@@ -44,6 +44,17 @@ function SignInInner() {
     () => searchParams?.get('simulated') === '1'
   )
 
+  // Pre-fill email + skip straight to password step when arriving from the
+  // onboarding "You're already in the locker room" returning-user prompt.
+  useEffect(() => {
+    const emailParam = searchParams?.get('email')
+    if (emailParam) {
+      setEmail(emailParam)
+      setAgeConfirmed(true)
+      setStep('password')
+    }
+  }, [searchParams])
+
   useEffect(() => {
     if (simulated) return
     if (typeof window === 'undefined') return
