@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { getLocal, setLocal } from '@/lib/safe-storage'
 import AccountSetupForm from '@/components/AccountSetupForm'
+import { getSupabaseClient } from '@/lib/supabase-client'
 
 function Logo({ dark = false }: { dark?: boolean }) {
   const c = dark ? '#fff' : '#000'
@@ -256,7 +257,7 @@ function ReturningView({
   )
 }
 
-type Mode = 'idle' | 'returning' | 'loading' | 'preview' | 'email_gate' | 'account_setup' | 'submitted'
+type Mode = 'idle' | 'welcome_back' | 'returning' | 'loading' | 'preview' | 'email_gate' | 'account_setup' | 'submitted'
 
 const PREVIEW_CHARS = 300 // how many chars to show before blur
 
@@ -271,6 +272,7 @@ export default function HomePage() {
   const [newsletterOptIn, setNewsletterOptIn] = useState(false)
   const [revealed, setRevealed] = useState(false)
   const [askError, setAskError] = useState('')
+  const [welcomeBackName, setWelcomeBackName] = useState<string | null>(null)
   const fullAnswerRef = useRef('')
   const prevQuestionRef = useRef('')
   const prevAnswerRef = useRef('')
@@ -308,17 +310,65 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    const stored = getLocal('ask_elijah_email')
-    if (stored) {
+    // ── Returning-user detection ─────────────────────────────────────────
+    // Three-tier check on every homepage load:
+    //
+    //   1. Active Supabase session  → redirect straight to /track (fastest path)
+    //   2. localStorage email + account exists → welcome_back mode (one-tap sign-in)
+    //   3. localStorage email + no account → returning mode (ask again, skip email gate)
+    //   4. Nothing → idle (new user, full homepage)
+    //
+    // Nir Eyal: the trigger (returning to site) should immediately confirm the
+    // internal feeling ("my locker room is waiting") and get out of the way.
+    const run = async () => {
+      try {
+        const supabase = getSupabaseClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          // Already logged in — skip everything and go straight to the reward.
+          window.location.href = '/track'
+          return
+        }
+      } catch {
+        /* Supabase unavailable — fall through to localStorage check */
+      }
+
+      const stored = getLocal('ask_elijah_email')
+      if (!stored) return // new user — stay idle
+
       userEmailRef.current = stored
+
+      // Load profile + memories in parallel (used by returning ask mode).
       Promise.all([
         fetch(`/api/profile?email=${encodeURIComponent(stored)}`).then(r => r.json()).catch(() => null),
         fetch(`/api/memories?email=${encodeURIComponent(stored)}`).then(r => r.json()).catch(() => null),
       ]).then(([profile, mem]) => {
         if (profile?.position || profile?.level) profileRef.current = profile
         if (mem?.memories?.length) memoriesRef.current = mem.memories
+        // Grab first name for the welcome-back greeting if available.
+        if (profile?.first_name) setWelcomeBackName(profile.first_name.split(' ')[0])
       })
+
+      // Check if this email has a full account.
+      try {
+        const res = await fetch('/api/check-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: stored }),
+        })
+        const { exists } = await res.json()
+        if (exists) {
+          setMode('welcome_back')
+        } else {
+          setMode('returning')
+        }
+      } catch {
+        // API unreachable — fall back to returning mode so they can still ask.
+        setMode('returning')
+      }
     }
+
+    run()
   }, [])
 
   const handleSubmit = async () => {
@@ -631,6 +681,52 @@ export default function HomePage() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Welcome back ─────────────────────────────────────────────────────────
+  // Shown when localStorage has their email AND they have a full account.
+  // One-tap sign-in — no homepage, no onboarding, straight to the reward.
+  if (mode === 'welcome_back') {
+    const wbEmail = userEmailRef.current
+    const wbName = welcomeBackName
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-6 py-5">
+          <Logo dark />
+          <div className="w-12" />
+        </nav>
+        <div className="flex-1 flex flex-col justify-center px-6 pb-20 max-w-sm mx-auto w-full">
+          <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-8">Welcome back</p>
+
+          <h1 className="text-4xl font-bold tracking-tight leading-tight mb-5">
+            {wbName ? `Hey ${wbName}.` : 'You\u2019re back.'}
+          </h1>
+
+          <p className="text-gray-500 text-sm leading-relaxed mb-12">
+            Your locker room is waiting.
+          </p>
+
+          <a
+            href={`/sign-in?email=${encodeURIComponent(wbEmail)}`}
+            className="w-full bg-white text-black py-4 text-sm font-bold rounded-full text-center hover:opacity-80 transition-opacity mb-5 block"
+          >
+            Sign in →
+          </a>
+
+          <button
+            onClick={() => {
+              try { localStorage.removeItem('ask_elijah_email') } catch { /* ignore */ }
+              userEmailRef.current = ''
+              setWelcomeBackName(null)
+              setMode('idle')
+            }}
+            className="text-xs text-gray-700 hover:text-white transition-colors text-center"
+          >
+            Not you? Start fresh →
+          </button>
         </div>
       </div>
     )
