@@ -174,7 +174,7 @@ function SignInInner() {
     }
   }
 
-  const handleOAuth = async (provider: 'google' | 'apple') => {
+  const handleOAuth = async (provider: 'google') => {
     if (loading) return
     setLoading(true)
     setError('')
@@ -272,18 +272,6 @@ function SignInInner() {
                     <span className="text-[10px] text-gray-600 uppercase tracking-widest">or</span>
                     <div className="flex-1 h-px bg-gray-900" />
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleOAuth('apple')}
-                    disabled={loading || !ageConfirmed}
-                    className="w-full border border-gray-700 hover:border-white text-white py-3 text-sm font-semibold rounded-full disabled:opacity-30 transition-colors flex items-center justify-center gap-2 mb-3"
-                  >
-                    <svg width="14" height="16" viewBox="0 0 14 16" fill="currentColor" aria-hidden="true">
-                      <path d="M11.16 8.47c0-1.73 1.41-2.55 1.47-2.6-.8-1.17-2.05-1.33-2.5-1.35-1.06-.11-2.07.62-2.6.62-.55 0-1.38-.61-2.27-.59-1.17.02-2.25.68-2.85 1.73-1.22 2.11-.31 5.23.88 6.94.58.84 1.27 1.78 2.17 1.75.87-.04 1.2-.56 2.25-.56 1.05 0 1.35.56 2.27.55.94-.02 1.54-.86 2.11-1.7.67-.97.95-1.93.96-1.98-.02-.01-1.84-.7-1.86-2.78zM9.67 3.52c.48-.58.8-1.39.71-2.19-.69.03-1.52.46-2.02 1.04-.44.51-.84 1.33-.73 2.12.77.06 1.56-.39 2.04-.97z" />
-                    </svg>
-                    Continue with Apple
-                  </button>
 
                   <button
                     type="button"
