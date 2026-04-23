@@ -220,7 +220,20 @@ export default function AccountSetupForm({
     <div className="w-full max-w-sm mx-auto px-5 py-10 flex flex-col min-h-[560px]">
       <ProgressDots step={step} total={5} />
 
-      <div key={step} className="step-in flex-1 flex flex-col mt-10">
+      {/* Persistent sign-in escape hatch — visible on step 1 so returning
+          users on a new device don't have to go through onboarding again. */}
+      {step === 1 && (
+        <p className="text-center mb-4">
+          <a
+            href="/sign-in"
+            className="text-xs text-gray-600 hover:text-white transition-colors"
+          >
+            Already have a locker room? Sign in →
+          </a>
+        </p>
+      )}
+
+      <div key={step} className="step-in flex-1 flex flex-col mt-6">
         {step === 1 && (
           <StepTapChoice
             title="How old are you?"

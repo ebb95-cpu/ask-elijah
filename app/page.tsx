@@ -542,7 +542,7 @@ export default function HomePage() {
         <nav className="flex items-center justify-between px-6 py-5">
           <Logo dark />
           <div className="flex items-center gap-6">
-            <Link href="/sign-in" className="text-sm text-gray-500 hover:text-white transition-colors">Sign in</Link>
+            <Link href="/sign-in" className="text-sm text-gray-400 hover:text-white transition-colors">Sign in</Link>
             <Link href="/history" className="text-sm text-gray-500 hover:text-white transition-colors">My questions</Link>
           </div>
         </nav>
@@ -573,8 +573,15 @@ export default function HomePage() {
   if (mode === 'account_setup') {
     return (
       <div className="min-h-[100dvh] bg-black text-white flex flex-col">
-        <nav className="flex items-center justify-center px-6 py-5">
+        <nav className="flex items-center justify-between px-6 py-5">
+          <div className="w-16" />
           <Logo dark />
+          <Link
+            href="/sign-in"
+            className="text-xs text-gray-500 hover:text-white transition-colors w-16 text-right"
+          >
+            Sign in
+          </Link>
         </nav>
         <div className="flex-1 flex items-center justify-center">
           <AccountSetupForm
@@ -791,7 +798,7 @@ export default function HomePage() {
           {userEmailRef.current ? (
             <Link href="/history" className="text-sm text-white font-semibold hover:opacity-70 transition-opacity">My questions →</Link>
           ) : (
-            <Link href="/sign-in" className="text-sm text-gray-500 hover:text-white transition-colors">Sign in</Link>
+            <Link href="/sign-in" className="text-sm text-gray-400 hover:text-white transition-colors">Sign in</Link>
           )}
         </div>
       </nav>
