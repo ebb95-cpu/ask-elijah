@@ -163,28 +163,43 @@ export default function AccountSetupForm({
 
   const handleOAuth = async () => {
     if (loading) return
-    const cleanEmail = email.trim().toLowerCase()
-    if (!cleanEmail) return setError('Enter your email')
     if (!ageConfirmed) return setError('Confirm you are 13 or older')
     setError('')
     setLoading('google')
-    try {
-      const ok = await verifyAndSaveQuestion(cleanEmail)
-      if (!ok) { setLoading(null); return }
 
-      // Persist profile data before the OAuth redirect — the /auth/callback
-      // runs server-side and can't see local state.
-      await fetch('/api/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: cleanEmail,
-          first_name: firstName.trim(),
-          age: age.trim(),
-          position: position.trim(),
-          challenge: struggle.trim(),
-        }),
-      }).catch(() => {})
+    // Always stash onboarding data in localStorage so ProfileSyncer on /track
+    // can write it to the profile after the OAuth callback resolves the email.
+    try {
+      localStorage.setItem('ae_pending_profile', JSON.stringify({
+        first_name: firstName.trim() || null,
+        age: age.trim() || null,
+        position: position.trim() || null,
+        challenge: struggle.trim() || null,
+      }))
+    } catch { /* ignore */ }
+
+    const cleanEmail = email.trim().toLowerCase()
+    try {
+      // If they typed an email, verify it and pre-save the question + profile.
+      // If they skipped the email field (using Google as their email provider),
+      // we skip this — /auth/callback provisions the profile using Google's email,
+      // and ProfileSyncer on /track writes the onboarding fields afterward.
+      if (cleanEmail) {
+        const ok = await verifyAndSaveQuestion(cleanEmail)
+        if (!ok) { setLoading(null); return }
+
+        await fetch('/api/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: cleanEmail,
+            first_name: firstName.trim(),
+            age: age.trim(),
+            position: position.trim(),
+            challenge: struggle.trim(),
+          }),
+        }).catch(() => {})
+      }
 
       const supabase = getSupabaseClient()
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
@@ -515,9 +530,12 @@ function StepEmailAuth({
   loading: null | 'password' | 'google'
   error: string
 }) {
-  const canAct = email.trim().length > 0 && ageConfirmed
+  // Google only needs age confirmed — it provides its own email via OAuth.
+  // Password path also needs an email typed (it's the account identifier).
+  const canGoogle = ageConfirmed
+  const canPassword = email.trim().length > 0 && ageConfirmed
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && password.length >= 8 && canAct && !loading) onPasswordSubmit()
+    if (e.key === 'Enter' && password.length >= 8 && canPassword && !loading) onPasswordSubmit()
   }
   return (
     <>
@@ -559,7 +577,7 @@ function StepEmailAuth({
       <button
         type="button"
         onClick={onGoogle}
-        disabled={loading !== null || !canAct}
+        disabled={loading !== null || !canGoogle}
         className="w-full border border-gray-700 hover:border-white text-white py-3 text-sm font-semibold rounded-full disabled:opacity-30 transition-colors flex items-center justify-center gap-2 mb-6"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
@@ -592,7 +610,7 @@ function StepEmailAuth({
       <button
         type="button"
         onClick={onPasswordSubmit}
-        disabled={!password.trim() || loading !== null || !canAct}
+        disabled={!password.trim() || loading !== null || !canPassword}
         className="w-full bg-white text-black py-3 text-sm font-bold rounded-full disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
       >
         {loading === 'password' ? 'Setting up...' : 'Save my locker room →'}

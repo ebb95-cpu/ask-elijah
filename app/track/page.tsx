@@ -4,6 +4,7 @@ import { getSupabase } from '@/lib/supabase-server'
 import LockerRoomWelcomeBanner from '@/components/LockerRoomWelcomeBanner'
 import ShareAnswerButton from '@/components/ShareAnswerButton'
 import InlineAskComposer from '@/components/InlineAskComposer'
+import ProfileSyncer from '@/components/ProfileSyncer'
 
 export const dynamic = 'force-dynamic'
 
@@ -302,6 +303,9 @@ async function SignedInState({ email }: { email: string }) {
       <p className="text-xs text-gray-500 leading-relaxed mb-6">
         I answer every one personally. My queue runs 24 to 48 hours. When I reply, it&apos;ll land in your inbox.
       </p>
+
+      {/* Syncs onboarding profile data written before a Google OAuth redirect. */}
+      <ProfileSyncer />
 
       {/* First-visit welcome banner. Dismissible, localStorage-gated. */}
       <LockerRoomWelcomeBanner struggle={profile.challenge} />
