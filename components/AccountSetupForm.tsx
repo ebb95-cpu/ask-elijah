@@ -19,19 +19,14 @@ import { setLocal } from '@/lib/safe-storage'
  *   2. Position      — tap
  *   3. Struggle      — tap + optional free-type
  *   4. Name          — type
- *   5. Email + age   — type + Kickbox verify + save question
- *   6. Save          — Apple / Google OAuth or password
+ *   5. Email + auth  — email + age confirm + Google OAuth or password
  *
  * Data flow:
  *   - Steps 1-4 are pure UI state.
- *   - Step 5 (email) calls /api/verify-email (sets ae_track cookie) and
- *     /api/ask to persist the question under the verified email. If they
- *     bounce after this step, question still lives on /track.
- *   - Step 6 email/password → POST /api/sign-up with all fields, then
+ *   - Step 5 email/password path: verify email (Kickbox) → /api/sign-up →
  *     signInWithPassword → redirect /track.
- *   - Step 6 OAuth → POST /api/profile with fields (keyed by email) so
- *     the callback has them, then signInWithOAuth → /auth/callback →
- *     /track.
+ *   - Step 5 OAuth path: verify email → /api/profile (pre-saves data) →
+ *     signInWithOAuth → /auth/callback → /track.
  */
 
 const AGE_CHIPS = ['13', '14', '15', '16', '17', '18+']
@@ -54,7 +49,7 @@ const STRUGGLE_CHIPS = [
   'Coach trust',
 ]
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6
+type Step = 1 | 2 | 3 | 4 | 5
 
 export default function AccountSetupForm({
   question,
@@ -80,7 +75,7 @@ export default function AccountSetupForm({
   const [email, setEmail] = useState('')
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState<null | 'next' | 'password' | 'google' | 'apple'>(null)
+  const [loading, setLoading] = useState<null | 'password' | 'google'>(null)
   const [error, setError] = useState('')
 
   const goBack = () => {
@@ -91,56 +86,48 @@ export default function AccountSetupForm({
 
   const advance = () => {
     setError('')
-    setStep((s) => Math.min(s + 1, 6) as Step)
+    setStep((s) => Math.min(s + 1, 5) as Step)
   }
 
-  // Step 5 — verify email + save the question + advance to save step.
-  const submitEmailStep = async () => {
-    const cleanEmail = email.trim().toLowerCase()
-    if (!cleanEmail) return setError('Enter your email')
-    if (!ageConfirmed) return setError('Confirm you are 13 or older')
-    setLoading('next')
-    setError('')
+  // Shared email verify + question save — runs at the start of both auth paths.
+  const verifyAndSaveQuestion = async (cleanEmail: string): Promise<boolean> => {
+    const verifyRes = await fetch('/api/verify-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail }),
+    })
+    const verifyData = await verifyRes.json().catch(() => ({ ok: false, reason: 'Could not verify email. Try again.' }))
+    if (!verifyRes.ok || !verifyData?.ok) {
+      setError(verifyData?.reason || "That email doesn't look right. Double-check it.")
+      return false
+    }
+    // Question gets saved under the verified email so it persists even if
+    // they bounce before completing auth.
     try {
-      const verifyRes = await fetch('/api/verify-email', {
+      await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail }),
+        body: JSON.stringify({ question, email: cleanEmail, newsletterOptIn: true }),
       })
-      const verifyData = await verifyRes.json().catch(() => ({ ok: false, reason: 'Could not verify email. Try again.' }))
-      if (!verifyRes.ok || !verifyData?.ok) {
-        setError(verifyData?.reason || "That email doesn't look right. Double-check it.")
-        setLoading(null)
-        return
-      }
-
-      // Question gets saved under the verified email so it persists if
-      // they bounce before the final save step.
-      try {
-        await fetch('/api/ask', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question, email: cleanEmail, newsletterOptIn: true }),
-        })
-      } catch {
-        /* non-fatal */
-      }
-      setLocal('ask_elijah_email', cleanEmail)
-      setLoading(null)
-      advance()
     } catch {
-      setError('Could not verify email. Try again.')
-      setLoading(null)
+      /* non-fatal */
     }
+    setLocal('ask_elijah_email', cleanEmail)
+    return true
   }
 
   const handlePasswordSubmit = async () => {
     if (loading) return
+    const cleanEmail = email.trim().toLowerCase()
+    if (!cleanEmail) return setError('Enter your email')
+    if (!ageConfirmed) return setError('Confirm you are 13 or older')
     if (!password || password.length < 8) return setError('Pick a password (8+ characters)')
     setError('')
     setLoading('password')
     try {
-      const cleanEmail = email.trim().toLowerCase()
+      const ok = await verifyAndSaveQuestion(cleanEmail)
+      if (!ok) { setLoading(null); return }
+
       const res = await fetch('/api/sign-up', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,7 +135,6 @@ export default function AccountSetupForm({
           email: cleanEmail,
           password,
           firstName: firstName.trim(),
-          // Map onboarding inputs to existing profile columns.
           age: age.trim(),
           position: position.trim(),
           challenge: struggle.trim(),
@@ -175,15 +161,19 @@ export default function AccountSetupForm({
     }
   }
 
-  const handleOAuth = async (provider: 'google' | 'apple') => {
+  const handleOAuth = async () => {
     if (loading) return
+    const cleanEmail = email.trim().toLowerCase()
+    if (!cleanEmail) return setError('Enter your email')
+    if (!ageConfirmed) return setError('Confirm you are 13 or older')
     setError('')
-    setLoading(provider)
+    setLoading('google')
     try {
-      const cleanEmail = email.trim().toLowerCase()
+      const ok = await verifyAndSaveQuestion(cleanEmail)
+      if (!ok) { setLoading(null); return }
+
       // Persist profile data before the OAuth redirect — the /auth/callback
-      // runs server-side and can't see local state. /api/profile upserts by
-      // email so it's safe to call even before the Supabase Auth user exists.
+      // runs server-side and can't see local state.
       await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -198,7 +188,7 @@ export default function AccountSetupForm({
 
       const supabase = getSupabaseClient()
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
-        provider,
+        provider: 'google',
         options: { redirectTo: `${window.location.origin}/auth/callback?next=/track` },
       })
       if (oauthErr) {
@@ -213,7 +203,7 @@ export default function AccountSetupForm({
 
   return (
     <div className="w-full max-w-sm mx-auto px-5 py-10 flex flex-col min-h-[560px]">
-      <ProgressDots step={step} total={6} />
+      <ProgressDots step={step} total={5} />
 
       <div key={step} className="step-in flex-1 flex flex-col mt-10">
         {step === 1 && (
@@ -258,26 +248,17 @@ export default function AccountSetupForm({
           />
         )}
         {step === 5 && (
-          <StepEmail
+          <StepEmailAuth
             email={email}
             setEmail={(v) => { setEmail(v); if (error) setError('') }}
             ageConfirmed={ageConfirmed}
             setAgeConfirmed={setAgeConfirmed}
-            onAdvance={submitEmailStep}
-            onBack={goBack}
-            loading={loading === 'next'}
-            error={error}
-          />
-        )}
-        {step === 6 && (
-          <StepAuth
-            email={email}
             password={password}
             setPassword={(v) => { setPassword(v); if (error) setError('') }}
             onPasswordSubmit={handlePasswordSubmit}
-            onOAuth={handleOAuth}
+            onGoogle={handleOAuth}
             onBack={goBack}
-            loading={loading === 'password' ? 'password' : loading === 'google' ? 'google' : loading === 'apple' ? 'apple' : null}
+            loading={loading}
             error={error}
           />
         )}
@@ -308,9 +289,6 @@ function ProgressDots({ step, total }: { step: number; total: number }) {
 }
 
 // ── Pure tap-chip step (age, position) ──────────────────────────────────
-// Single-select, advances on tap when that's the whole answer — no "Next"
-// wait. Used for age + position because there's literally nothing else to
-// say once they've picked.
 function StepTapChoice({
   title,
   subtitle,
@@ -380,7 +358,6 @@ function StepTapChoice({
 }
 
 // ── Chip-or-type step (struggle) ────────────────────────────────────────
-// Chips for common answers + free-text fallback for anything not listed.
 function StepChipOrType({
   title,
   subtitle,
@@ -509,13 +486,19 @@ function StepName({
   )
 }
 
-// ── Email step ───────────────────────────────────────────────────────────
-function StepEmail({
+// ── Combined email + auth step ───────────────────────────────────────────
+// Email field + age confirm up top, then Google OAuth button, then
+// password fallback below a divider. No separate "Checking" screen —
+// verification happens inline when they click either action.
+function StepEmailAuth({
   email,
   setEmail,
   ageConfirmed,
   setAgeConfirmed,
-  onAdvance,
+  password,
+  setPassword,
+  onPasswordSubmit,
+  onGoogle,
   onBack,
   loading,
   error,
@@ -524,20 +507,24 @@ function StepEmail({
   setEmail: (v: string) => void
   ageConfirmed: boolean
   setAgeConfirmed: (v: boolean) => void
-  onAdvance: () => void
+  password: string
+  setPassword: (v: string) => void
+  onPasswordSubmit: () => void
+  onGoogle: () => void
   onBack: () => void
-  loading: boolean
+  loading: null | 'password' | 'google'
   error: string
 }) {
+  const canAct = email.trim().length > 0 && ageConfirmed
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !loading) onAdvance()
+    if (e.key === 'Enter' && password.length >= 8 && canAct && !loading) onPasswordSubmit()
   }
   return (
     <>
       <button
         type="button"
         onClick={onBack}
-        disabled={loading}
+        disabled={loading !== null}
         className="text-gray-600 hover:text-white text-xs mb-6 self-start transition-colors disabled:opacity-40"
       >
         ← Back
@@ -546,7 +533,7 @@ function StepEmail({
       <h1 className="text-3xl font-bold tracking-tight leading-tight mb-3">
         Where do I send it?
       </h1>
-      <p className="text-gray-500 text-sm mb-10">So my full answer lands in your inbox.</p>
+      <p className="text-gray-500 text-sm mb-8">So my full answer lands in your inbox.</p>
 
       <input
         type="email"
@@ -554,12 +541,11 @@ function StepEmail({
         placeholder="your@email.com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        onKeyDown={onKey}
         autoComplete="email"
-        className="w-full px-0 py-3 bg-transparent border-0 border-b border-gray-700 focus:border-white text-white text-xl placeholder-gray-700 outline-none transition-colors mb-6"
+        className="w-full px-0 py-3 bg-transparent border-0 border-b border-gray-700 focus:border-white text-white text-xl placeholder-gray-700 outline-none transition-colors mb-5"
       />
 
-      <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer">
+      <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer mb-8">
         <input
           type="checkbox"
           checked={ageConfirmed}
@@ -569,77 +555,11 @@ function StepEmail({
         I confirm I am 13 years of age or older
       </label>
 
-      {error && <p className="text-red-400 text-xs mt-4">{error}</p>}
-
-      <div className="mt-auto pt-8">
-        <button
-          type="button"
-          onClick={onAdvance}
-          disabled={!email.trim() || !ageConfirmed || loading}
-          className="w-full bg-white text-black py-4 text-sm font-bold rounded-full disabled:opacity-20 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
-        >
-          {loading ? 'Checking...' : 'Next →'}
-        </button>
-      </div>
-    </>
-  )
-}
-
-// ── Save step (auth) ────────────────────────────────────────────────────
-function StepAuth({
-  email,
-  password,
-  setPassword,
-  onPasswordSubmit,
-  onOAuth,
-  onBack,
-  loading,
-  error,
-}: {
-  email: string
-  password: string
-  setPassword: (v: string) => void
-  onPasswordSubmit: () => void
-  onOAuth: (provider: 'google' | 'apple') => void
-  onBack: () => void
-  loading: null | 'password' | 'google' | 'apple'
-  error: string
-}) {
-  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && password.length >= 8 && !loading) onPasswordSubmit()
-  }
-  return (
-    <>
+      {/* Google OAuth — primary CTA */}
       <button
         type="button"
-        onClick={onBack}
-        disabled={loading !== null}
-        className="text-gray-600 hover:text-white text-xs mb-6 self-start transition-colors disabled:opacity-40"
-      >
-        ← Back
-      </button>
-
-      <h1 className="text-3xl font-bold tracking-tight leading-tight mb-3">
-        Save your court.
-      </h1>
-      <p className="text-gray-500 text-sm mb-8 break-all">{email}</p>
-
-      <button
-        type="button"
-        onClick={() => onOAuth('apple')}
-        disabled={loading !== null}
-        className="w-full border border-gray-700 hover:border-white text-white py-3 text-sm font-semibold rounded-full disabled:opacity-30 transition-colors flex items-center justify-center gap-2 mb-3"
-      >
-        <svg width="14" height="16" viewBox="0 0 14 16" fill="currentColor" aria-hidden="true">
-          <path d="M11.16 8.47c0-1.73 1.41-2.55 1.47-2.6-.8-1.17-2.05-1.33-2.5-1.35-1.06-.11-2.07.62-2.6.62-.55 0-1.38-.61-2.27-.59-1.17.02-2.25.68-2.85 1.73-1.22 2.11-.31 5.23.88 6.94.58.84 1.27 1.78 2.17 1.75.87-.04 1.2-.56 2.25-.56 1.05 0 1.35.56 2.27.55.94-.02 1.54-.86 2.11-1.7.67-.97.95-1.93.96-1.98-.02-.01-1.84-.7-1.86-2.78zM9.67 3.52c.48-.58.8-1.39.71-2.19-.69.03-1.52.46-2.02 1.04-.44.51-.84 1.33-.73 2.12.77.06 1.56-.39 2.04-.97z" />
-        </svg>
-        {loading === 'apple' ? 'Opening Apple...' : 'Continue with Apple'}
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onOAuth('google')}
-        disabled={loading !== null}
+        onClick={onGoogle}
+        disabled={loading !== null || !canAct}
         className="w-full border border-gray-700 hover:border-white text-white py-3 text-sm font-semibold rounded-full disabled:opacity-30 transition-colors flex items-center justify-center gap-2 mb-6"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
@@ -672,7 +592,7 @@ function StepAuth({
       <button
         type="button"
         onClick={onPasswordSubmit}
-        disabled={!password.trim() || loading !== null}
+        disabled={!password.trim() || loading !== null || !canAct}
         className="w-full bg-white text-black py-3 text-sm font-bold rounded-full disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
       >
         {loading === 'password' ? 'Setting up...' : 'Save my court →'}
