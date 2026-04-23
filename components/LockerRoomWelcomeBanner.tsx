@@ -5,34 +5,22 @@ import { useEffect, useState } from 'react'
 const DISMISS_KEY = 'ae_locker_welcome_seen'
 
 /**
- * First-visit payoff modal shown on /track after onboarding. Structured
- * as pain-mirror → mechanism → proof → transfer/solve. Each card anchors
- * to a real neuroscience study so the claims aren't vibes — Hormozi-style
- * proof stacking inside a Nir Eyal fast-reward pacing.
+ * First-visit bridge shown on /track after onboarding.
  *
- *   Card 1 — PAIN MIRROR. Reflects the struggle they named in onboarding
- *            back at them.
- *   Card 2 — MECHANISM (Harvard Medical School). Mental practice
- *            produces the same motor cortex reorganization as physical
- *            practice. Source: Pascual-Leone et al. 1995, "Modulation of
- *            muscle responses evoked by transcranial magnetic stimulation
- *            during the acquisition of new fine motor skills," Journal
- *            of Neurophysiology 74(3).
- *   Card 3 — PROOF (Cleveland Clinic). +35% finger abduction strength
- *            from imagined contractions alone, 0% from physical training
- *            in the control of no-imagery group. Source: Ranganathan,
- *            Siemionow, Liu, Sahgal, Yue 2004, "From mental power to
- *            muscle power — gaining strength by using the mind,"
- *            Neuropsychologia 42.
- *   Card 4 — TRANSFER + SOLUTION. Executive function training transfers
- *            across domains (Diamond 2013, Annual Review of Psychology).
- *            Brand close: "That's what we train here."
+ * Placement in the Hooked loop: the player just finished Investment
+ * (onboarding). The Variable Reward (their answer) is one tap away.
+ * This screen is a 5-second bridge — not a lecture. Its only job is to
+ * prime them so the answer lands harder.
  *
- * Copy stays brutally tight per Nir Eyal fast-reward: ~10-15 second total
- * read. No em dashes, no "AI" references, first-person Elijah voice.
+ * Structure (Hormozi pain-mirror → reframe → proof → reward):
+ *   1. Pain mirror   — their exact struggle reflected back (personalised).
+ *   2. Reframe       — "that's a brain problem, not a skill problem."
+ *                      Shifts blame from them to something trainable.
+ *   3. Proof line    — one Harvard sentence. Enough. No stacking.
+ *   4. CTA           — "Read my answer →" delivers the reward immediately.
  *
- * The struggle prop comes from profiles.challenge (onboarding step 3).
- * If it's missing (OAuth edge case) we fall back to generic copy.
+ * Fallback (no struggle captured — OAuth path): acknowledges the action
+ * they took and creates positive tribe distinction ("most players never").
  */
 export default function LockerRoomWelcomeBanner({ struggle }: { struggle?: string | null }) {
   const [visible, setVisible] = useState(false)
@@ -48,77 +36,63 @@ export default function LockerRoomWelcomeBanner({ struggle }: { struggle?: strin
   const dismiss = () => {
     try {
       localStorage.setItem(DISMISS_KEY, '1')
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
     setVisible(false)
   }
 
   if (!visible) return null
 
-  // Personalize the pain card with the struggle they named. Fallback is
-  // generic but still validating.
-  const painHeadline = struggle?.trim()
-    ? `You told me it\u2019s ${struggle.trim().toLowerCase()}.`
-    : 'You came here for a reason.'
-  const painBody = 'That\u2019s exactly what training the mind fixes.'
+  const hasStruggle = !!struggle?.trim()
+  const struggleText = struggle?.trim().toLowerCase() ?? ''
+
+  // Pain mirror — reflects their exact onboarding answer back.
+  // Fallback validates the act of asking when struggle isn't known.
+  const headline = hasStruggle
+    ? `You told me it\u2019s ${struggleText}.`
+    : 'You asked. That already puts you ahead.'
+
+  // Reframe — shifts the problem from a character flaw to something trainable.
+  const reframe = hasStruggle
+    ? `That\u2019s a brain problem, not a skill problem.`
+    : 'Most players never address the mental side.'
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black overflow-y-auto"
-      style={{
-        animation: 'stepIn 400ms cubic-bezier(0.22, 1, 0.36, 1) both',
-      }}
+      className="fixed inset-0 z-50 bg-black flex flex-col"
+      style={{ animation: 'stepIn 400ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
     >
-      <div className="max-w-xl mx-auto px-5 py-10 flex flex-col min-h-[100dvh]">
-        <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-4">Why this works</p>
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight mb-10">
-          You&rsquo;re about to speed up.
+      <div className="max-w-xl mx-auto w-full px-6 flex flex-col justify-center min-h-[100dvh]">
+
+        <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-12">
+          Before you read
+        </p>
+
+        {/* Pain mirror */}
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight text-white mb-5">
+          {headline}
         </h1>
 
-        <div className="flex flex-col gap-7 mb-10">
-          <Card
-            headline={painHeadline}
-            body={painBody}
-          />
-          <Card
-            headline="Your brain rewires when you train it."
-            body="Harvard found mental practice builds the same motor cortex changes as physical practice."
-          />
-          <Card
-            headline="Mental reps count. Literally."
-            body="Cleveland Clinic measured +35% strength from imagined contractions alone. No movement required."
-          />
-          <Card
-            headline="A stronger brain wins everywhere."
-            body="Focus, composure, decisions. It carries to class, relationships, every hard thing. That&rsquo;s what we train here."
-          />
-        </div>
+        {/* Reframe */}
+        <p className="text-xl sm:text-2xl font-semibold text-gray-400 leading-snug mb-10">
+          {reframe}
+        </p>
 
-        <div className="mt-auto pt-4">
+        {/* One proof line — enough to make them believe, not enough to bore them */}
+        <p className="text-sm text-gray-500 leading-relaxed">
+          Harvard found mental reps build the same motor pathways as physical
+          practice. Your mind trains like your body does.
+        </p>
+
+        <div className="mt-auto pt-16">
           <button
             onClick={dismiss}
             className="w-full bg-white text-black py-4 text-sm font-bold rounded-full hover:opacity-80 transition-opacity"
           >
-            I&rsquo;m ready. →
+            Read my answer &rarr;
           </button>
         </div>
-      </div>
-    </div>
-  )
-}
 
-function Card({ headline, body }: { headline: string; body: string }) {
-  return (
-    <div className="border-l-2 border-white pl-5">
-      <h2
-        className="text-white font-bold text-lg sm:text-xl leading-tight mb-2"
-        dangerouslySetInnerHTML={{ __html: headline }}
-      />
-      <p
-        className="text-gray-400 text-sm leading-relaxed"
-        dangerouslySetInnerHTML={{ __html: body }}
-      />
+      </div>
     </div>
   )
 }
