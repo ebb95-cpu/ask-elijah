@@ -5,25 +5,34 @@ import { useEffect, useState } from 'react'
 const DISMISS_KEY = 'ae_court_welcome_seen'
 
 /**
- * First-visit payoff modal shown on /track after onboarding. Structured as
- * Hormozi's pain-agitate-diagnose-solve inside a Nir-Eyal fast-reward
- * pacing: the player just invested (age, position, struggle, name, email,
- * account) and needs an immediate dopamine hit validating "this is going
- * to fix the thing I told you about."
+ * First-visit payoff modal shown on /track after onboarding. Structured
+ * as pain-mirror → mechanism → proof → transfer/solve. Each card anchors
+ * to a real neuroscience study so the claims aren't vibes — Hormozi-style
+ * proof stacking inside a Nir Eyal fast-reward pacing.
  *
- *   Card 1 — Pain acknowledgment. Mirrors the struggle they named in
- *            onboarding back at them so it feels heard.
- *   Card 2 — Agitate. Name what they've already tried that didn't work.
- *   Card 3 — Diagnose. Real neuroscience for WHY harder-reps-alone fails.
- *   Card 4 — Solve. Position Ask Elijah as the unique mechanism.
+ *   Card 1 — PAIN MIRROR. Reflects the struggle they named in onboarding
+ *            back at them.
+ *   Card 2 — MECHANISM (Harvard Medical School). Mental practice
+ *            produces the same motor cortex reorganization as physical
+ *            practice. Source: Pascual-Leone et al. 1995, "Modulation of
+ *            muscle responses evoked by transcranial magnetic stimulation
+ *            during the acquisition of new fine motor skills," Journal
+ *            of Neurophysiology 74(3).
+ *   Card 3 — PROOF (Cleveland Clinic). +35% finger abduction strength
+ *            from imagined contractions alone, 0% from physical training
+ *            in the control of no-imagery group. Source: Ranganathan,
+ *            Siemionow, Liu, Sahgal, Yue 2004, "From mental power to
+ *            muscle power — gaining strength by using the mind,"
+ *            Neuropsychologia 42.
+ *   Card 4 — TRANSFER + SOLUTION. Executive function training transfers
+ *            across domains (Diamond 2013, Annual Review of Psychology).
+ *            Brand close: "That's what we train here."
  *
- * Copy is brutally tight per the fast-reward rule: each card is a one-line
- * headline + one-line body. Full read time ~10-15 seconds. No em dashes,
- * no "AI" references, first-person Elijah voice throughout.
+ * Copy stays brutally tight per Nir Eyal fast-reward: ~10-15 second total
+ * read. No em dashes, no "AI" references, first-person Elijah voice.
  *
- * The struggle prop comes from profiles.challenge (captured in onboarding
- * step 3). If it's missing (OAuth user, edge case) we fall back to
- * generic copy that still works.
+ * The struggle prop comes from profiles.challenge (onboarding step 3).
+ * If it's missing (OAuth edge case) we fall back to generic copy.
  */
 export default function CourtWelcomeBanner({ struggle }: { struggle?: string | null }) {
   const [visible, setVisible] = useState(false)
@@ -52,6 +61,7 @@ export default function CourtWelcomeBanner({ struggle }: { struggle?: string | n
   const painHeadline = struggle?.trim()
     ? `You told me it\u2019s ${struggle.trim().toLowerCase()}.`
     : 'You came here for a reason.'
+  const painBody = 'That\u2019s exactly what training the mind fixes.'
 
   return (
     <div
@@ -69,19 +79,19 @@ export default function CourtWelcomeBanner({ struggle }: { struggle?: string | n
         <div className="flex flex-col gap-7 mb-10">
           <Card
             headline={painHeadline}
-            body="I hear you. That&rsquo;s why you&rsquo;re here."
+            body={painBody}
           />
           <Card
-            headline="Harder isn&rsquo;t the answer."
-            body="If reps alone fixed it, you&rsquo;d be fixed by now."
+            headline="Your brain rewires when you train it."
+            body="Harvard found mental practice builds the same motor cortex changes as physical practice."
           />
           <Card
-            headline="It&rsquo;s your brain under pressure."
-            body="Stress shuts down the part running your game. No drill reaches it."
+            headline="Mental reps count. Literally."
+            body="Cleveland Clinic measured +35% strength from imagined contractions alone. No movement required."
           />
           <Card
-            headline="That&rsquo;s what we train here."
-            body="Every answer: neuroscience-backed. Specific to you. Not generic."
+            headline="A stronger brain wins everywhere."
+            body="Focus, composure, decisions. It carries to class, relationships, every hard thing. That&rsquo;s what we train here."
           />
         </div>
 
