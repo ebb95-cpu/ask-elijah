@@ -58,39 +58,36 @@ export default function LockerRoomWelcomeBanner({ struggle }: { struggle?: strin
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black flex flex-col"
+      className="fixed inset-0 z-50 bg-black flex items-center justify-center"
       style={{ animation: 'stepIn 400ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
     >
-      <div className="max-w-xl mx-auto w-full px-6 flex flex-col justify-center min-h-[100dvh]">
+      <div className="max-w-sm mx-auto w-full px-7 flex flex-col gap-5">
 
-        <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-12">
+        <p className="text-[10px] text-gray-600 uppercase tracking-widest">
           Before you read
         </p>
 
         {/* Pain mirror */}
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight text-white mb-5">
+        <h1 className="text-2xl font-bold tracking-tight leading-snug text-white">
           {headline}
         </h1>
 
         {/* Reframe */}
-        <p className="text-xl sm:text-2xl font-semibold text-gray-400 leading-snug mb-10">
+        <p className="text-base font-semibold text-gray-400 leading-snug">
           {reframe}
         </p>
 
-        {/* One proof line — enough to make them believe, not enough to bore them */}
-        <p className="text-sm text-gray-500 leading-relaxed">
-          Harvard found mental reps build the same motor pathways as physical
-          practice. Your mind trains like your body does.
+        {/* One proof line */}
+        <p className="text-sm text-gray-600 leading-relaxed">
+          Harvard found mental reps build the same motor pathways as physical practice. Your mind trains like your body does.
         </p>
 
-        <div className="mt-auto pt-16">
-          <button
-            onClick={dismiss}
-            className="w-full bg-white text-black py-4 text-sm font-bold rounded-full hover:opacity-80 transition-opacity"
-          >
-            Read my answer &rarr;
-          </button>
-        </div>
+        <button
+          onClick={dismiss}
+          className="w-full bg-white text-black py-4 text-sm font-bold rounded-full hover:opacity-80 transition-opacity mt-2"
+        >
+          Read my answer &rarr;
+        </button>
 
       </div>
     </div>
