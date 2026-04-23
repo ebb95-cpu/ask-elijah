@@ -45,9 +45,9 @@ function Logo() {
 
 function Stat({ value, label }: { value: number | string; label: string }) {
   return (
-    <div className="flex flex-col items-start">
-      <span className="text-lg font-bold tabular-nums leading-none">{value}</span>
-      <span className="text-[10px] text-gray-500 uppercase tracking-widest mt-1.5">{label}</span>
+    <div className="flex flex-col">
+      <span className="text-2xl font-bold tabular-nums leading-none tracking-tight">{value}</span>
+      <span className="text-[10px] text-gray-600 uppercase tracking-widest mt-2">{label}</span>
     </div>
   )
 }
@@ -87,15 +87,17 @@ export default async function TrackPage() {
 
 function NoCookieState() {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-      <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-4">Your locker room</p>
-      <h1 className="text-3xl font-bold mb-4 max-w-md">Ask me something first.</h1>
-      <p className="text-gray-500 text-sm leading-relaxed mb-10 max-w-sm">
+    <div className="flex-1 flex flex-col justify-center px-6 pb-20 max-w-sm mx-auto w-full">
+      <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-8">Your locker room</p>
+      <h1 className="text-4xl font-bold tracking-tight leading-tight mb-5">
+        Ask me something first.
+      </h1>
+      <p className="text-gray-500 text-sm leading-relaxed mb-12">
         Once you send me a question I&apos;ll set up your locker room. No account needed.
       </p>
       <Link
         href="/"
-        className="bg-white text-black px-6 py-3 text-sm font-bold rounded-full hover:opacity-80 transition-opacity"
+        className="text-sm font-semibold text-white hover:opacity-60 transition-opacity"
       >
         Ask me something →
       </Link>
@@ -219,14 +221,13 @@ async function SignedInState({ email }: { email: string }) {
 
   if (questions.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-4">Your locker room</p>
-        <h1 className="text-2xl font-bold mb-3">No questions here yet.</h1>
-        <p className="text-gray-500 text-sm mb-10">Ask me something and I&apos;ll set up your locker room.</p>
-        <Link
-          href="/"
-          className="bg-white text-black px-6 py-3 text-sm font-bold rounded-full hover:opacity-80 transition-opacity"
-        >
+      <div className="flex-1 flex flex-col justify-center px-6 pb-20 max-w-sm mx-auto w-full">
+        <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-8">Your locker room</p>
+        <h1 className="text-4xl font-bold tracking-tight leading-tight mb-5">No questions yet.</h1>
+        <p className="text-gray-500 text-sm leading-relaxed mb-12">
+          Ask me something and I&apos;ll set up your locker room.
+        </p>
+        <Link href="/" className="text-sm font-semibold text-white hover:opacity-60 transition-opacity">
           Ask me something →
         </Link>
       </div>
@@ -234,198 +235,141 @@ async function SignedInState({ email }: { email: string }) {
   }
 
   return (
-    <div className="flex-1 px-5 pt-6 max-w-xl mx-auto w-full pb-32">
-      {/* Small page label — "Your locker room" identity, not a greeting. */}
-      <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-3">Your locker room</p>
+    <div className="flex-1 px-6 pt-8 max-w-xl mx-auto w-full pb-32">
 
-      {/* Profile card — dashboard-style identity block. Avatar + greeting
-          + level/position line + stats row + edit link. If the profile is
-          incomplete, the bottom of the card softly nudges them to finish
-          it (never blocking). */}
-      <div className="rounded-2xl border border-gray-800 bg-gradient-to-b from-[#0d0d0d] to-[#070707] p-5 mb-6">
-        <div className="flex items-start gap-4">
-          <div
-            className="shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold"
-            style={{ background: 'linear-gradient(135deg, #2a2a2a 0%, #0a0a0a 100%)', border: '1px solid #2a2a2a' }}
+      {/* ── Identity block ───────────────────────────────────────────────
+          No card box. Let the content breathe. Stats sit below the
+          greeting as a clean row — no borders wrapping everything. */}
+      <div className="mb-12">
+        <div className="flex items-start justify-between mb-1">
+          <h1 className="text-4xl font-bold tracking-tight leading-tight">{greeting}.</h1>
+          <Link
+            href="/profile"
+            className="text-[10px] text-gray-700 hover:text-white transition-colors uppercase tracking-widest mt-3"
           >
-            {initial}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-3">
-              <h1 className="text-2xl font-bold tracking-tight leading-tight">{greeting}.</h1>
-              <Link
-                href="/profile"
-                className="text-[10px] text-gray-600 hover:text-white transition-colors uppercase tracking-widest whitespace-nowrap shrink-0 mt-1.5"
-              >
-                Edit →
-              </Link>
-            </div>
-            {profile.isFoundingMember && (
-              // First-30-members flag lives on profiles.is_founding_member
-              // (set by ask/route.ts maybeMarkFoundingMember). Badge is the
-              // retention perk — "I was here early" is the reward.
-              <p className="mt-1.5 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold text-amber-400">
-                <span aria-hidden="true">★</span>
-                Founding member
-              </p>
-            )}
-            {profileLine && (
-              <p className="text-xs text-gray-400 mt-1">{profileLine}</p>
-            )}
-            {profile.challenge && (
-              <p className="text-xs text-gray-500 mt-1 italic">Working on: {profile.challenge}</p>
-            )}
-          </div>
+            Edit →
+          </Link>
         </div>
 
-        {/* Stats row — asked / answered / joined. Not a streak or badge
-            system (those belong in v2 after retention data proves out). */}
-        <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-gray-900">
-          <Stat value={questions.length} label={questions.length === 1 ? 'Asked' : 'Asked'} />
-          <Stat value={approved.length} label={approved.length === 1 ? 'Answered' : 'Answered'} />
-          <Stat value={joinedLabel || '·'} label="Joined" />
+        {profile.isFoundingMember && (
+          <p className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold text-amber-400 mb-1">
+            <span aria-hidden="true">★</span>Founding member
+          </p>
+        )}
+        {profileLine && (
+          <p className="text-sm text-gray-500 mt-1">{profileLine}</p>
+        )}
+        {profile.challenge && (
+          <p className="text-sm text-gray-600 mt-1 italic">Working on: {profile.challenge}</p>
+        )}
+
+        <div className="flex items-center gap-10 mt-8">
+          <Stat value={questions.length} label="Asked" />
+          <Stat value={approved.length} label="Answered" />
+          {joinedLabel && <Stat value={joinedLabel} label="Since" />}
         </div>
 
         {!profileComplete && (
-          <div className="mt-4 pt-4 border-t border-gray-900">
-            <Link
-              href="/profile"
-              className="flex items-center justify-between text-xs text-gray-500 hover:text-white transition-colors group"
-            >
-              <span>Finish your profile so my answers hit more specifically</span>
-              <span className="text-gray-600 group-hover:text-white transition-colors">→</span>
-            </Link>
-          </div>
+          <Link
+            href="/profile"
+            className="inline-flex items-center gap-2 text-xs text-gray-600 hover:text-white transition-colors mt-6 group"
+          >
+            <span>Finish your profile so my answers are more specific</span>
+            <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+          </Link>
         )}
       </div>
 
-      {/* Expectation line — single source of truth for queue timing. */}
-      <p className="text-xs text-gray-500 leading-relaxed mb-6">
-        I answer every one personally. My queue runs 24 to 48 hours. When I reply, it&apos;ll land in your inbox.
-      </p>
-
-      {/* Syncs onboarding profile data written before a Google OAuth redirect. */}
+      {/* Hidden syncer + banner — no visual footprint */}
       <ProfileSyncer />
-
-      {/* First-visit welcome banner. Dismissible, localStorage-gated. */}
       <LockerRoomWelcomeBanner struggle={profile.challenge} />
 
-      {/* Fresh answer — the latest reward, green glow + pulsing dot. Only
-          the newest approved one gets this treatment so the signal stays
-          meaningful as the library grows. */}
+      {/* ── Expectation line ─────────────────────────────────────────── */}
+      <p className="text-xs text-gray-600 leading-relaxed mb-12">
+        I answer every one personally. Queue runs 24 to 48 hours. You&apos;ll get it in your inbox.
+      </p>
+
+      {/* ── Fresh answer ─────────────────────────────────────────────────
+          White left bar distinguishes the newest answer. No glow, no
+          green — the content is the reward, not the notification chrome. */}
       {freshAnswer && (
-        <div className="mb-10">
-          <div
-            className="rounded-2xl p-5 relative overflow-hidden"
-            style={{
-              background: 'linear-gradient(180deg, #0f2a12 0%, #081408 100%)',
-              border: '1px solid #1f4a22',
-              boxShadow: '0 0 40px -10px rgba(74, 222, 128, 0.25)',
-            }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400" />
-              </span>
-              <span className="text-[10px] uppercase tracking-widest text-green-400 font-semibold">
-                Elijah wrote you back
-              </span>
-              {freshAnswer.approved_at && (
-                <span className="text-[10px] text-gray-500 ml-auto">
-                  {formatDate(freshAnswer.approved_at)}
-                </span>
-              )}
-            </div>
-            <p className="text-sm font-semibold leading-snug text-white italic mb-4">
-              &ldquo;{freshAnswer.question}&rdquo;
+        <div className="border-l-2 border-white pl-6 mb-14">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[10px] text-white uppercase tracking-widest font-semibold">
+              New
             </p>
-            {freshAnswer.answer && (
-              <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
-                {freshAnswer.answer}
-              </p>
+            {freshAnswer.approved_at && (
+              <span className="text-[10px] text-gray-600">{formatDate(freshAnswer.approved_at)}</span>
             )}
-            <div className="mt-4 pt-4 border-t border-green-900/40 flex justify-end">
-              <ShareAnswerButton questionId={freshAnswer.id} question={freshAnswer.question} />
-            </div>
+          </div>
+          <p className="text-sm text-gray-400 italic leading-relaxed mb-5">
+            &ldquo;{freshAnswer.question}&rdquo;
+          </p>
+          {freshAnswer.answer && (
+            <p className="text-base text-gray-100 leading-[1.85] whitespace-pre-wrap">
+              {freshAnswer.answer}
+            </p>
+          )}
+          <div className="flex items-center justify-between mt-6">
+            <p className="text-xs text-gray-700">— Elijah</p>
+            <ShareAnswerButton questionId={freshAnswer.id} question={freshAnswer.question} />
           </div>
         </div>
       )}
 
-      {/* Inline ask composer — post-reward moment is when the "ask another"
-          impulse is highest. Keeps the Hooked loop tight: reward → compose
-          → new pending card without ever leaving this page. */}
+      {/* ── Ask composer — Hooked loop: reward fires, then immediately
+          surfaces the next trigger ───────────────────────────────────── */}
       <InlineAskComposer />
 
-      {/* Pending questions render identically to the library cards below —
-          no "I'm reviewing" pill, no "first take" label. From the player's
-          perspective this is just their answer. If Elijah refines it in the
-          admin queue, the text silently updates on their next visit. The
-          only distinct visual treatment is the fresh-answer celebratory
-          card up top when Elijah just approved. */}
+      {/* ── Pending questions ────────────────────────────────────────────
+          Gray left bar signals "in progress" without a status label.
+          "On my way." tells them something is coming without overpromising. */}
       {pending.length > 0 && (
-        <div className="mb-12">
-          <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-3">
-            {pending.length === 1 ? 'Your answer' : 'Your answers'}
+        <div className="mb-14">
+          <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-6">
+            {pending.length === 1 ? 'In progress' : 'In progress'}
           </p>
-          <div className="space-y-4">
+          <div className="space-y-8">
             {pending.map((q) => (
-              <div
-                key={q.id}
-                className="rounded-xl p-4 border border-gray-900 bg-[#0a0a0a]"
-              >
-                <div className="flex items-center justify-end mb-3">
-                  <span className="text-[10px] text-gray-600">
-                    {formatDate(q.created_at)}
-                  </span>
-                </div>
-                <p className="text-sm font-semibold leading-snug text-white italic mb-3">
+              <div key={q.id} className="border-l border-gray-800 pl-6">
+                <p className="text-sm text-gray-500 italic leading-relaxed mb-3">
                   &ldquo;{q.question}&rdquo;
                 </p>
-                {q.answer && (
-                  <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                {q.answer ? (
+                  <p className="text-base text-gray-100 leading-[1.85] whitespace-pre-wrap">
                     {q.answer}
                   </p>
+                ) : (
+                  <p className="text-xs text-gray-700 italic">On my way.</p>
                 )}
+                <p className="text-[10px] text-gray-800 mt-4">{formatDate(q.created_at)}</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Permanent library — accumulating value. Older answered questions
-          that don't need the celebratory treatment anymore. */}
+      {/* ── Answer library ───────────────────────────────────────────────
+          Gray left bar, unified with pending. Attribution on every answer
+          reinforces that this came from a real person. */}
       {libraryAnswers.length > 0 && (
-        <div className="mb-12">
-          <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-3">
-            Your answers from me
+        <div className="mb-14">
+          <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-6">
+            {libraryAnswers.length === 1 ? 'Your answer' : 'Your answers'}
           </p>
-          <div className="space-y-4">
+          <div className="space-y-10">
             {libraryAnswers.map((q) => (
-              <div
-                key={q.id}
-                className="rounded-xl p-4 border border-gray-900 bg-[#0a0a0a]"
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
-                  <span className="text-[10px] uppercase tracking-widest text-green-400 font-semibold">
-                    Answered
-                  </span>
-                  {q.approved_at && (
-                    <span className="text-[10px] text-gray-600 ml-auto">
-                      {formatDate(q.approved_at)}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm font-semibold leading-snug text-white italic mb-3">
+              <div key={q.id} className="border-l border-gray-800 pl-6">
+                <p className="text-sm text-gray-500 italic leading-relaxed mb-4">
                   &ldquo;{q.question}&rdquo;
                 </p>
                 {q.answer && (
-                  <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                  <p className="text-base text-gray-100 leading-[1.85] whitespace-pre-wrap">
                     {q.answer}
                   </p>
                 )}
-                <div className="mt-3 pt-3 border-t border-gray-900 flex justify-end">
+                <div className="flex items-center justify-between mt-5">
+                  <p className="text-xs text-gray-700">— Elijah</p>
                   <ShareAnswerButton questionId={q.id} question={q.question} />
                 </div>
               </div>
@@ -434,24 +378,24 @@ async function SignedInState({ email }: { email: string }) {
         </div>
       )}
 
-      {/* Tribe reward + next-trigger loader. Tap → /?q=... pre-fills the
-          ask input on the homepage. */}
+      {/* ── Community feed ───────────────────────────────────────────────
+          Clean list — no bordered cards. Tap pre-fills the ask input. */}
       {feed.length > 0 && (
         <div className="mb-16">
-          <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-3">
-            What other players are asking
+          <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-6">
+            What other players asked
           </p>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col">
             {feed.map((p) => (
               <Link
                 key={p.id}
                 href={`/?q=${encodeURIComponent(p.question)}`}
-                className="group flex items-start justify-between gap-3 border border-gray-900 hover:border-gray-700 rounded-xl p-4 transition-colors"
+                className="group flex items-start justify-between gap-4 py-4 border-b border-gray-900 last:border-0"
               >
-                <p className="text-sm text-gray-300 italic leading-snug group-hover:text-white transition-colors">
+                <p className="text-sm text-gray-500 italic leading-snug group-hover:text-white transition-colors">
                   &ldquo;{p.question}&rdquo;
                 </p>
-                <span className="shrink-0 text-[10px] text-gray-600 uppercase tracking-widest whitespace-nowrap mt-0.5">
+                <span className="shrink-0 text-[10px] text-gray-700 group-hover:text-white transition-colors whitespace-nowrap mt-0.5">
                   Ask →
                 </span>
               </Link>
@@ -460,16 +404,12 @@ async function SignedInState({ email }: { email: string }) {
         </div>
       )}
 
-      {/* Soft upgrade path. The primary "ask another" action lives in the
-          InlineAskComposer up top — no need for a redundant bottom pill. */}
-      <div className="flex flex-col items-center gap-4">
-        <Link
-          href="/sign-up"
-          className="text-xs text-gray-500 hover:text-white transition-colors text-center"
-        >
-          Save your locker room to an account &rarr;
-        </Link>
-      </div>
+      <Link
+        href="/sign-up"
+        className="text-xs text-gray-700 hover:text-white transition-colors"
+      >
+        Save your locker room to an account &rarr;
+      </Link>
     </div>
   )
 }
