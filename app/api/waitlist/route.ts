@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { requireAdmin } from '@/lib/admin-auth'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-const resend = new Resend(process.env.RESEND_API_KEY)
+import { getSupabase } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
   const { email, name, challenge } = await req.json()
@@ -19,6 +12,8 @@ export async function POST(req: NextRequest) {
 
   const cleanEmail = email.trim().toLowerCase()
   const isSignupClosed = process.env.SIGNUP_CLOSES_AT && new Date() > new Date(process.env.SIGNUP_CLOSES_AT)
+  const supabase = getSupabase()
+  const resend = new Resend(process.env.RESEND_API_KEY)
 
   // Upsert — if they already signed up, just return ok (don't send another confirmation)
   const { data: existing } = await supabase
@@ -146,7 +141,7 @@ export async function GET(req: NextRequest) {
   const unauthorized = await requireAdmin()
   if (unauthorized) return unauthorized
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('waitlist')
     .select('id, email, name, challenge, confirmed, approved, created_at')
     .order('created_at', { ascending: false })

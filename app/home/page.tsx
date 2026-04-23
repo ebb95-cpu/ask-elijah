@@ -26,10 +26,9 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const supabase = getSupabaseClient()
-
   useEffect(() => {
     const fetchProfile = async () => {
+      const supabase = getSupabaseClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/sign-in'); return }
 
@@ -62,6 +61,7 @@ export default function HomePage() {
   }
 
   const handleSignOut = async () => {
+    const supabase = getSupabaseClient()
     await supabase.auth.signOut()
     router.push('/')
   }

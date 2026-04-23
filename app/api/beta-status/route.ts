@@ -1,10 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { getSupabase } from '@/lib/supabase-server'
 
 export async function GET() {
   const cap = parseInt(process.env.BETA_CAP || '0', 10)
@@ -15,7 +10,7 @@ export async function GET() {
   }
 
   // Count unique users who have submitted questions
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('questions')
     .select('email')
 

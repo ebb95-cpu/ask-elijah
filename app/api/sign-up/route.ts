@@ -3,8 +3,6 @@ import { getSupabase } from '@/lib/supabase-server'
 import { verifyEmail } from '@/lib/email-verify'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function POST(req: NextRequest) {
   const { email, password, firstName, challenge, weaknesses, strengths, age, position, skipEmailVerify } = await req.json()
 
@@ -65,7 +63,7 @@ export async function POST(req: NextRequest) {
     await supabase.from('profiles').upsert(upsertRow).then(() => {}, () => {})
   }
 
-  resend.emails.send({
+  new Resend(process.env.RESEND_API_KEY).emails.send({
     from: 'Elijah Bryant <elijah@elijahbryant.pro>',
     to: cleanEmail,
     subject: 'You just did something most players never do.',

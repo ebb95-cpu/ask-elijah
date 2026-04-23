@@ -1,7 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 import { getSupabase } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
+
+async function getSessionEmail(req: NextRequest): Promise<string | null> {
+  const res = NextResponse.next()
+  const supabaseAuth = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return req.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => res.cookies.set(name, value, options))
+        },
+      },
+    }
+  )
+  const { data: { user } } = await supabaseAuth.auth.getUser()
+  return user?.email?.toLowerCase() ?? null
+}
 
 /**
  * Returning-user dashboard data: a unified list of the asker's questions
@@ -14,15 +33,15 @@ export const dynamic = 'force-dynamic'
  * is the safer move.
  */
 export async function GET(req: NextRequest) {
-  const email = req.nextUrl.searchParams.get('email')
-  if (!email) return NextResponse.json({ questions: [] })
+  const email = await getSessionEmail(req)
+  if (!email) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
   const supabase = getSupabase()
 
   const { data: rows } = await supabase
     .from('questions')
     .select('id, question, answer, status, action_steps, created_at, approved_at, reviewed_by_elijah')
-    .eq('email', email.toLowerCase())
+    .eq('email', email)
     .in('status', ['pending', 'approved'])
     .order('created_at', { ascending: false })
     .limit(20)

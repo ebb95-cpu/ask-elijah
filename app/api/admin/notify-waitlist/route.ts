@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { requireAdmin } from '@/lib/admin-auth'
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-const resend = new Resend(process.env.RESEND_API_KEY)
+import { getSupabase } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
   // Auth check
@@ -16,6 +10,7 @@ export async function POST(req: NextRequest) {
   if (unauthorized) return unauthorized
 
   // Get approved + confirmed + un-notified waitlist entries
+  const supabase = getSupabase()
   const { data: waitlist, error } = await supabase
     .from('waitlist')
     .select('id, email, name')
@@ -29,6 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
+  const resend = new Resend(process.env.RESEND_API_KEY)
   let sent = 0
   const ids: string[] = []
 

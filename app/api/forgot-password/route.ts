@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function POST(req: NextRequest) {
   const { email } = await req.json()
   if (!email?.trim()) {
@@ -31,7 +29,7 @@ export async function POST(req: NextRequest) {
   const firstName =
     (data.user?.user_metadata as { first_name?: string } | null)?.first_name || 'there'
 
-  await resend.emails.send({
+  await new Resend(process.env.RESEND_API_KEY).emails.send({
     from: 'Elijah Bryant <elijah@elijahbryant.pro>',
     to: cleanEmail,
     subject: 'Reset your password.',
