@@ -6,10 +6,9 @@ import { getSupabaseClient } from '@/lib/supabase-client'
 const PENDING_KEY = 'ae_pending_profile'
 
 /**
- * Runs once on /track after an OAuth sign-in. If localStorage has
- * ae_pending_profile (written by AccountSetupForm before the Google redirect),
- * it reads the session email and POSTs the onboarding fields to /api/profile.
- * Clears the key whether it succeeds or not so it never runs twice.
+ * Runs once on /track after auth or same-browser email verification. If
+ * localStorage has ae_pending_profile, it saves those onboarding fields using
+ * either the Supabase session or the signed track cookie.
  */
 export default function ProfileSyncer() {
   useEffect(() => {
@@ -18,9 +17,6 @@ export default function ProfileSyncer() {
       raw = localStorage.getItem(PENDING_KEY)
     } catch { return }
     if (!raw) return
-
-    // Clear immediately so a page refresh doesn't re-fire.
-    try { localStorage.removeItem(PENDING_KEY) } catch { /* ignore */ }
 
     let pending: Record<string, string | null>
     try {
@@ -33,12 +29,20 @@ export default function ProfileSyncer() {
 
     getSupabaseClient().auth.getSession().then(({ data }) => {
       const email = data?.session?.user?.email
-      if (!email) return
-      fetch('/api/profile', {
+      const endpoint = email ? '/api/profile' : '/api/track-profile'
+      const body = email ? { email, ...pending } : pending
+
+      fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, ...pending }),
-      }).catch(() => { /* fire-and-forget */ })
+        body: JSON.stringify(body),
+      })
+        .then((res) => {
+          if (res.ok) {
+            try { localStorage.removeItem(PENDING_KEY) } catch { /* ignore */ }
+          }
+        })
+        .catch(() => { /* retry on next /track visit */ })
     })
   }, [])
 

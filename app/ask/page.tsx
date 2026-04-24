@@ -739,28 +739,28 @@ function AskPageInner() {
   const handleOnboardComplete = async (skip = false) => {
     setLocal('profile_done', '1')
     if (!skip && (onboardName || onboardPosition || onboardLevel || onboardChallenge)) {
-      const savedEmail = getSession('user_email') || email
-      try {
-        await simFetch(
-          '/api/profile',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: savedEmail,
-              // Canonical field is first_name — used by crons, home, ask API,
-              // and the returning-user welcome modes. Legacy `name` column
-              // still works but first_name is the source of truth.
-              first_name: onboardName,
-              position: onboardPosition,
-              level: onboardLevel,
-              challenge: onboardChallenge,
-              language: detectedLang,
-            }),
-          },
-          { ok: true }
-        )
-      } catch { /* fail silently */ }
+      const pendingProfile = {
+        // Canonical field is first_name — used by crons, home, ask API,
+        // and the returning-user welcome modes. Legacy `name` column
+        // still works but first_name is the source of truth.
+        first_name: onboardName || null,
+        position: onboardPosition || null,
+        level: onboardLevel || null,
+        challenge: onboardChallenge || null,
+        language: detectedLang,
+      }
+      setLocal('ae_pending_profile', JSON.stringify(pendingProfile))
+      await simFetch(
+        '/api/track-profile',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pendingProfile),
+        },
+        { ok: true }
+      ).then((res) => {
+        if (res.ok) removeLocal('ae_pending_profile')
+      }).catch(() => { /* ProfileSyncer retries after /track loads */ })
     }
     setMode('submitted')
   }
