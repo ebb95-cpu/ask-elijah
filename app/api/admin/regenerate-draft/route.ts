@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { requireAdmin } from '@/lib/admin-auth'
 import { sanitizeAnswerText } from '@/lib/answer-sanitize'
+import { logError } from '@/lib/log-error'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -174,29 +175,49 @@ ${kb.context || '(No relevant knowledge-base context found.)'}
 
 Write the full answer from scratch now:`
 
-  const res = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5',
-    max_tokens: 2000,
-    system: SYSTEM_PROMPT,
-    tools: [
-      { type: 'web_search_20250305', name: 'web_search', max_uses: 3 },
-      { type: 'web_fetch_20250910', name: 'web_fetch', max_uses: 5 },
-    ],
-    messages: [{ role: 'user', content: prompt }],
-  })
+  let res: Anthropic.Messages.Message
+  try {
+    res = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 2000,
+      system: SYSTEM_PROMPT,
+      tools: [
+        { type: 'web_search_20250305', name: 'web_search', max_uses: 3 },
+        { type: 'web_fetch_20250910', name: 'web_fetch', max_uses: 5 },
+      ],
+      messages: [{ role: 'user', content: prompt }],
+    })
+  } catch (err) {
+    await logError('admin:regenerate-draft:tools', err, { question: question.slice(0, 100) })
+    try {
+      res = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 2000,
+        system: SYSTEM_PROMPT,
+        messages: [{
+          role: 'user',
+          content: `${prompt}\n\nWeb tools are unavailable for this retry. Use the knowledge-base context and Elijah's notes only. Still return a materially new, player-facing answer.`,
+        }],
+      })
+    } catch (fallbackErr) {
+      await logError('admin:regenerate-draft:fallback', fallbackErr, { question: question.slice(0, 100) })
+      return NextResponse.json({ error: 'Remix generation failed. Try again in a moment.' }, { status: 502 })
+    }
+  }
 
   // The final text block is the answer. Earlier blocks may be tool calls and
   // tool results that we harvest for sources.
   const textBlocks = res.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
   let newDraft = sanitizeAnswerText(textBlocks.map((b) => b.text).join('\n\n'))
   if (normalizeForCompare(newDraft) === normalizeForCompare(context)) {
-    const forced = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 1400,
-      system: SYSTEM_PROMPT,
-      messages: [{
-        role: 'user',
-        content: `Your last remix was effectively unchanged. Rewrite it again so it is clearly a NEW answer.
+    try {
+      const forced = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1400,
+        system: SYSTEM_PROMPT,
+        messages: [{
+          role: 'user',
+          content: `Your last remix was effectively unchanged. Rewrite it again so it is clearly a NEW answer.
 
 Rules:
 - Keep Elijah's meaning and voice.
@@ -210,31 +231,38 @@ Player's question:
 
 Current textarea that must be transformed:
 ${context}`,
-      }],
-    })
-    const forcedText = forced.content
-      .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n\n')
-      .trim()
-    if (forcedText) newDraft = sanitizeAnswerText(forcedText)
+        }],
+      })
+      const forcedText = forced.content
+        .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
+        .map((b) => b.text)
+        .join('\n\n')
+        .trim()
+      if (forcedText) newDraft = sanitizeAnswerText(forcedText)
+    } catch (err) {
+      await logError('admin:regenerate-draft:forced-rewrite', err, { question: question.slice(0, 100) })
+    }
   }
   if (isShorterRemix && wordCount(newDraft) > 200) {
-    const compressed = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 700,
-      system: SYSTEM_PROMPT,
-      messages: [{
-        role: 'user',
-        content: `Compress this answer to 140-180 words. This is a hard limit. Keep Elijah's meaning, direct voice, one science-grounded mechanism sentence, and one concrete action step. Remove extra explanation, extra sources, and repeated ideas. Return only the final answer.\n\nQuestion: "${question}"\n\nAnswer to compress:\n${newDraft}`,
-      }],
-    })
-    const compressedText = compressed.content
-      .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n\n')
-      .trim()
-    if (compressedText) newDraft = sanitizeAnswerText(compressedText)
+    try {
+      const compressed = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 700,
+        system: SYSTEM_PROMPT,
+        messages: [{
+          role: 'user',
+          content: `Compress this answer to 140-180 words. This is a hard limit. Keep Elijah's meaning, direct voice, one science-grounded mechanism sentence, and one concrete action step. Remove extra explanation, extra sources, and repeated ideas. Return only the final answer.\n\nQuestion: "${question}"\n\nAnswer to compress:\n${newDraft}`,
+        }],
+      })
+      const compressedText = compressed.content
+        .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
+        .map((b) => b.text)
+        .join('\n\n')
+        .trim()
+      if (compressedText) newDraft = sanitizeAnswerText(compressedText)
+    } catch (err) {
+      await logError('admin:regenerate-draft:compress', err, { question: question.slice(0, 100) })
+    }
   }
   const sources = Array.from(
     [...kb.sources, ...extractSources(res.content)]
