@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import ThreeDots from '@/components/ui/ThreeDots'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -492,7 +493,12 @@ export default function AdminQuestionsPage() {
                   fontFamily: '-apple-system, sans-serif',
                 }}
               >
-                {remixing ? 'Remixing...' : 'Remix ↻'}
+                {remixing ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                    <ThreeDots size={3} animate color="#fff" />
+                    Remixing
+                  </span>
+                ) : 'Remix ↻'}
               </button>
               <button
                 onClick={() => handleSkip(openItem.id)}
