@@ -7,6 +7,72 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
 type Source = { title: string; url: string }
+type PineconeMatch = {
+  score: number
+  metadata?: Record<string, string>
+}
+
+async function embedText(text: string): Promise<number[] | null> {
+  if (!process.env.VOYAGE_API_KEY) return null
+  const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ input: [text], model: 'voyage-3-lite' }),
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.data?.[0]?.embedding || null
+}
+
+async function searchKnowledgeBase(query: string): Promise<{ context: string; sources: Source[] }> {
+  if (!process.env.PINECONE_HOST || !process.env.PINECONE_API_KEY) {
+    return { context: '', sources: [] }
+  }
+
+  try {
+    const embedding = await embedText(query)
+    if (!embedding) return { context: '', sources: [] }
+
+    const res = await fetch(`${process.env.PINECONE_HOST}/query`, {
+      method: 'POST',
+      headers: {
+        'Api-Key': process.env.PINECONE_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ vector: embedding, topK: 6, includeMetadata: true }),
+    })
+    if (!res.ok) return { context: '', sources: [] }
+
+    const data = await res.json()
+    const matches = ((data.matches || []) as PineconeMatch[])
+      .filter((m) => m.score >= 0.35 && m.metadata?.text)
+
+    const context = matches
+      .map((m, i) => {
+        const title = m.metadata?.source_title || m.metadata?.title || 'Elijah knowledge base'
+        return `[KB ${i + 1}: ${title}, score ${m.score.toFixed(2)}]\n${m.metadata?.text}`
+      })
+      .join('\n\n---\n\n')
+
+    const seen = new Set<string>()
+    const sources = matches.flatMap((m) => {
+      const url = m.metadata?.source_url || m.metadata?.video_url || ''
+      if (!url || seen.has(url)) return []
+      seen.add(url)
+      return [{
+        title: m.metadata?.source_title || m.metadata?.title || 'Elijah knowledge base',
+        url,
+      }]
+    })
+
+    return { context, sources }
+  } catch {
+    return { context: '', sources: [] }
+  }
+}
 
 /**
  * Walk the Anthropic response content blocks and pull out every URL the model
@@ -59,20 +125,33 @@ export async function POST(req: NextRequest) {
   }
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const kb = await searchKnowledgeBase(`${question}\n\n${context}`.slice(0, 4000))
 
-  const prompt = `Write a completely new answer from scratch to this player's question. Use the context below as your raw material — it may contain a previous draft, notes Elijah jotted in, or a mix of both. Weave it all together into one cohesive, polished answer. Do not append or reference anything. Just write a single complete answer as if you knew all of this from the start. Same voice, same directness as Elijah.
+  const prompt = `Write a completely new answer from scratch to this player's question.
+
+Priority order:
+1. Elijah's current notes/draft below are the source of truth. Preserve his point of view, meaning, examples, and coaching angle.
+2. Elijah's knowledge-base context can support, clarify, or sharpen the answer only when it clearly connects to what Elijah said.
+3. Web research is only for fact-checking, neuroscience/psychology/sports-psychology grounding, and avoiding inaccurate mechanism claims.
+
+If knowledge-base context does not intertwine with Elijah's current notes, leave it out. Do not force it in. Do not replace Elijah's opinion with generic sports psychology. If web research contradicts a mechanism claim, rewrite the mechanism so it is accurate while keeping Elijah's core point.
+
+Use the context below as raw material — it may contain a previous draft, notes Elijah jotted in, or a mix of both. Weave it into one cohesive, polished answer. Do not append or reference anything. Just write a single complete answer as if you knew all of this from the start. Same voice, same directness as Elijah.
 
 You have web_search and web_fetch. USE THEM proactively. Before stating any mechanism claim (how the brain works under pressure, sleep, nervous-system regulation, HRV, visualization, confidence, recovery — any physiological or psychological "why this works"), verify it with a lookup. Two to four searches is the norm, not the exception.
 
-But the voice always wins. Never say "studies show" or use footnote-style citations inside the answer. Phrase research in first-person Elijah voice: "the reason this works is your nervous system..." or "I read something from a Stanford lab that said...". The science makes the mechanism credible; Elijah's voice keeps it human. Weave, don't stack.
+Ground the answer in real neuroscience, psychology, sports psychology, physiology, or performance research when a mechanism is being explained. But the voice always wins. Never say "studies show" or use footnote-style citations inside the answer. Phrase research in first-person Elijah voice: "the reason this works is your nervous system..." or "I read something from a Stanford lab that said...". The science makes the mechanism credible; Elijah's voice keeps it human. Weave, don't stack.
 
 Also use web_fetch when a URL is pasted in the notes, and verify any specific name, quote, or stat before putting it in Elijah's mouth.
 
 Player's question:
 "${question}"
 
-Context and notes to work from:
+Elijah's current notes/draft to prioritize:
 ${context}
+
+Relevant Elijah knowledge-base context. Use only if it fits Elijah's notes:
+${kb.context || '(No relevant knowledge-base context found.)'}
 
 Write the full answer from scratch now:`
 
@@ -91,7 +170,7 @@ Write the full answer from scratch now:`
   // tool results that we harvest for sources.
   const textBlocks = res.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
   const newDraft = textBlocks.map((b) => b.text).join('\n\n').trim()
-  const sources = extractSources(res.content)
+  const sources = [...kb.sources, ...extractSources(res.content)]
 
   return NextResponse.json({ draft: newDraft, sources })
 }
