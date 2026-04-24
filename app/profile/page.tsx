@@ -113,15 +113,15 @@ export default function ProfilePage() {
       <div className="fixed inset-0 bg-black flex flex-col items-center justify-center px-8 text-center">
         <div className="flex items-center gap-0 mb-16">
           <div className={`w-4 h-4 rounded-full bg-white transition-opacity duration-500 ${savePhase === 'reveal' ? 'opacity-100' : 'opacity-0 dot-1'}`}
-            style={savePhase === 'dots' ? { animation: 'dotPulse 1.2s ease-in-out infinite 0s', opacity: 1 } : {}} />
+            style={savePhase === 'dots' ? { animation: 'dotPulse 1.8s ease-in-out infinite 0s', opacity: 1 } : {}} />
           <div className={`w-8 h-0.5 bg-white mx-1 transition-opacity duration-500 ${savePhase === 'reveal' ? 'opacity-100' : 'opacity-0'}`}
-            style={savePhase === 'dots' ? { animation: 'dotPulse 1.2s ease-in-out infinite 0.2s', opacity: 1 } : {}} />
+            style={savePhase === 'dots' ? { animation: 'dotPulse 1.8s ease-in-out infinite 0.18s', opacity: 1 } : {}} />
           <div className={`w-4 h-4 rounded-full bg-white transition-opacity duration-500 ${savePhase === 'reveal' ? 'opacity-100' : 'opacity-0 dot-2'}`}
-            style={savePhase === 'dots' ? { animation: 'dotPulse 1.2s ease-in-out infinite 0.4s', opacity: 1 } : {}} />
+            style={savePhase === 'dots' ? { animation: 'dotPulse 1.8s ease-in-out infinite 0.35s', opacity: 1 } : {}} />
           <div className={`w-8 h-0.5 bg-white mx-1 transition-opacity duration-500 ${savePhase === 'reveal' ? 'opacity-100' : 'opacity-0'}`}
-            style={savePhase === 'dots' ? { animation: 'dotPulse 1.2s ease-in-out infinite 0.6s', opacity: 1 } : {}} />
+            style={savePhase === 'dots' ? { animation: 'dotPulse 1.8s ease-in-out infinite 0.52s', opacity: 1 } : {}} />
           <div className={`w-4 h-4 rounded-full bg-white transition-opacity duration-500 ${savePhase === 'reveal' ? 'opacity-100' : 'opacity-0 dot-3'}`}
-            style={savePhase === 'dots' ? { animation: 'dotPulse 1.2s ease-in-out infinite 0.8s', opacity: 1 } : {}} />
+            style={savePhase === 'dots' ? { animation: 'dotPulse 1.8s ease-in-out infinite 0.7s', opacity: 1 } : {}} />
         </div>
         <div className={`transition-all duration-700 ${savePhase === 'reveal' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-6">

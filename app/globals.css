@@ -61,15 +61,25 @@ body {
   color: #000;
 }
 
-/* Three dots logo animation */
+/* Three dots logo animation: motion travels left → middle → right. */
 @keyframes dotPulse {
-  0%, 100% { opacity: 1; }
-  33% { opacity: 0.2; }
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+  36% {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
 }
 
-.dot-1 { animation: dotPulse 1.2s ease-in-out infinite 0s; }
-.dot-2 { animation: dotPulse 1.2s ease-in-out infinite 0.4s; }
-.dot-3 { animation: dotPulse 1.2s ease-in-out infinite 0.8s; }
+.dot-1 { animation: dotPulse 1.8s ease-in-out infinite 0s; transform-origin: center; }
+.dot-2 { animation: dotPulse 1.8s ease-in-out infinite 0.35s; transform-origin: center; }
+.dot-3 { animation: dotPulse 1.8s ease-in-out infinite 0.7s; transform-origin: center; }
 
 /* Slide up animation */
 @keyframes slideUp {
