@@ -33,6 +33,7 @@ interface PlayerQuestion {
 
 type StatusFilter = 'pending' | 'answered' | 'skipped'
 type QueueReason = { label: string; tone: 'gold' | 'blue' | 'green' | 'gray' }
+type RemixPreset = 'shorter' | 'more_elijah' | 'more_practical'
 
 function dupeCount(q: PlayerQuestion) {
   return q.dupes?.length ?? 0
@@ -51,6 +52,52 @@ function getQueueReasons(q: PlayerQuestion): QueueReason[] {
   if (dupeCount(q) > 0) reasons.push({ label: `${dupeCount(q) + 1} players ask this`, tone: 'gold' })
   if (q.source_context) reasons.push({ label: 'Research signal', tone: 'gray' })
   return reasons
+}
+
+function getAnswerBrief(q: PlayerQuestion) {
+  const text = q.question.toLowerCase()
+  const topic = text.includes('shoot') || text.includes('shot')
+    ? 'Shooting confidence'
+    : text.includes('coach') || text.includes('minutes') || text.includes('playing time')
+      ? 'Role and trust'
+      : text.includes('freeze') || text.includes('calm') || text.includes('nerv') || text.includes('confidence')
+        ? 'Pressure and composure'
+        : text.includes('strong') || text.includes('weak hand') || text.includes('handle')
+          ? 'Skill development'
+          : 'Player growth'
+  const emotion = text.includes('scared') || text.includes('freeze') || text.includes('nerv')
+    ? 'They probably need calm, certainty, and one thing to do next.'
+    : text.includes('coach') || text.includes('bench') || text.includes('minutes')
+      ? 'They probably feel frustrated and want control back.'
+      : 'They need a clear answer they can use today.'
+  const include = topic === 'Pressure and composure'
+    ? 'One mindset shift, one pre-game routine, and one in-game cue.'
+    : topic === 'Role and trust'
+      ? 'One honest truth, one controllable behavior, and one way to earn trust.'
+      : 'One direct principle, one drill or habit, and one action step.'
+
+  return { topic, emotion, include }
+}
+
+function getWordCount(text: string) {
+  return text.trim() ? text.trim().split(/\s+/).length : 0
+}
+
+function getQualityChecks(draft: string) {
+  const wordCount = getWordCount(draft)
+  const lower = draft.toLowerCase()
+  return [
+    { label: 'Clear answer', passed: wordCount >= 35 },
+    { label: 'Action step', passed: /today|next game|practice|write|try|do this|routine|drill/.test(lower) },
+    { label: 'Sounds personal', passed: /\byou\b|\byour\b|\bi\b|\bmy\b/.test(lower) },
+    { label: 'Not too long', passed: wordCount > 0 && wordCount <= 260 },
+  ]
+}
+
+function getRemixInstruction(preset: RemixPreset) {
+  if (preset === 'shorter') return 'Make this tighter, clearer, and under 180 words without losing the main point.'
+  if (preset === 'more_elijah') return 'Make this sound more direct, lived-in, and personal in Elijah Bryant’s voice.'
+  return 'Make this more practical with a specific next action the player can do today.'
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -123,12 +170,17 @@ export default function AdminQuestionsPage() {
     }
   }
 
-  const handleApprove = async (questionId: string) => {
+  const handleApprove = async (questionId: string, openNext = false) => {
     if (!draft.trim()) return
     const group = items.find((q) => q.id === questionId)
     const isPainPoint = group?.item_type === 'pain_point'
     const dupeIds = group?.dupes?.map((d) => d.id) ?? []
     const allIds = [questionId, ...dupeIds]
+    const nextItem = openNext
+      ? [...items]
+          .filter((q) => q.id !== questionId)
+          .sort((a, b) => queueScore(b) - queueScore(a))[0]
+      : null
     setApproving(true)
     setError(null)
     try {
@@ -171,8 +223,8 @@ export default function AdminQuestionsPage() {
       }
       setTimeout(() => setToast(null), 3000)
       setItems((prev) => prev.filter((q) => q.id !== questionId))
-      setOpenId(null)
-      setDraft('')
+      setOpenId(nextItem?.id ?? null)
+      setDraft(nextItem?.answer || '')
       setSources([])
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to approve')
@@ -181,7 +233,7 @@ export default function AdminQuestionsPage() {
     }
   }
 
-  const handleRemix = async () => {
+  const handleRemix = async (preset?: RemixPreset) => {
     if (!openItem || !draft.trim() || remixing) return
     setRemixing(true)
     setError(null)
@@ -192,7 +244,12 @@ export default function AdminQuestionsPage() {
       const res = await fetch('/api/admin/regenerate-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: openItem.question, context: draft }),
+        body: JSON.stringify({
+          question: openItem.question,
+          context: preset
+            ? `${draft}\n\nRemix instruction: ${getRemixInstruction(preset)}`
+            : draft,
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -252,8 +309,13 @@ export default function AdminQuestionsPage() {
 
   // ── Detail overlay ──────────────────────────────────────────────────────────
   if (openItem) {
+    const brief = getAnswerBrief(openItem)
+    const checks = getQualityChecks(draft)
+    const wordCount = getWordCount(draft)
+    const hasNextAfterApprove = items.some((q) => q.id !== openItem.id)
+
     return (
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
+      <div style={{ maxWidth: 1120, margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
         <button
           onClick={() => { setOpenId(null); setDraft(''); setError(null); setSources([]) }}
           style={{
@@ -279,140 +341,200 @@ export default function AdminQuestionsPage() {
           </p>
         </div>
 
-        {openItem.source_url && (
-          <p style={{ marginTop: -8, marginBottom: 20 }}>
-            <a href={openItem.source_url} target="_blank" rel="noopener noreferrer" style={{ color: '#7dd3fc', fontSize: 12, textDecoration: 'none' }}>
-              View source ↗
-            </a>
-          </p>
-        )}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 18,
+          alignItems: 'start',
+        }}>
+          <main>
+            {/* Editable answer */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 8 }}>
+                <p style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
+                  {openItem.status === 'approved' ? 'Answer (editable — update & re-send)' : 'Your answer (editable)'}
+                </p>
+                <span style={{ color: wordCount > 260 ? '#fbbf24' : '#666', fontSize: 11, fontWeight: 700 }}>
+                  {wordCount} words
+                </span>
+              </div>
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                rows={13}
+                style={{
+                  width: '100%', background: '#0a0a0a', color: '#fff',
+                  border: '1px solid #333', borderRadius: 10, padding: 16,
+                  fontSize: 16, lineHeight: 1.6, resize: 'vertical',
+                  outline: 'none', fontFamily: '-apple-system, sans-serif',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
 
-        {/* Dupes list — everyone else who asked this same question (different
-            wording). Approving sends the same answer to all of them. */}
-        {openItem.dupes && openItem.dupes.length > 0 && (
-          <details style={{ marginBottom: 20, padding: 12, border: '1px solid #2a2015', borderRadius: 6, background: '#15100a' }}>
-            <summary style={{ cursor: 'pointer', fontSize: 12, color: '#fbbf24', fontWeight: 600 }}>
-              Also asked by {openItem.dupes.length} {openItem.dupes.length === 1 ? 'person' : 'people'} — all get the same answer on approve
-            </summary>
-            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {openItem.dupes.map((d) => (
-                <div key={d.id} style={{ fontSize: 13, color: '#ccc', lineHeight: 1.5 }}>
-                  <span style={{ color: '#888', fontSize: 11 }}>
-                    {(d.email || 'anon').split('@')[0]} · {formatDate(d.created_at)}
-                  </span>
-                  <br />
-                  <span style={{ fontStyle: 'italic' }}>&ldquo;{d.question}&rdquo;</span>
-                </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
+              {([
+                ['shorter', 'Shorter'],
+                ['more_elijah', 'More Elijah'],
+                ['more_practical', 'More practical'],
+              ] as Array<[RemixPreset, string]>).map(([preset, label]) => (
+                <button
+                  key={preset}
+                  onClick={() => handleRemix(preset)}
+                  disabled={remixing || !draft.trim()}
+                  style={{
+                    background: '#080808',
+                    border: '1px solid #2a2a2a',
+                    borderRadius: 999,
+                    color: '#ddd',
+                    cursor: remixing ? 'wait' : 'pointer',
+                    fontFamily: '-apple-system, sans-serif',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    opacity: !draft.trim() ? 0.45 : 1,
+                    padding: '9px 12px',
+                  }}
+                >
+                  {label}
+                </button>
               ))}
             </div>
-          </details>
-        )}
 
-        {/* Editable answer */}
-        <div style={{ marginBottom: 20 }}>
-          <p style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-            {openItem.status === 'approved' ? 'Answer (editable — update & re-send)' : 'Your answer (editable)'}
-          </p>
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={10}
-            style={{
-              width: '100%', background: '#0a0a0a', color: '#fff',
-              border: '1px solid #333', borderRadius: 6, padding: 12,
-              fontSize: 16, lineHeight: 1.6, resize: 'vertical',
-              outline: 'none', fontFamily: '-apple-system, sans-serif',
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
+            {/* Sources consulted by the LLM during Remix. Review each before
+                approving to verify any quotes or facts pulled from the web. */}
+            {sources.length > 0 && (
+              <div
+                style={{
+                  marginBottom: 20,
+                  padding: '12px 14px',
+                  background: '#0a0a0a',
+                  border: '1px solid #1a1a1a',
+                  borderRadius: 6,
+                }}
+              >
+                <p style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0, marginBottom: 8 }}>
+                  Sources consulted ({sources.length}) — verify before approving
+                </p>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {sources.map((s, i) => (
+                    <li key={i} style={{ fontSize: 13, lineHeight: 1.4 }}>
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#7dd3fc', textDecoration: 'none' }}
+                      >
+                        {s.title}
+                      </a>
+                      <span style={{ color: '#555', marginLeft: 8, fontSize: 11 }}>
+                        {(() => {
+                          try { return new URL(s.url).hostname.replace(/^www\./, '') } catch { return '' }
+                        })()}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-        {/* Sources consulted by the LLM during Remix. Review each before
-            approving to verify any quotes or facts pulled from the web. */}
-        {sources.length > 0 && (
-          <div
-            style={{
-              marginBottom: 20,
-              padding: '12px 14px',
-              background: '#0a0a0a',
-              border: '1px solid #1a1a1a',
-              borderRadius: 6,
-            }}
-          >
-            <p style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0, marginBottom: 8 }}>
-              Sources consulted ({sources.length}) — verify before approving
-            </p>
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {sources.map((s, i) => (
-                <li key={i} style={{ fontSize: 13, lineHeight: 1.4 }}>
-                  <a
-                    href={s.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: '#7dd3fc', textDecoration: 'none' }}
-                  >
-                    {s.title}
-                  </a>
-                  <span style={{ color: '#555', marginLeft: 8, fontSize: 11 }}>
-                    {(() => {
-                      try { return new URL(s.url).hostname.replace(/^www\./, '') } catch { return '' }
-                    })()}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+            {error && (
+              <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>
+            )}
 
-        {error && (
-          <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>
-        )}
+            {/* Actions. Remix sits between Approve and Skip — edit the draft
+                inline (add notes, rewrites, whatever), hit Remix, and it writes
+                a fresh cohesive answer from what's currently in the textarea. */}
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => handleApprove(openItem.id, true)}
+                disabled={approving || !draft.trim() || !hasNextAfterApprove}
+                style={{
+                  background: approving ? '#ccc' : '#fbbf24', color: '#111',
+                  border: 'none', borderRadius: 8, padding: '14px 24px',
+                  fontSize: 15, fontWeight: 900, cursor: approving ? 'wait' : 'pointer',
+                  opacity: !draft.trim() || !hasNextAfterApprove ? 0.5 : 1, minHeight: 48,
+                  fontFamily: '-apple-system, sans-serif',
+                }}
+              >
+                {approving ? 'Sending...' : 'Approve & next →'}
+              </button>
+              <button
+                onClick={() => handleApprove(openItem.id)}
+                disabled={approving || !draft.trim()}
+                style={{
+                  background: approving ? '#ccc' : '#6366f1', color: '#fff',
+                  border: 'none', borderRadius: 8, padding: '14px 22px',
+                  fontSize: 15, fontWeight: 800, cursor: approving ? 'wait' : 'pointer',
+                  opacity: !draft.trim() ? 0.5 : 1, minHeight: 48,
+                  fontFamily: '-apple-system, sans-serif',
+                }}
+              >
+                {approving ? 'Sending...' : openItem.status === 'approved' ? 'Update & re-send' : 'Approve'}
+              </button>
+              <button
+                onClick={() => handleRemix()}
+                disabled={remixing || !draft.trim()}
+                title="Edit the draft, add notes inline, then Remix to regenerate a fresh answer from what's in the textarea."
+                style={{
+                  background: 'none',
+                  border: '1px solid #fff',
+                  borderRadius: 8,
+                  color: '#fff',
+                  fontSize: 14, fontWeight: 700,
+                  padding: '12px 20px',
+                  cursor: remixing ? 'wait' : 'pointer',
+                  opacity: !draft.trim() ? 0.4 : 1, minHeight: 48,
+                  fontFamily: '-apple-system, sans-serif',
+                }}
+              >
+                {remixing ? 'Remixing...' : 'Remix ↻'}
+              </button>
+              <button
+                onClick={() => handleSkip(openItem.id)}
+                style={{
+                  background: 'none', border: '1px solid #333', borderRadius: 8,
+                  color: '#888', fontSize: 14, padding: '12px 20px', cursor: 'pointer',
+                  minHeight: 48, fontFamily: '-apple-system, sans-serif',
+                }}
+              >
+                Skip
+              </button>
+            </div>
+          </main>
 
-        {/* Actions. Remix sits between Approve and Skip — edit the draft
-            inline (add notes, rewrites, whatever), hit Remix, and it writes
-            a fresh cohesive answer from what's currently in the textarea. */}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button
-            onClick={() => handleApprove(openItem.id)}
-            disabled={approving || !draft.trim()}
-            style={{
-              background: approving ? '#ccc' : '#6366f1', color: '#fff',
-              border: 'none', borderRadius: 6, padding: '14px 24px',
-              fontSize: 15, fontWeight: 700, cursor: approving ? 'wait' : 'pointer',
-              opacity: !draft.trim() ? 0.5 : 1, minHeight: 48,
-              fontFamily: '-apple-system, sans-serif',
-            }}
-          >
-            {approving ? 'Sending...' : openItem.status === 'approved' ? 'Update & re-send →' : 'Approve →'}
-          </button>
-          <button
-            onClick={handleRemix}
-            disabled={remixing || !draft.trim()}
-            title="Edit the draft, add notes inline, then Remix to regenerate a fresh answer from what's in the textarea."
-            style={{
-              background: 'none',
-              border: '1px solid #fff',
-              borderRadius: 6,
-              color: '#fff',
-              fontSize: 14, fontWeight: 700,
-              padding: '12px 20px',
-              cursor: remixing ? 'wait' : 'pointer',
-              opacity: !draft.trim() ? 0.4 : 1, minHeight: 48,
-              fontFamily: '-apple-system, sans-serif',
-            }}
-          >
-            {remixing ? 'Remixing...' : 'Remix ↻'}
-          </button>
-          <button
-            onClick={() => handleSkip(openItem.id)}
-            style={{
-              background: 'none', border: '1px solid #333', borderRadius: 6,
-              color: '#888', fontSize: 14, padding: '12px 20px', cursor: 'pointer',
-              minHeight: 48, fontFamily: '-apple-system, sans-serif',
-            }}
-          >
-            Skip
-          </button>
+          <aside style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <AnswerBriefCard brief={brief} />
+            <QualityChecklist checks={checks} wordCount={wordCount} />
+
+            {openItem.source_url && (
+              <InfoCard title="Source">
+                <a href={openItem.source_url} target="_blank" rel="noopener noreferrer" style={{ color: '#7dd3fc', fontSize: 13, textDecoration: 'none' }}>
+                  View source ↗
+                </a>
+              </InfoCard>
+            )}
+
+            {/* Dupes list — everyone else who asked this same question (different
+                wording). Approving sends the same answer to all of them. */}
+            {openItem.dupes && openItem.dupes.length > 0 && (
+              <details style={{ padding: 14, border: '1px solid #2a2015', borderRadius: 10, background: '#15100a' }}>
+                <summary style={{ cursor: 'pointer', fontSize: 13, color: '#fbbf24', fontWeight: 800 }}>
+                  {openItem.dupes.length + 1} players need this answer
+                </summary>
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {openItem.dupes.map((d) => (
+                    <div key={d.id} style={{ fontSize: 12, color: '#ccc', lineHeight: 1.5 }}>
+                      <span style={{ color: '#888', fontSize: 10 }}>
+                        {(d.email || 'anon').split('@')[0]} · {formatDate(d.created_at)}
+                      </span>
+                      <br />
+                      <span style={{ fontStyle: 'italic' }}>&ldquo;{d.question}&rdquo;</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </aside>
         </div>
       </div>
     )
@@ -641,6 +763,85 @@ function SummaryCard({ label, value, color }: { label: string; value: number; co
     <div style={{ border: '1px solid #171717', background: '#050505', borderRadius: 8, padding: 14 }}>
       <p style={{ color, fontSize: 24, fontWeight: 900, lineHeight: 1, margin: '0 0 8px' }}>{value}</p>
       <p style={{ color: '#666', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>{label}</p>
+    </div>
+  )
+}
+
+function AnswerBriefCard({ brief }: { brief: ReturnType<typeof getAnswerBrief> }) {
+  return (
+    <InfoCard title="Answer brief">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <BriefRow label="Topic" value={brief.topic} />
+        <BriefRow label="Player needs" value={brief.emotion} />
+        <BriefRow label="Include" value={brief.include} />
+      </div>
+    </InfoCard>
+  )
+}
+
+function BriefRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p style={{ color: '#666', fontSize: 10, letterSpacing: '0.1em', margin: '0 0 4px', textTransform: 'uppercase' }}>{label}</p>
+      <p style={{ color: '#ddd', fontSize: 13, lineHeight: 1.45, margin: 0 }}>{value}</p>
+    </div>
+  )
+}
+
+function QualityChecklist({
+  checks,
+  wordCount,
+}: {
+  checks: Array<{ label: string; passed: boolean }>
+  wordCount: number
+}) {
+  return (
+    <InfoCard title="Ready check">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        {checks.map((check) => (
+          <div key={check.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              alignItems: 'center',
+              background: check.passed ? '#0a1f15' : '#171717',
+              border: check.passed ? '1px solid #1f4030' : '1px solid #2a2a2a',
+              borderRadius: 999,
+              color: check.passed ? '#34d399' : '#666',
+              display: 'flex',
+              fontSize: 10,
+              fontWeight: 900,
+              height: 18,
+              justifyContent: 'center',
+              width: 18,
+            }}>
+              {check.passed ? '✓' : '·'}
+            </span>
+            <span style={{ color: check.passed ? '#ddd' : '#777', fontSize: 13, fontWeight: 700 }}>
+              {check.label}
+            </span>
+          </div>
+        ))}
+        {wordCount > 260 && (
+          <p style={{ color: '#fbbf24', fontSize: 12, lineHeight: 1.45, margin: '4px 0 0' }}>
+            This is getting long. Try the Shorter remix before approving.
+          </p>
+        )}
+      </div>
+    </InfoCard>
+  )
+}
+
+function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      background: '#070707',
+      border: '1px solid #1e1e1e',
+      borderRadius: 12,
+      padding: 14,
+    }}>
+      <p style={{ color: '#888', fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', margin: '0 0 12px', textTransform: 'uppercase' }}>
+        {title}
+      </p>
+      {children}
     </div>
   )
 }
