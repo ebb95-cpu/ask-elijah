@@ -208,7 +208,11 @@ export default function AdminQuestionsPage() {
           throw new Error(data.error || `${res.status}`)
         }
         const data = await res.json()
-        setToast(`Approved ${data.succeeded ?? allIds.length} — emails sent`)
+        setToast(
+          data.failed
+            ? `Approved ${data.succeeded ?? 0}; ${data.failed} need a retry`
+            : `Approved ${data.succeeded ?? allIds.length} — emails sent`
+        )
       } else {
         const res = await fetch('/api/admin/approve-question', {
           method: 'POST',
@@ -227,7 +231,8 @@ export default function AdminQuestionsPage() {
       setDraft(nextItem?.answer || '')
       setSources([])
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to approve')
+      const message = e instanceof Error ? e.message : 'Failed to approve'
+      setError(/^\d+$/.test(message) ? `Approval failed with server error ${message}. Try again or check logs.` : message)
     } finally {
       setApproving(false)
     }

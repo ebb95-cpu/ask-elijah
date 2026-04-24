@@ -112,11 +112,14 @@ export async function approveAnswer(args: {
     return { ok: false, status: 404, error: 'Question not found' }
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('first_name, level, age_range')
-    .eq('email', record.email.toLowerCase())
-    .single()
+  const email = typeof record.email === 'string' ? record.email.trim().toLowerCase() : ''
+  const { data: profile } = email
+    ? await supabase
+        .from('profiles')
+        .select('first_name, level, age_range')
+        .eq('email', email)
+        .single()
+    : { data: null }
   const firstName = profile?.first_name || null
 
   const draftChanged = (record.ai_draft || record.answer || '').trim() !== finalAnswer.trim()
@@ -153,10 +156,11 @@ export async function approveAnswer(args: {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY)
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro').trim()
+    if (!email) throw new Error('Question has no email recipient')
     await resend.emails.send({
       from: 'Elijah Bryant <elijah@elijahbryant.pro>',
       replyTo: 'ebb95@mac.com',
-      to: record.email,
+      to: email,
       subject: 'Elijah wrote back.',
       html: `
 <!DOCTYPE html>

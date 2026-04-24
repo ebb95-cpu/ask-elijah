@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
+import { approveAnswer } from '@/lib/approve-answer'
+import { logError } from '@/lib/log-error'
+
 export const dynamic = 'force-dynamic'
-
-function getSiteUrl() {
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-  return 'https://elijahbryant.pro'
-}
-
+export const maxDuration = 120
 export async function POST(req: NextRequest) {
   const unauthorized = await requireAdmin()
 
@@ -17,24 +15,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'questionIds and finalAnswer required' }, { status: 400 })
   }
 
-  const siteUrl = getSiteUrl()
-
-  // Approve each question — fire in parallel, fail-soft per item
-  const results = await Promise.allSettled(
-    questionIds.map((questionId: string) =>
-      fetch(`${siteUrl}/api/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-token': process.env.CRON_SECRET!,
-        },
-        body: JSON.stringify({ questionId, finalAnswer, actionSteps: '' }),
-      })
-    )
+  // Approve each question through the shared in-process pipeline. This avoids
+  // admin -> HTTP -> token-gated approve hops and lets the UI see the real
+  // failure reason instead of a vague 500.
+  const results = await Promise.all(
+    questionIds.map(async (questionId: string) => {
+      const result = await approveAnswer({ questionId, finalAnswer, actionSteps: '' })
+      if (!result.ok) {
+        await logError('admin:bulk-approve:item', new Error(result.error), { questionId, status: result.status })
+      }
+      return { questionId, ...result }
+    })
   )
 
-  const succeeded = results.filter((r) => r.status === 'fulfilled').length
-  const failed = results.filter((r) => r.status === 'rejected').length
+  const succeeded = results.filter((r) => r.ok).length
+  const failures = results.filter((r) => !r.ok)
+  const failed = failures.length
 
-  return NextResponse.json({ succeeded, failed })
+  if (succeeded === 0) {
+    const first = failures[0]
+    return NextResponse.json(
+      { error: first?.error || 'No questions were approved', succeeded, failed },
+      { status: first?.status || 500 }
+    )
+  }
+
+  return NextResponse.json({
+    succeeded,
+    failed,
+    failures: failures.map((f) => ({ questionId: f.questionId, error: f.error })),
+  })
 }
