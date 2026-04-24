@@ -40,6 +40,7 @@ export default function AdminQuestionsPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<StatusFilter>('pending')
   const [toast, setToast] = useState<string | null>(null)
+  const [researching, setResearching] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [approving, setApproving] = useState(false)
@@ -58,7 +59,15 @@ export default function AdminQuestionsPage() {
       const res = await fetch(`/api/admin/queue?status=${status}`)
       if (!res.ok) throw new Error(`${res.status}`)
       const data = await res.json()
-      setItems(data.questions || [])
+      const loaded = data.questions || []
+      setItems(
+        status === 'pending'
+          ? [...loaded].sort((a: PlayerQuestion, b: PlayerQuestion) => {
+              if (a.item_type === b.item_type) return 0
+              return a.item_type === 'pain_point' ? -1 : 1
+            })
+          : loaded
+      )
     } catch (e) {
       console.error('Queue load failed:', e)
     } finally {
@@ -70,6 +79,29 @@ export default function AdminQuestionsPage() {
     load(filter === 'answered' ? 'answered' : filter)
     setOpenId(null)
   }, [filter, load])
+
+  const researchItems = items.filter((q) => q.item_type === 'pain_point')
+  const playerItems = items.filter((q) => q.item_type !== 'pain_point')
+
+  const runResearchNow = async () => {
+    if (researching) return
+    setResearching(true)
+    setToast('Running research. This can take a minute...')
+    try {
+      const res = await fetch('/api/admin/pain-research', { method: 'POST' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `${res.status}`)
+      }
+      setToast('Research started. Refresh in a minute for new cards.')
+      setTimeout(() => load(filter === 'answered' ? 'answered' : filter), 5000)
+    } catch (e) {
+      setToast(`Research failed: ${e instanceof Error ? e.message : 'unknown error'}`)
+    } finally {
+      setResearching(false)
+      setTimeout(() => setToast(null), 6000)
+    }
+  }
 
   const handleApprove = async (questionId: string) => {
     if (!draft.trim()) return
@@ -366,10 +398,45 @@ export default function AdminQuestionsPage() {
     <div style={{ maxWidth: 760, margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
-        <h1 style={{ fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, color: '#fff', margin: 0, fontFamily: '-apple-system, sans-serif' }}>
-          Question Queue
-        </h1>
+        <div>
+          <p style={{ fontSize: 10, color: '#555', letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 6px' }}>
+            Daily Dashboard
+          </p>
+          <h1 style={{ fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, color: '#fff', margin: 0, fontFamily: '-apple-system, sans-serif' }}>
+            Questions Ready For You
+          </h1>
+        </div>
+        <button
+          onClick={runResearchNow}
+          disabled={researching}
+          style={{
+            background: researching ? '#222' : '#fff',
+            color: researching ? '#777' : '#000',
+            border: '1px solid #fff',
+            borderRadius: 6,
+            padding: '10px 14px',
+            fontSize: 12,
+            fontWeight: 800,
+            cursor: researching ? 'wait' : 'pointer',
+            fontFamily: '-apple-system, sans-serif',
+          }}
+        >
+          {researching ? 'Researching...' : 'Find new pain points'}
+        </button>
       </div>
+
+      {filter === 'pending' && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gap: 10,
+          marginBottom: 18,
+        }}>
+          <SummaryCard label="Research prompts" value={researchItems.length} color="#7dd3fc" />
+          <SummaryCard label="Player questions" value={playerItems.length} color="#fbbf24" />
+          <SummaryCard label="Total ready" value={items.length} color="#fff" />
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (
@@ -413,12 +480,17 @@ export default function AdminQuestionsPage() {
 
       {/* Grid */}
       {!loading && items.length > 0 && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-          gap: 10,
-        }}>
-          {items.map((q) => (
+        <>
+          {filter === 'pending' && researchItems.length > 0 && (
+            <QueueSection title="Researched pain points" subtitle="Answer these to teach the knowledge base your opinion." />
+          )}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+            gap: 10,
+            marginBottom: filter === 'pending' && playerItems.length > 0 ? 28 : 0,
+          }}>
+          {(filter === 'pending' && researchItems.length > 0 ? researchItems : items).map((q) => (
             <button
               key={q.id}
               onClick={() => {
@@ -522,8 +594,128 @@ export default function AdminQuestionsPage() {
               </div>
             </button>
           ))}
-        </div>
+          </div>
+
+          {filter === 'pending' && researchItems.length > 0 && playerItems.length > 0 && (
+            <>
+              <QueueSection title="Real player questions" subtitle="These came from users and send an email when approved." />
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                gap: 10,
+              }}>
+                {playerItems.map((q) => (
+                  <QueueCard
+                    key={q.id}
+                    q={q}
+                    onOpen={() => {
+                      setOpenId(q.id)
+                      setDraft(q.answer || '')
+                      setError(null)
+                    }}
+                    formatDate={formatDate}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
       )}
     </div>
   )
+}
+
+function SummaryCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div style={{ border: '1px solid #171717', background: '#050505', borderRadius: 8, padding: 14 }}>
+      <p style={{ color, fontSize: 24, fontWeight: 900, lineHeight: 1, margin: '0 0 8px' }}>{value}</p>
+      <p style={{ color: '#666', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>{label}</p>
+    </div>
+  )
+}
+
+function QueueSection({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div style={{ margin: '18px 0 10px' }}>
+      <p style={{ color: '#fff', fontSize: 13, fontWeight: 800, margin: '0 0 4px' }}>{title}</p>
+      <p style={{ color: '#555', fontSize: 12, margin: 0 }}>{subtitle}</p>
+    </div>
+  )
+}
+
+function QueueCard({
+  q,
+  onOpen,
+  formatDate,
+}: {
+  q: PlayerQuestion
+  onOpen: () => void
+  formatDate: (iso: string) => string
+}) {
+  return (
+    <button
+      key={q.id}
+      onClick={onOpen}
+      style={{
+        background: '#0a0d1a',
+        border: q.reviewed_by_elijah ? '1px solid #1f4030' : '1px solid #1a2040',
+        borderRadius: 8,
+        padding: 14,
+        textAlign: 'left',
+        cursor: 'pointer',
+        fontFamily: '-apple-system, sans-serif',
+        minHeight: 100,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        gap: 8,
+        position: 'relative',
+      }}
+    >
+      {q.reviewed_by_elijah && (
+        <span style={badgeStyle('#34d399', '#0a1f15', '#1f4030')}>✓ Reviewed</span>
+      )}
+      {q.item_type === 'pain_point' && (
+        <span title="Researched pain point" style={badgeStyle('#7dd3fc', '#07131a', '#123040')}>Research</span>
+      )}
+      <p style={{
+        fontSize: 13, fontWeight: 600, color: '#fff', margin: 0,
+        lineHeight: 1.4, overflow: 'hidden',
+        display: '-webkit-box',
+        WebkitLineClamp: 3,
+        WebkitBoxOrient: 'vertical' as const,
+        paddingRight: q.reviewed_by_elijah || q.item_type === 'pain_point' ? 72 : 0,
+      }}>
+        {q.question}
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+        <span style={{ fontSize: 10, color: '#555' }}>
+          {q.item_type === 'pain_point' ? 'research' : q.email ? q.email.split('@')[0] : 'anon'}
+          {q.dupes && q.dupes.length > 0 && (
+            <span style={{ color: '#fbbf24', background: '#2a2015', padding: '1px 6px', borderRadius: 10, fontWeight: 700, marginLeft: 4 }}>
+              +{q.dupes.length}
+            </span>
+          )}
+        </span>
+        <span style={{ fontSize: 10, color: '#3a4570' }}>{formatDate(q.created_at)}</span>
+      </div>
+    </button>
+  )
+}
+
+function badgeStyle(color: string, background: string, border: string): React.CSSProperties {
+  return {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    fontSize: 9,
+    fontWeight: 700,
+    color,
+    background,
+    border: `1px solid ${border}`,
+    borderRadius: 999,
+    padding: '2px 6px',
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
+  }
 }
