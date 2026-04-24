@@ -3,7 +3,7 @@ import { getSupabase } from '@/lib/supabase-server'
 import { requireAdmin } from '@/lib/admin-auth'
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -13,11 +13,17 @@ export async function POST(
     if (unauthorized) return unauthorized
 
     const supabase = getSupabase()
+    const body = await req.json().catch(() => ({}))
+    const table = body.itemType === 'pain_point' ? 'pain_points' : 'questions'
 
-    await supabase
-      .from('pain_points')
+    const { error } = await supabase
+      .from(table)
       .update({ status: 'skipped' })
       .eq('id', id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
 
     return NextResponse.json({ ok: true })
   } catch (err) {

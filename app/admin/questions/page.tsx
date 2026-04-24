@@ -272,7 +272,8 @@ export default function AdminQuestionsPage() {
       )
       setTimeout(() => setToast(null), 3000)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to remix')
+      const message = e instanceof Error ? e.message : 'Failed to remix'
+      setError(/^\d+$/.test(message) ? `Remix failed with server error ${message}. Try again in a moment.` : message)
     } finally {
       setRemixing(false)
     }
@@ -281,18 +282,20 @@ export default function AdminQuestionsPage() {
   const handleSkip = async (questionId: string) => {
     try {
       const group = items.find((q) => q.id === questionId)
-      if (group?.item_type === 'pain_point') {
-        const res = await fetch(`/api/admin/questions/${questionId}/skip`, { method: 'POST' })
-        if (!res.ok) throw new Error(`${res.status}`)
-      } else {
-        const { getSupabaseClient } = await import('@/lib/supabase-client')
-        const supabase = getSupabaseClient()
-        await supabase.from('questions').update({ status: 'skipped' }).eq('id', questionId)
+      const res = await fetch(`/api/admin/questions/${questionId}/skip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemType: group?.item_type || 'question' }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `${res.status}`)
       }
       setItems((prev) => prev.filter((q) => q.id !== questionId))
       setOpenId(null)
-    } catch {
-      setError('Failed to skip')
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to skip'
+      setError(/^\d+$/.test(message) ? `Skip failed with server error ${message}. Try again in a moment.` : message)
     }
   }
 
