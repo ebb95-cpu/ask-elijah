@@ -713,14 +713,14 @@ export default function HomePage() {
           </h1>
 
           <p className="text-gray-500 text-sm leading-relaxed mb-12">
-            Your locker room is waiting.
+            Pick up where you left off. Your answers, follow-ups, and next reps are inside.
           </p>
 
           <a
             href={`/sign-in?email=${encodeURIComponent(wbEmail)}`}
             className="w-full bg-white text-black py-4 text-sm font-bold rounded-full text-center hover:opacity-80 transition-opacity mb-5 block"
           >
-            Sign in →
+            Open my locker room →
           </a>
 
           <button
