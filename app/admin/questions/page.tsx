@@ -36,6 +36,12 @@ interface PlayerQuestion {
 type StatusFilter = 'pending' | 'answered' | 'skipped'
 type QueueReason = { label: string; tone: 'gold' | 'blue' | 'green' | 'gray' }
 type RemixPreset = 'shorter' | 'more_elijah' | 'more_practical'
+type RemixNotice = {
+  at: Date
+  beforeWords: number
+  afterWords: number
+  changed: boolean
+}
 
 function dupeCount(q: PlayerQuestion) {
   return q.dupes?.length ?? 0
@@ -121,6 +127,7 @@ export default function AdminQuestionsPage() {
   // Sources the LLM consulted via web_search / web_fetch when remixing.
   // Rendered under the draft so admin can verify quotes before approving.
   const [sources, setSources] = useState<{ title: string; url: string }[]>([])
+  const [remixNotice, setRemixNotice] = useState<RemixNotice | null>(null)
 
   const load = useCallback(async (status: string) => {
     setLoading(true)
@@ -147,6 +154,7 @@ export default function AdminQuestionsPage() {
   useEffect(() => {
     load(filter === 'answered' ? 'answered' : filter)
     setOpenId(null)
+    setRemixNotice(null)
   }, [filter, load])
 
   const researchItems = items.filter((q) => q.item_type === 'pain_point')
@@ -232,6 +240,7 @@ export default function AdminQuestionsPage() {
       setOpenId(nextItem?.id ?? null)
       setDraft(nextItem?.answer || '')
       setSources([])
+      setRemixNotice(null)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to approve'
       setError(/^\d+$/.test(message) ? `Approval failed with server error ${message}. Try again or check logs.` : message)
@@ -242,8 +251,11 @@ export default function AdminQuestionsPage() {
 
   const handleRemix = async (preset?: RemixPreset) => {
     if (!openItem || !draft.trim() || remixing) return
+    const previousDraft = draft
+    const beforeWords = getWordCount(previousDraft)
     setRemixing(true)
     setError(null)
+    setRemixNotice(null)
     try {
       // Whatever's in the textarea is the raw material — previous draft plus
       // any notes Elijah inlined. The endpoint writes a new cohesive answer
@@ -265,10 +277,13 @@ export default function AdminQuestionsPage() {
       if (!data.draft) throw new Error('Empty remix response')
       setDraft(data.draft)
       setSources(Array.isArray(data.sources) ? data.sources : [])
+      const afterWords = getWordCount(data.draft)
+      const changed = data.draft.trim() !== previousDraft.trim()
+      setRemixNotice({ at: new Date(), beforeWords, afterWords, changed })
       setToast(
-        data.sources?.length
-          ? `Remixed — ${data.sources.length} source${data.sources.length === 1 ? '' : 's'} consulted`
-          : 'Remixed — review the new draft'
+        changed
+          ? `New remix generated — ${beforeWords} → ${afterWords} words`
+          : 'Remix finished, but the draft came back unchanged. Add a stronger note and try again.'
       )
       setTimeout(() => setToast(null), 3000)
     } catch (e) {
@@ -295,6 +310,7 @@ export default function AdminQuestionsPage() {
       setOpenId(null)
       setDraft('')
       setSources([])
+      setRemixNotice(null)
       setError(null)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to skip'
@@ -329,7 +345,7 @@ export default function AdminQuestionsPage() {
     return (
       <div style={{ maxWidth: 1120, margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
         <button
-          onClick={() => { setOpenId(null); setDraft(''); setError(null); setSources([]) }}
+          onClick={() => { setOpenId(null); setDraft(''); setError(null); setSources([]); setRemixNotice(null) }}
           style={{
             background: 'none', border: '1px solid #333', borderRadius: 6,
             color: '#888', fontSize: 13, padding: '8px 16px', cursor: 'pointer',
@@ -366,25 +382,49 @@ export default function AdminQuestionsPage() {
                 <p style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
                   {openItem.status === 'approved' ? 'Answer (editable — update & re-send)' : 'Your answer (editable)'}
                 </p>
-                <span style={{ color: wordCount > 260 ? '#fbbf24' : '#666', fontSize: 11, fontWeight: 700 }}>
-                  {wordCount} words
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {remixNotice && (
+                    <span style={{
+                      background: remixNotice.changed ? '#0a1f15' : '#2a2015',
+                      border: remixNotice.changed ? '1px solid #1f4030' : '1px solid #4a3512',
+                      borderRadius: 999,
+                      color: remixNotice.changed ? '#34d399' : '#fbbf24',
+                      fontSize: 10,
+                      fontWeight: 900,
+                      padding: '4px 8px',
+                    }}>
+                      {remixNotice.changed ? 'New remix' : 'No visible change'} · {remixNotice.beforeWords} → {remixNotice.afterWords} words
+                    </span>
+                  )}
+                  <span style={{ color: wordCount > 260 ? '#fbbf24' : '#666', fontSize: 11, fontWeight: 700 }}>
+                    {wordCount} words
+                  </span>
+                </div>
               </div>
               <textarea
                 value={draft}
                 onChange={(e) => {
                   setDraft(e.target.value)
                   if (error) setError(null)
+                  if (remixNotice) setRemixNotice(null)
                 }}
                 rows={13}
                 style={{
                   width: '100%', background: '#0a0a0a', color: '#fff',
-                  border: '1px solid #333', borderRadius: 10, padding: 16,
+                  border: remixNotice?.changed ? '1px solid #1f4030' : '1px solid #333', borderRadius: 10, padding: 16,
                   fontSize: 16, lineHeight: 1.6, resize: 'vertical',
                   outline: 'none', fontFamily: '-apple-system, sans-serif',
                   boxSizing: 'border-box',
+                  boxShadow: remixNotice?.changed ? '0 0 0 3px rgba(52, 211, 153, 0.08)' : 'none',
                 }}
               />
+              {remixNotice && (
+                <p style={{ color: remixNotice.changed ? '#34d399' : '#fbbf24', fontSize: 12, margin: '8px 0 0', lineHeight: 1.45 }}>
+                  {remixNotice.changed
+                    ? `Fresh remix generated at ${remixNotice.at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. Review the new draft before approving.`
+                    : 'Remix completed, but the answer looked the same. Add a direct note like "include this exact point..." and remix again.'}
+                </p>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
@@ -679,6 +719,7 @@ export default function AdminQuestionsPage() {
                         setDraft(nextFocus.answer || '')
                         setError(null)
                         setSources([])
+                        setRemixNotice(null)
                       }}
                       style={{
                         background: '#fbbf24',
@@ -709,6 +750,7 @@ export default function AdminQuestionsPage() {
                         setDraft(q.answer || '')
                         setError(null)
                         setSources([])
+                        setRemixNotice(null)
                       }}
                       formatDate={formatDate}
                     />
@@ -743,6 +785,7 @@ export default function AdminQuestionsPage() {
                           setDraft(q.answer || '')
                           setError(null)
                           setSources([])
+                          setRemixNotice(null)
                         }}
                         formatDate={formatDate}
                       />
@@ -771,6 +814,7 @@ export default function AdminQuestionsPage() {
                       setDraft(q.answer || '')
                       setError(null)
                       setSources([])
+                      setRemixNotice(null)
                     }}
                     formatDate={formatDate}
                   />

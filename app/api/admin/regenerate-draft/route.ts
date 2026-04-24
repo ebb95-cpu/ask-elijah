@@ -119,6 +119,10 @@ function wordCount(text: string): number {
   return text.trim() ? text.trim().split(/\s+/).length : 0
 }
 
+function normalizeForCompare(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, ' ').replace(/[^\w\s]/g, '').trim()
+}
+
 export async function POST(req: NextRequest) {
   const unauthorized = await requireAdmin()
 
@@ -143,6 +147,8 @@ Priority order:
 If knowledge-base context does not intertwine with Elijah's current notes, leave it out. Do not force it in. Do not replace Elijah's opinion with generic sports psychology. If web research contradicts a mechanism claim, rewrite the mechanism so it is accurate while keeping Elijah's core point.
 
 Use the context below as raw material — it may contain a previous draft, notes Elijah jotted in, or a mix of both. Weave it into one cohesive, polished answer. Do not append or reference anything. Just write a single complete answer as if you knew all of this from the start. Same voice, same directness as Elijah.
+
+The remix must be materially different from the current textarea. If Elijah added new lines, rough thoughts, examples, corrections, or extra coaching points, those additions must visibly change the final answer. Do not return the same answer with tiny wording changes. Change the opening, structure, and action step as needed so the new information is clearly integrated.
 
 CRITICAL: Return only the words Elijah would say to the player. Never include behind-the-scenes narration, research process, preambles, markdown separators, or model language. Do not write phrases like "Alright, I've got solid research backing," "let me weave this together," "here's the answer," "I researched," "as an AI," "LLM," or anything that sounds like ChatGPT talking. Start directly with the answer to the player.
 
@@ -183,6 +189,36 @@ Write the full answer from scratch now:`
   // tool results that we harvest for sources.
   const textBlocks = res.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
   let newDraft = sanitizeAnswerText(textBlocks.map((b) => b.text).join('\n\n'))
+  if (normalizeForCompare(newDraft) === normalizeForCompare(context)) {
+    const forced = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 1400,
+      system: SYSTEM_PROMPT,
+      messages: [{
+        role: 'user',
+        content: `Your last remix was effectively unchanged. Rewrite it again so it is clearly a NEW answer.
+
+Rules:
+- Keep Elijah's meaning and voice.
+- Integrate any added notes, corrections, examples, or rough thoughts from the textarea.
+- Change the opening and the action step.
+- Do not mention that you are remixing.
+- Return only the final answer.
+
+Player's question:
+"${question}"
+
+Current textarea that must be transformed:
+${context}`,
+      }],
+    })
+    const forcedText = forced.content
+      .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
+      .map((b) => b.text)
+      .join('\n\n')
+      .trim()
+    if (forcedText) newDraft = sanitizeAnswerText(forcedText)
+  }
   if (isShorterRemix && wordCount(newDraft) > 200) {
     const compressed = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
