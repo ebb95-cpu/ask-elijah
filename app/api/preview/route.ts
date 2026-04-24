@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const userMessage = `${ragContext}Now answer this question using the above context where relevant:\n\n${question}${profileContext}`
+    const userMessage = `${ragContext}Now answer this question using the above context where relevant:\n\n${question}${profileContext}\n\nEvery answer must name what the player is feeling, explain why it happens in simple psychology/body language, connect it to Elijah's pro perspective, and end with a clear action plan they can do today. Keep the science simple enough for a young kid to understand but credible enough that it is clearly grounded.`
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const stream = await anthropic.messages.create({

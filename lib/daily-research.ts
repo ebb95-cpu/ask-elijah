@@ -180,7 +180,7 @@ async function generateDraftAnswer(cleanedQuestion: string, kbSources: KbSource[
     messages: [
       {
         role: 'user',
-        content: `${context}Answer this question from a young basketball player:\n\n${cleanedQuestion}`,
+        content: `${context}Answer this question from a young basketball player:\n\n${cleanedQuestion}\n\nFollow the global answer contract: name what the player is feeling, explain why it happens in simple psychology/body language, connect it to Elijah's pro perspective, and end with a clear action plan they can do today. Keep the science easy for a young player to understand and credible underneath.`,
       },
     ],
   })

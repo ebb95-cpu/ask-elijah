@@ -890,7 +890,7 @@ export async function POST(req: NextRequest) {
 
     const preamble = modePreamble(mode, askerType)
     const voiceAnchors = await getVoiceAnchors(topic)
-    const userMessage = `${preamble}${voiceAnchors}${playerContextBlock}${ragContext}Now answer this question using the above context where relevant:\n\n${question}\n\nReturn only the words Elijah would say to the player. No preamble, no research-process narration, no "let me weave this together," no "here's the answer," no ChatGPT/LLM language. Start directly with the answer.`
+    const userMessage = `${preamble}${voiceAnchors}${playerContextBlock}${ragContext}Now answer this question using the above context where relevant:\n\n${question}\n\nEvery answer must follow this standard: name what the player is feeling, explain why it happens in simple psychology/body language, connect it to Elijah's credible pro perspective, and end with a clear action plan they can do today. Keep the science simple enough for a young kid to understand but credible enough that it is clearly grounded.\n\nReturn only the words Elijah would say to the player. No preamble, no research-process narration, no "let me weave this together," no "here's the answer," no ChatGPT/LLM language. Start directly with the answer.`
 
     // Use preview answer if already generated on the frontend, otherwise generate fresh
     let draft = ''

@@ -179,11 +179,11 @@ Keep each pushback under 20 words, in the player's voice, specific to what they 
       ? `\n\nBEFORE WRITING, anticipate the player's pushback. They will be thinking:\n${pushbacks.map((p) => `- "${p}"`).join('\n')}\n\nWrite the answer in a way that preemptively addresses each of those without calling them out explicitly. The player should feel like you already thought of everything they might object to.`
       : ''
 
-    const finalPrompt = `Write a completely new polished answer to the player's question. Weave in Elijah's notes AND everything he said during the refinement conversation. Do not reference the old draft, do not append — produce ONE cohesive final answer as if you knew all this from the start. Structure: pain → mechanism → solution → one concrete action today.
+    const finalPrompt = `Write a completely new polished answer to the player's question. Weave in Elijah's notes AND everything he said during the refinement conversation. Do not reference the old draft, do not append — produce ONE cohesive final answer as if you knew all this from the start. Structure: pain → simple science-backed mechanism → Elijah's pro perspective → one concrete action plan today.
 
 You have web_search and web_fetch. USE THEM proactively. Before you state any mechanism claim (how the brain works under pressure, sleep architecture, nervous-system regulation, HRV, visualization, confidence, recovery — any physiological or psychological "why this works"), verify it with a web lookup. Two to four searches is the norm for a good answer, not the exception.
 
-But never read like a research paper. Elijah's voice wins every time. Weave the science into first-person phrasing — "the reason this works is your nervous system actually..." or "I read something from a Stanford lab that said...". Never "studies show" or footnote-style citations in the body. The research makes the mechanism credible; the voice keeps it human.
+But never read like a research paper. Elijah's voice wins every time. Weave the science into first-person phrasing — "the reason this works is your nervous system actually..." or "I read something from a Stanford lab that said...". Never "studies show" or footnote-style citations in the body. The research makes the mechanism credible; the voice keeps it human. Make the psychology easy enough for a young kid to understand, but credible enough for a coach or sports psych person to respect.
 
 Also use web_fetch when a URL is present in the notes, and verify any specific name, quote, or stat before you put it in Elijah's mouth.
 

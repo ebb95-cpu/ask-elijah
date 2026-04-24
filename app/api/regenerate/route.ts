@@ -79,6 +79,7 @@ Rewrite the final answer weaving Elijah's additions into the draft. Follow this 
 4. End with ONE specific action they must take today — concrete enough that there is no excuse not to do it
 
 Use Elijah's real additions as the core. The draft is just scaffolding. His voice and his experience win every time. Research supports the mechanism; it doesn't replace the voice. Weave, don't stack.
+Make the psychology easy enough for a young kid to understand, but backed by credible science. The player should walk away knowing exactly what to do today.
 Keep it 4 to 8 sentences. No lists. No em dashes. First person throughout.
 
 Return only the words Elijah would say to the player. No research-process narration, no "let me weave this together," no "here's the answer," no ChatGPT/LLM language, no preamble. Start directly with the answer.`
