@@ -17,6 +17,29 @@ type Question = Record<string, unknown> & {
   created_at: string
 }
 
+type PainPoint = Record<string, unknown> & {
+  id: string
+  cleaned_question: string
+  draft_answer: string | null
+  final_answer: string | null
+  source_url: string | null
+  source_context: string | null
+  created_at: string
+}
+
+function painPointToQuestion(p: PainPoint): Question {
+  return {
+    ...p,
+    item_type: 'pain_point',
+    question: p.cleaned_question,
+    answer: p.final_answer || p.draft_answer || '',
+    email: null,
+    source_url: p.source_url,
+    source_context: p.source_context,
+    created_at: p.created_at,
+  }
+}
+
 function cosine(a: number[], b: number[]): number {
   let dot = 0, na = 0, nb = 0
   for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i] }
@@ -97,6 +120,7 @@ export async function GET(req: NextRequest) {
     supabase.from('questions').select('*').in('status', pqStatus).order(status === 'answered' ? 'approved_at' : 'created_at', { ascending: false }).limit(100),
   ])
 
+  const painPoints = ((ppRes.data || []) as PainPoint[]).map(painPointToQuestion)
   let questions = (pqRes.data || []) as Question[]
 
   // Dedupe pending questions by semantic similarity. Only pending — answered
@@ -116,6 +140,6 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     painPoints: ppRes.data || [],
-    questions,
+    questions: status === 'pending' ? [...painPoints, ...questions] : [...questions, ...painPoints],
   })
 }

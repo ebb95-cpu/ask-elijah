@@ -18,6 +18,9 @@ interface PlayerQuestion {
   status: string
   email: string | null
   created_at: string
+  item_type?: 'question' | 'pain_point'
+  source_url?: string | null
+  source_context?: string | null
   // True when this question's answer went through manual approval in the
   // admin queue (vs. a future auto-approve path). Surfaced as a badge on
   // the card so Elijah can see at a glance which ones he's already touched.
@@ -71,16 +74,26 @@ export default function AdminQuestionsPage() {
   const handleApprove = async (questionId: string) => {
     if (!draft.trim()) return
     const group = items.find((q) => q.id === questionId)
+    const isPainPoint = group?.item_type === 'pain_point'
     const dupeIds = group?.dupes?.map((d) => d.id) ?? []
     const allIds = [questionId, ...dupeIds]
     setApproving(true)
     setError(null)
     try {
-      // One approver, N recipients: if the card represents a cluster,
-      // bulk-approve sends the same answer to every asker in the cluster.
-      // Single card still goes through approve-question because that's the
-      // path wired to scorecard + shared approve pipeline.
-      if (allIds.length > 1) {
+      if (isPainPoint) {
+        const res = await fetch(`/api/admin/questions/${questionId}/answer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ finalAnswer: draft }),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.error || `${res.status}`)
+        }
+        setToast('Added to knowledge base')
+      } else if (allIds.length > 1) {
+        // One approver, N recipients: if the card represents a cluster,
+        // bulk-approve sends the same answer to every asker in the cluster.
         const res = await fetch('/api/admin/bulk-approve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -152,9 +165,15 @@ export default function AdminQuestionsPage() {
 
   const handleSkip = async (questionId: string) => {
     try {
-      const { getSupabaseClient } = await import('@/lib/supabase-client')
-      const supabase = getSupabaseClient()
-      await supabase.from('questions').update({ status: 'skipped' }).eq('id', questionId)
+      const group = items.find((q) => q.id === questionId)
+      if (group?.item_type === 'pain_point') {
+        const res = await fetch(`/api/admin/questions/${questionId}/skip`, { method: 'POST' })
+        if (!res.ok) throw new Error(`${res.status}`)
+      } else {
+        const { getSupabaseClient } = await import('@/lib/supabase-client')
+        const supabase = getSupabaseClient()
+        await supabase.from('questions').update({ status: 'skipped' }).eq('id', questionId)
+      }
       setItems((prev) => prev.filter((q) => q.id !== questionId))
       setOpenId(null)
     } catch {
@@ -192,15 +211,24 @@ export default function AdminQuestionsPage() {
         {/* Question */}
         <div style={{ marginBottom: 20 }}>
           <p style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-            {openItem.email || 'anon'} · {formatDate(openItem.created_at)}
+            {openItem.item_type === 'pain_point' ? 'research' : (openItem.email || 'anon')} · {formatDate(openItem.created_at)}
             {openItem.dupes && openItem.dupes.length > 0 && (
               <> · <span style={{ color: '#fbbf24' }}>+{openItem.dupes.length} asked the same</span></>
             )}
+            {openItem.source_context && <> · <span style={{ color: '#7dd3fc' }}>{openItem.source_context}</span></>}
           </p>
           <p style={{ fontSize: 20, fontWeight: 700, color: '#fff', lineHeight: 1.4, margin: 0 }}>
             {openItem.question}
           </p>
         </div>
+
+        {openItem.source_url && (
+          <p style={{ marginTop: -8, marginBottom: 20 }}>
+            <a href={openItem.source_url} target="_blank" rel="noopener noreferrer" style={{ color: '#7dd3fc', fontSize: 12, textDecoration: 'none' }}>
+              View source ↗
+            </a>
+          </p>
+        )}
 
         {/* Dupes list — everyone else who asked this same question (different
             wording). Approving sends the same answer to all of them. */}
@@ -437,6 +465,27 @@ export default function AdminQuestionsPage() {
                   ✓ Reviewed
                 </span>
               )}
+              {q.item_type === 'pain_point' && (
+                <span
+                  title="Researched pain point"
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    color: '#7dd3fc',
+                    background: '#07131a',
+                    border: '1px solid #123040',
+                    borderRadius: 999,
+                    padding: '2px 6px',
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Research
+                </span>
+              )}
               <p style={{
                 fontSize: 13, fontWeight: 600, color: '#fff', margin: 0,
                 lineHeight: 1.4, overflow: 'hidden',
@@ -444,7 +493,7 @@ export default function AdminQuestionsPage() {
                 WebkitLineClamp: 3,
                 WebkitBoxOrient: 'vertical' as const,
                 // Leave room for the badge in the top-right corner on reviewed cards.
-                paddingRight: q.reviewed_by_elijah ? 72 : 0,
+                paddingRight: q.reviewed_by_elijah || q.item_type === 'pain_point' ? 72 : 0,
               }}>
                 {q.question}
               </p>
@@ -452,7 +501,7 @@ export default function AdminQuestionsPage() {
                 {/* Email can be null on pain-point-style records. Crashed the
                     admin queue on mobile when .split was called on null. */}
                 <span style={{ fontSize: 10, color: '#555' }}>
-                  {q.email ? q.email.split('@')[0] : 'anon'}
+                  {q.item_type === 'pain_point' ? 'research' : q.email ? q.email.split('@')[0] : 'anon'}
                   {q.dupes && q.dupes.length > 0 && (
                     <>
                       {' '}

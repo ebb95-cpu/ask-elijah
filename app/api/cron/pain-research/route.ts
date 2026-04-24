@@ -6,10 +6,58 @@ import { collectYouTube } from '@/lib/research/youtube'
 import { collectReddit } from '@/lib/research/reddit'
 import { collectAutocomplete } from '@/lib/research/autocomplete'
 import { synthesize } from '@/lib/research/synthesize'
-import type { RawInsight } from '@/lib/research/types'
+import type { RawInsight, SynthesisOutput } from '@/lib/research/types'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
+
+async function seedQuestionQueue(
+  supabase: ReturnType<typeof getSupabase>,
+  synthesis: SynthesisOutput,
+  runId: string
+): Promise<number> {
+  let inserted = 0
+  const questions = synthesis.top_questions.slice(0, 12)
+
+  for (const item of questions) {
+    const cleaned = item.question.trim()
+    if (!cleaned) continue
+
+    const { data: existing } = await supabase
+      .from('pain_points')
+      .select('id')
+      .eq('cleaned_question', cleaned)
+      .limit(1)
+      .maybeSingle()
+    if (existing) continue
+
+    const matchingPain = synthesis.pain_points.find((p) =>
+      cleaned.toLowerCase().includes(p.title.toLowerCase().split(' ')[0] || '')
+    ) || synthesis.pain_points[0]
+
+    const quotes = matchingPain?.quotes || []
+    const originalText = [
+      matchingPain ? `Pain: ${matchingPain.title}\n${matchingPain.summary}` : 'Daily pain research question',
+      `Signal score: ${item.score}`,
+      quotes.length ? `Representative quotes:\n${quotes.slice(0, 3).map((q) => `- ${q.text}`).join('\n')}` : '',
+    ].filter(Boolean).join('\n\n')
+
+    const { error } = await supabase.from('pain_points').insert({
+      source: 'pain_research',
+      source_url: quotes.find((q) => q.source_url)?.source_url || null,
+      source_context: `daily-run:${runId}`,
+      original_text: originalText,
+      cleaned_question: cleaned,
+      status: 'pending',
+      draft_answer: null,
+      kb_sources: [],
+    })
+
+    if (!error) inserted++
+  }
+
+  return inserted
+}
 
 /**
  * Nightly pain-research cron.
@@ -64,6 +112,7 @@ export async function GET(req: NextRequest) {
     const rawSamples = rawAll.slice(0, 500)
 
     const synthesis = await synthesize(rawAll)
+    const queued_questions = await seedQuestionQueue(supabase, synthesis, runId)
 
     await supabase
       .from('pain_research_runs')
@@ -84,6 +133,7 @@ export async function GET(req: NextRequest) {
       raw_count: rawAll.length,
       pain_count: synthesis.pain_points.length,
       question_count: synthesis.top_questions.length,
+      queued_questions,
       source_breakdown: synthesis.source_breakdown,
     })
   } catch (err) {
