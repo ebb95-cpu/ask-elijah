@@ -293,6 +293,9 @@ export default function AdminQuestionsPage() {
       }
       setItems((prev) => prev.filter((q) => q.id !== questionId))
       setOpenId(null)
+      setDraft('')
+      setSources([])
+      setError(null)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to skip'
       setError(/^\d+$/.test(message) ? `Skip failed with server error ${message}. Try again in a moment.` : message)
@@ -369,7 +372,10 @@ export default function AdminQuestionsPage() {
               </div>
               <textarea
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={(e) => {
+                  setDraft(e.target.value)
+                  if (error) setError(null)
+                }}
                 rows={13}
                 style={{
                   width: '100%', background: '#0a0a0a', color: '#fff',
@@ -670,6 +676,7 @@ export default function AdminQuestionsPage() {
                         setOpenId(nextFocus.id)
                         setDraft(nextFocus.answer || '')
                         setError(null)
+                        setSources([])
                       }}
                       style={{
                         background: '#fbbf24',
@@ -699,6 +706,7 @@ export default function AdminQuestionsPage() {
                         setOpenId(q.id)
                         setDraft(q.answer || '')
                         setError(null)
+                        setSources([])
                       }}
                       formatDate={formatDate}
                     />
@@ -732,6 +740,7 @@ export default function AdminQuestionsPage() {
                           setOpenId(q.id)
                           setDraft(q.answer || '')
                           setError(null)
+                          setSources([])
                         }}
                         formatDate={formatDate}
                       />
@@ -759,6 +768,7 @@ export default function AdminQuestionsPage() {
                       setOpenId(q.id)
                       setDraft(q.answer || '')
                       setError(null)
+                      setSources([])
                     }}
                     formatDate={formatDate}
                   />
