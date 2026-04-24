@@ -91,6 +91,24 @@ function getWordCount(text: string) {
   return text.trim() ? text.trim().split(/\s+/).length : 0
 }
 
+function getMeaningfulWords(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length > 2)
+}
+
+function remixChangedEnough(before: string, after: string) {
+  const beforeWords = new Set(getMeaningfulWords(before))
+  const afterWords = new Set(getMeaningfulWords(after))
+  if (beforeWords.size === 0 || afterWords.size === 0) return before.trim() !== after.trim()
+  const shared = Array.from(beforeWords).filter((word) => afterWords.has(word)).length
+  const overlap = shared / Math.max(beforeWords.size, afterWords.size)
+  const wordDelta = Math.abs(getWordCount(before) - getWordCount(after))
+  return overlap < 0.86 || wordDelta >= 12
+}
+
 function getQualityChecks(draft: string) {
   const wordCount = getWordCount(draft)
   const lower = draft.toLowerCase()
@@ -278,7 +296,7 @@ export default function AdminQuestionsPage() {
       setDraft(data.draft)
       setSources(Array.isArray(data.sources) ? data.sources : [])
       const afterWords = getWordCount(data.draft)
-      const changed = data.draft.trim() !== previousDraft.trim()
+      const changed = remixChangedEnough(previousDraft, data.draft)
       setRemixNotice({ at: new Date(), beforeWords, afterWords, changed })
       setToast(
         changed

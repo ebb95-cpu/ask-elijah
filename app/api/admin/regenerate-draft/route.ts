@@ -124,6 +124,25 @@ function normalizeForCompare(text: string): string {
   return text.toLowerCase().replace(/\s+/g, ' ').replace(/[^\w\s]/g, '').trim()
 }
 
+function getMeaningfulWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length > 2)
+}
+
+function isTooSimilar(before: string, after: string): boolean {
+  if (normalizeForCompare(before) === normalizeForCompare(after)) return true
+  const beforeWords = new Set(getMeaningfulWords(before))
+  const afterWords = new Set(getMeaningfulWords(after))
+  if (beforeWords.size === 0 || afterWords.size === 0) return false
+  const shared = Array.from(beforeWords).filter((word) => afterWords.has(word)).length
+  const overlap = shared / Math.max(beforeWords.size, afterWords.size)
+  const wordDelta = Math.abs(wordCount(before) - wordCount(after))
+  return overlap >= 0.86 && wordDelta < 12
+}
+
 export async function POST(req: NextRequest) {
   const unauthorized = await requireAdmin()
 
@@ -209,7 +228,7 @@ Write the full answer from scratch now:`
   // tool results that we harvest for sources.
   const textBlocks = res.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
   let newDraft = sanitizeAnswerText(textBlocks.map((b) => b.text).join('\n\n'))
-  if (normalizeForCompare(newDraft) === normalizeForCompare(context)) {
+  if (isTooSimilar(context, newDraft)) {
     try {
       const forced = await anthropic.messages.create({
         model: 'claude-sonnet-4-5',
@@ -222,7 +241,9 @@ Write the full answer from scratch now:`
 Rules:
 - Keep Elijah's meaning and voice.
 - Integrate any added notes, corrections, examples, or rough thoughts from the textarea.
-- Change the opening and the action step.
+- Change the opening, structure, and action step.
+- Add at least one sentence that was not in the previous answer.
+- Remove or rephrase at least one sentence from the previous answer.
 - Do not mention that you are remixing.
 - Return only the final answer.
 
