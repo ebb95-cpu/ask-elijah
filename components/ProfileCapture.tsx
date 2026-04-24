@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import LoadingDots from '@/components/ui/LoadingDots'
 
 type Stage = 1 | 2
 
@@ -191,7 +192,7 @@ export default function ProfileCapture({ email, questionId, dismissScope }: Prop
           disabled={!canSave || saving}
           className="flex-1 bg-white text-black py-3 text-sm font-bold tracking-tight rounded-md disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
         >
-          {saving ? 'Saving...' : stage === 1 ? 'Save →' : 'Lock it in →'}
+          {saving ? <LoadingDots label="Saving" /> : stage === 1 ? 'Save →' : 'Lock it in →'}
         </button>
         <button
           onClick={handleSkip}

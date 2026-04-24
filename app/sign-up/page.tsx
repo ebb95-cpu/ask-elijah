@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import LoadingDots from '@/components/ui/LoadingDots'
 import { getSupabaseClient } from '@/lib/supabase-client'
 
 function Logo() {
@@ -124,7 +125,7 @@ function SignUpInner() {
             disabled={loading || !email || !password || !firstName}
             className="w-full bg-black text-white py-3 text-sm font-semibold tracking-tight hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating account...' : 'Create account →'}
+            {loading ? <LoadingDots label="Creating account" /> : 'Create account →'}
           </button>
         </form>
 

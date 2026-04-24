@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { setSession } from '@/lib/safe-storage'
+import LoadingDots from './LoadingDots'
 
 interface AskBoxProps {
   autoFocus?: boolean
@@ -101,7 +102,7 @@ export default function AskBox({
               disabled={!question.trim() || loading}
               className="bg-black text-white px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
             >
-              {loading ? 'Getting your answer...' : 'Ask The Pro →'}
+              {loading ? <LoadingDots label="Getting your answer" /> : 'Ask The Pro →'}
             </button>
           </div>
         </div>

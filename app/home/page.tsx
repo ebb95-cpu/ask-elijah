@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import LoadingDots from '@/components/ui/LoadingDots'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import { setSession } from '@/lib/safe-storage'
 
@@ -124,7 +125,7 @@ export default function HomePage() {
               disabled={!question.trim() || loading}
               className="bg-black text-white px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
             >
-              {loading ? 'Getting your answer...' : 'Ask Elijah →'}
+              {loading ? <LoadingDots label="Getting your answer" /> : 'Ask Elijah →'}
             </button>
           </div>
         </div>

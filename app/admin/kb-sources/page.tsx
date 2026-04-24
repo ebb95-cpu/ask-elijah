@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import LoadingDots from '@/components/ui/LoadingDots'
 
 interface KbSource {
   id: string
@@ -375,7 +376,7 @@ export default function AdminKbSourcesPage() {
                 opacity: !testQuery.trim() ? 0.3 : 1,
               }}
             >
-              {testRunning ? 'Searching...' : 'Search'}
+              {testRunning ? <LoadingDots label="Searching" /> : 'Search'}
             </button>
           </div>
 
@@ -481,7 +482,7 @@ export default function AdminKbSourcesPage() {
         }}
       />
 
-      {loading && <div style={{ color: '#555555', fontSize: '13px' }}>Loading...</div>}
+      {loading && <div style={{ color: '#777777', fontSize: '13px' }}><LoadingDots label="Loading" /></div>}
       {error && <div style={{ color: '#ff6666', fontSize: '13px' }}>Error: {error}</div>}
 
       {!loading && !error && filtered.length === 0 && (
@@ -594,7 +595,7 @@ export default function AdminKbSourcesPage() {
                     cursor: isBusy ? 'wait' : 'pointer',
                   }}
                 >
-                  {isBusy ? '...' : 'Delete'}
+                  {isBusy ? <LoadingDots label="" size={2} /> : 'Delete'}
                 </button>
               </div>
             )

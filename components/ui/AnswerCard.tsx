@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import LoadingDots from './LoadingDots'
 
 interface AnswerCardProps {
   question: string
@@ -47,7 +48,7 @@ export default function AnswerCard({
         {/* Answer */}
         <div className={`text-black text-lg leading-relaxed font-sans ${streaming && !answer ? 'text-gray-400' : ''}`}>
           {streaming && !answer ? (
-            'Getting your answer...'
+            <LoadingDots label="Getting your answer" />
           ) : (
             <span className={streaming ? 'streaming-cursor' : ''}>
               {answer}

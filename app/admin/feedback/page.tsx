@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import LoadingDots from '@/components/ui/LoadingDots'
 
 /**
  * Feedback + bug triage dashboard.
@@ -150,7 +151,7 @@ export default function FeedbackPage() {
         </button>
       </div>
 
-      {loading && <div style={{ color: '#555', fontSize: 13 }}>Loading...</div>}
+      {loading && <div style={{ color: '#777', fontSize: 13 }}><LoadingDots label="Loading" /></div>}
 
       {summary && (
         <div style={summaryStyle}>

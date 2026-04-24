@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import { usePostHog } from 'posthog-js/react'
+import LoadingDots from '@/components/ui/LoadingDots'
 import ThumbsFeedback from '@/components/ThumbsFeedback'
 import ProfileCapture from '@/components/ProfileCapture'
 import ShareAnswerButton from '@/components/ShareAnswerButton'
@@ -156,10 +157,8 @@ export default function HistoryPage() {
       {/* Content */}
       <div className="flex-1 px-5 pb-28 md:pb-12">
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="aspect-square bg-gray-900 rounded-xl animate-pulse" />
-            ))}
+          <div className="flex justify-center py-20">
+            <LoadingDots label="Loading your questions" className="text-sm text-gray-500" />
           </div>
         ) : questions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">

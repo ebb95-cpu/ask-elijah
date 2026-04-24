@@ -7,6 +7,7 @@ import { getSupabaseClient } from '@/lib/supabase-client'
 import { usePostHog } from 'posthog-js/react'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
 import { getLocal, setLocal, removeLocal, getSession, setSession, removeSession } from '@/lib/safe-storage'
+import LoadingDots from '@/components/ui/LoadingDots'
 import ReturningDashboard from '@/components/ReturningDashboard'
 import { simFetch } from '@/lib/simulator'
 
@@ -25,28 +26,7 @@ function Logo({ dark = false }: { dark?: boolean }) {
 
 function ThinkingDots() {
   return (
-    <>
-      <style>{`
-        @keyframes dotPulse {
-          0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
-          40% { opacity: 1; transform: scale(1); }
-        }
-        .dot-pulse span {
-          display: inline-block;
-          width: 10px;
-          height: 10px;
-          margin: 0 5px;
-          background: white;
-          border-radius: 50%;
-          animation: dotPulse 1.4s ease-in-out infinite;
-        }
-        .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
-        .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
-      `}</style>
-      <div className="dot-pulse">
-        <span /><span /><span />
-      </div>
-    </>
+    <LoadingDots label="" size={5} className="text-white" />
   )
 }
 
@@ -962,7 +942,7 @@ function AskPageInner() {
                 disabled={!clarifyAnswer.trim() || clarifyLoading}
                 className="w-full bg-white text-black py-4 text-base font-bold rounded-full disabled:opacity-30 hover:opacity-80 transition-opacity min-h-[48px]"
               >
-                {clarifyLoading ? 'Got it...' : 'Answer →'}
+                {clarifyLoading ? <LoadingDots label="Got it" /> : 'Answer →'}
               </button>
               <button
                 onClick={async () => {
@@ -1059,7 +1039,7 @@ function AskPageInner() {
                   disabled={!waitlistEmail.trim() || !waitlistName.trim() || waitlistLoading}
                   className="w-full bg-white text-black py-3 text-sm font-semibold tracking-tight disabled:opacity-30 hover:opacity-80 transition-opacity"
                 >
-                  {waitlistLoading ? 'Saving...' : "I'm ready when you are →"}
+                  {waitlistLoading ? <LoadingDots label="Saving" /> : "I'm ready when you are →"}
                 </button>
               </>
             ) : (
@@ -1125,7 +1105,7 @@ function AskPageInner() {
                 disabled={!reflectionText.trim() || reflectionSubmitting}
                 className="bg-white text-black px-8 py-3 text-sm font-semibold disabled:opacity-30 hover:opacity-80 transition-opacity"
               >
-                {reflectionSubmitting ? 'Saving...' : 'Tell Elijah →'}
+                {reflectionSubmitting ? <LoadingDots label="Saving" /> : 'Tell Elijah →'}
               </button>
               <button onClick={() => setMode('upvote_prompt')} className="text-xs text-gray-600 hover:text-white transition-colors">
                 Skip for now

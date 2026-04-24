@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import LoadingDots from '@/components/ui/LoadingDots'
 import { getSupabaseClient } from '@/lib/supabase-client'
 
 function Logo() {
@@ -123,7 +124,7 @@ export default function ResetPasswordPage() {
             disabled={loading || !password || !confirm}
             className="w-full bg-black text-white py-3 text-sm font-semibold tracking-tight hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            {loading ? 'Saving...' : 'Save password →'}
+            {loading ? <LoadingDots label="Saving" /> : 'Save password →'}
           </button>
         </form>
       </div>

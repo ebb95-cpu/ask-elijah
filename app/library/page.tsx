@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import LoadingDots from '@/components/ui/LoadingDots'
 import { getSupabaseClient } from '@/lib/supabase-client'
 
 function Logo() {
@@ -121,13 +122,8 @@ export default function LibraryPage() {
         </div>
 
         {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="border border-gray-100 p-6 animate-pulse">
-                <div className="h-4 bg-gray-100 rounded w-3/4 mb-3" />
-                <div className="h-3 bg-gray-100 rounded w-1/2" />
-              </div>
-            ))}
+          <div className="flex justify-center py-14">
+            <LoadingDots label="Loading your playbook" className="text-sm text-gray-500" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20">

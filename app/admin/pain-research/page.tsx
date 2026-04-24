@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import LoadingDots from '@/components/ui/LoadingDots'
 
 /**
  * Pain-research admin dashboard.
@@ -117,7 +118,7 @@ export default function PainResearchPage() {
               opacity: starting || latest?.status === 'running' ? 0.5 : 1,
             }}
           >
-            {latest?.status === 'running' ? 'Running...' : 'Run now'}
+            {latest?.status === 'running' ? <LoadingDots label="Running" /> : 'Run now'}
           </button>
           <button
             onClick={load}
@@ -140,7 +141,7 @@ export default function PainResearchPage() {
         <div style={toastStyle}>{toast}</div>
       )}
 
-      {loading && <div style={{ color: '#555', fontSize: 13 }}>Loading...</div>}
+      {loading && <div style={{ color: '#777', fontSize: 13 }}><LoadingDots label="Loading" /></div>}
       {error && <div style={{ color: '#ff6666', fontSize: 13 }}>Error: {error}</div>}
 
       {!loading && !latest && (

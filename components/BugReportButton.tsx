@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import LoadingDots from '@/components/ui/LoadingDots'
 import { simFetch } from '@/lib/simulator'
 import { getLocal } from '@/lib/safe-storage'
 
@@ -155,7 +156,7 @@ export default function BugReportButton() {
                       opacity: message.trim().length < 3 ? 0.5 : 1,
                     }}
                   >
-                    {sending ? 'Sending...' : 'Send'}
+                    {sending ? <LoadingDots label="Sending" size={2} /> : 'Send'}
                   </button>
                 </div>
               </>

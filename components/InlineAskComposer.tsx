@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import LoadingDots from '@/components/ui/LoadingDots'
 import { getLocal } from '@/lib/safe-storage'
 
 /**
@@ -98,7 +99,7 @@ export default function InlineAskComposer() {
       resetTextareaHeight()
       router.refresh()
       // router.refresh is async in effect but returns synchronously. Leave
-      // the loading spinner up briefly so the user sees the handoff.
+      // the loading indicator up briefly so the user sees the handoff.
       setTimeout(() => setLoading(false), 400)
     } catch {
       setError("Couldn't send that one. Try again in a sec.")
@@ -144,7 +145,7 @@ export default function InlineAskComposer() {
           disabled={!question.trim() || loading}
           className="shrink-0 text-sm font-bold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all"
         >
-          {loading ? '...' : 'Ask →'}
+          {loading ? <LoadingDots label="" size={2} /> : 'Ask →'}
         </button>
       </div>
       {error && (

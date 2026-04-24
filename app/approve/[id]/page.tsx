@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
+import LoadingDots from '@/components/ui/LoadingDots'
 
 type QuestionRecord = {
   id: string
@@ -95,7 +96,7 @@ function ApprovePageInner() {
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <p className="text-gray-600 text-sm">Loading...</p>
+        <LoadingDots label="Loading" className="text-gray-500 text-sm" />
       </div>
     )
   }
@@ -173,7 +174,7 @@ function ApprovePageInner() {
               transition: 'all 0.15s',
             }}
           >
-            {remixing ? 'Remixing...' : 'Add & Remix →'}
+            {remixing ? <LoadingDots label="Remixing" /> : 'Add & Remix →'}
           </button>
 
           <button
@@ -191,7 +192,7 @@ function ApprovePageInner() {
               transition: 'all 0.15s',
             }}
           >
-            {sending ? 'Sending...' : `Approve & Send →`}
+            {sending ? <LoadingDots label="Sending" /> : `Approve & Send →`}
           </button>
 
           <button
@@ -243,7 +244,7 @@ export default function ApprovePage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <p className="text-gray-600 text-sm">Loading...</p>
+        <LoadingDots label="Loading" className="text-gray-500 text-sm" />
       </div>
     }>
       <ApprovePageInner />

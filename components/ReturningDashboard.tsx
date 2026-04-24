@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import LoadingDots from '@/components/ui/LoadingDots'
 import { getLocal, setLocal } from '@/lib/safe-storage'
 
 /**
@@ -182,7 +183,7 @@ export default function ReturningDashboard({
         </div>
 
         {loading ? (
-          <div className="text-sm text-gray-700">Loading...</div>
+          <LoadingDots label="Loading" className="text-sm text-gray-600" />
         ) : questions.length === 0 ? (
           <p className="text-sm text-gray-600">
             You haven&apos;t asked anything yet. Hit the button up top to start.

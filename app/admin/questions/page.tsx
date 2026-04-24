@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import ThreeDots from '@/components/ui/ThreeDots'
+import LoadingDots from '@/components/ui/LoadingDots'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -470,7 +471,7 @@ export default function AdminQuestionsPage() {
                   fontFamily: '-apple-system, sans-serif',
                 }}
               >
-                {approving ? 'Sending...' : 'Approve & next →'}
+                {approving ? <LoadingDots label="Sending" /> : 'Approve & next →'}
               </button>
               <button
                 onClick={() => handleApprove(openItem.id)}
@@ -483,7 +484,7 @@ export default function AdminQuestionsPage() {
                   fontFamily: '-apple-system, sans-serif',
                 }}
               >
-                {approving ? 'Sending...' : openItem.status === 'approved' ? 'Update & re-send' : 'Approve'}
+                {approving ? <LoadingDots label="Sending" /> : openItem.status === 'approved' ? 'Update & re-send' : 'Approve'}
               </button>
               <button
                 onClick={() => handleRemix()}
@@ -504,7 +505,7 @@ export default function AdminQuestionsPage() {
                 {remixing ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
                     <ThreeDots size={3} animate color="#fff" />
-                    Remixing
+                    <span>Remixing</span>
                   </span>
                 ) : 'Remix ↻'}
               </button>
@@ -587,7 +588,7 @@ export default function AdminQuestionsPage() {
             fontFamily: '-apple-system, sans-serif',
           }}
         >
-          {researching ? 'Researching...' : 'Find new pain points'}
+          {researching ? <LoadingDots label="Researching" /> : 'Find new pain points'}
         </button>
       </div>
 
@@ -634,7 +635,9 @@ export default function AdminQuestionsPage() {
 
       {/* Loading */}
       {loading && (
-        <p style={{ color: '#555', fontSize: 14, fontFamily: '-apple-system, sans-serif' }}>Loading...</p>
+        <div style={{ color: '#777', fontSize: 14, fontFamily: '-apple-system, sans-serif' }}>
+          <LoadingDots label="Loading" />
+        </div>
       )}
 
       {/* Empty */}

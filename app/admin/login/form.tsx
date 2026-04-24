@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import LoadingDots from '@/components/ui/LoadingDots'
 
 /**
  * Progressive-enhancement form body. The parent server component wraps this
@@ -127,7 +128,7 @@ export default function AdminLoginForm({ initialError }: { initialError: string 
           minHeight: 48,
         }}
       >
-        {loading ? 'Signing in...' : 'Sign in →'}
+        {loading ? <LoadingDots label="Signing in" /> : 'Sign in →'}
       </button>
 
       <p style={{ color: '#333', fontSize: 10, marginTop: 24, lineHeight: 1.5, textAlign: 'center' }}>

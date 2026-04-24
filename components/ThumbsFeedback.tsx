@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import LoadingDots from '@/components/ui/LoadingDots'
 import { simFetch } from '@/lib/simulator'
 
 /**
@@ -164,7 +165,7 @@ export default function ThumbsFeedback({
                 fontWeight: 600,
               }}
             >
-              {sending ? 'Sending...' : 'Send'}
+              {sending ? <LoadingDots label="Sending" size={2} /> : 'Send'}
             </button>
             <button
               onClick={() => {

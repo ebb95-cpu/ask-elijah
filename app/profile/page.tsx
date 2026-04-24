@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import LoadingDots from '@/components/ui/LoadingDots'
 import { getLocal, setLocal } from '@/lib/safe-storage'
 import { simFetch } from '@/lib/simulator'
 
@@ -378,7 +379,7 @@ export default function ProfilePage() {
                   disabled={!email.trim() || savePhase === 'saving'}
                   className="flex-1 py-3 bg-white text-black text-sm font-semibold disabled:opacity-30 hover:opacity-80 transition-opacity"
                 >
-                  {savePhase === 'saving' ? 'Saving...' : 'Save profile'}
+                  {savePhase === 'saving' ? <LoadingDots label="Saving" /> : 'Save profile'}
                 </button>
               </div>
             </div>
