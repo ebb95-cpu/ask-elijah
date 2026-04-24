@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { requireAdmin } from '@/lib/admin-auth'
+import { sanitizeAnswerText } from '@/lib/answer-sanitize'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -143,6 +144,8 @@ If knowledge-base context does not intertwine with Elijah's current notes, leave
 
 Use the context below as raw material — it may contain a previous draft, notes Elijah jotted in, or a mix of both. Weave it into one cohesive, polished answer. Do not append or reference anything. Just write a single complete answer as if you knew all of this from the start. Same voice, same directness as Elijah.
 
+CRITICAL: Return only the words Elijah would say to the player. Never include behind-the-scenes narration, research process, preambles, markdown separators, or model language. Do not write phrases like "Alright, I've got solid research backing," "let me weave this together," "here's the answer," "I researched," "as an AI," "LLM," or anything that sounds like ChatGPT talking. Start directly with the answer to the player.
+
 Requested remix direction:
 ${remixInstruction || 'General remix: make the answer cleaner, more cohesive, and easier for a young hooper to use.'}
 
@@ -179,7 +182,7 @@ Write the full answer from scratch now:`
   // The final text block is the answer. Earlier blocks may be tool calls and
   // tool results that we harvest for sources.
   const textBlocks = res.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
-  let newDraft = textBlocks.map((b) => b.text).join('\n\n').trim()
+  let newDraft = sanitizeAnswerText(textBlocks.map((b) => b.text).join('\n\n'))
   if (isShorterRemix && wordCount(newDraft) > 200) {
     const compressed = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
@@ -195,7 +198,7 @@ Write the full answer from scratch now:`
       .map((b) => b.text)
       .join('\n\n')
       .trim()
-    if (compressedText) newDraft = compressedText
+    if (compressedText) newDraft = sanitizeAnswerText(compressedText)
   }
   const sources = Array.from(
     [...kb.sources, ...extractSources(res.content)]

@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { logError } from '@/lib/log-error'
 import { requireAdmin } from '@/lib/admin-auth'
+import { sanitizeAnswerText } from '@/lib/answer-sanitize'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -186,6 +187,8 @@ But never read like a research paper. Elijah's voice wins every time. Weave the 
 
 Also use web_fetch when a URL is present in the notes, and verify any specific name, quote, or stat before you put it in Elijah's mouth.
 
+CRITICAL: Return only the words Elijah would say to the player. Never include behind-the-scenes narration, research process, markdown separators, or model language. Do not write phrases like "Alright, I've got solid research backing," "let me weave this together," "here's the answer," "I researched," "as an AI," "LLM," or anything that sounds like ChatGPT talking. Start directly with the answer to the player.
+
 Player's question:
 "${question}"
 
@@ -217,7 +220,7 @@ Write the full answer now. Length: however long it needs to be to cover every an
     const finalTextBlocks = finalRes.content.filter(
       (b): b is Anthropic.Messages.TextBlock => b.type === 'text'
     )
-    const newDraft = finalTextBlocks.map((b) => b.text).join('\n\n').trim()
+    const newDraft = sanitizeAnswerText(finalTextBlocks.map((b) => b.text).join('\n\n'))
     if (!newDraft || newDraft.length < 30) {
       return NextResponse.json({ error: 'Generation failed' }, { status: 500 })
     }

@@ -6,6 +6,7 @@ import { Resend } from 'resend'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { checkLimit } from '@/lib/rate-limit'
 import { logError } from '@/lib/log-error'
+import { sanitizeAnswerText } from '@/lib/answer-sanitize'
 
 // Draft generation now uses web_search/web_fetch to ground mechanism claims
 // in real research. Search + weave adds 5–10s of latency per answer, so the
@@ -889,7 +890,7 @@ export async function POST(req: NextRequest) {
 
     const preamble = modePreamble(mode, askerType)
     const voiceAnchors = await getVoiceAnchors(topic)
-    const userMessage = `${preamble}${voiceAnchors}${playerContextBlock}${ragContext}Now answer this question using the above context where relevant:\n\n${question}`
+    const userMessage = `${preamble}${voiceAnchors}${playerContextBlock}${ragContext}Now answer this question using the above context where relevant:\n\n${question}\n\nReturn only the words Elijah would say to the player. No preamble, no research-process narration, no "let me weave this together," no "here's the answer," no ChatGPT/LLM language. Start directly with the answer.`
 
     // Use preview answer if already generated on the frontend, otherwise generate fresh
     let draft = ''
@@ -972,7 +973,7 @@ export async function POST(req: NextRequest) {
 
     // Save to Supabase as pending — strip verify markers from stored answer
     const supabase = getSupabase()
-    const cleanDraft = stripVerifyMarkers(draft)
+    const cleanDraft = sanitizeAnswerText(stripVerifyMarkers(draft))
     const { data: record, error: insertError } = await supabase
       .from('questions')
       .insert({

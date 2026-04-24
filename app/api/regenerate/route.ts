@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { checkLimit } from '@/lib/rate-limit'
 import { logError } from '@/lib/log-error'
+import { sanitizeAnswerText } from '@/lib/answer-sanitize'
 
 // Web search adds latency; give serverless enough headroom.
 export const maxDuration = 60
@@ -78,7 +79,9 @@ Rewrite the final answer weaving Elijah's additions into the draft. Follow this 
 4. End with ONE specific action they must take today — concrete enough that there is no excuse not to do it
 
 Use Elijah's real additions as the core. The draft is just scaffolding. His voice and his experience win every time. Research supports the mechanism; it doesn't replace the voice. Weave, don't stack.
-Keep it 4 to 8 sentences. No lists. No em dashes. First person throughout.`
+Keep it 4 to 8 sentences. No lists. No em dashes. First person throughout.
+
+Return only the words Elijah would say to the player. No research-process narration, no "let me weave this together," no "here's the answer," no ChatGPT/LLM language, no preamble. Start directly with the answer.`
 
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -96,7 +99,7 @@ Keep it 4 to 8 sentences. No lists. No em dashes. First person throughout.`
     const textBlocks = response.content.filter(
       (b): b is Anthropic.Messages.TextBlock => b.type === 'text'
     )
-    const answer = textBlocks.map((b) => b.text).join('\n\n').trim()
+    const answer = sanitizeAnswerText(textBlocks.map((b) => b.text).join('\n\n'))
     const sources = harvestWebSources(response.content)
     return NextResponse.json({ answer, sources })
   } catch (err) {
