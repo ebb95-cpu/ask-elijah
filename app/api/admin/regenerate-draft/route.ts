@@ -114,6 +114,10 @@ function extractSources(content: Anthropic.Messages.ContentBlock[]): Source[] {
   return Array.from(seen.values())
 }
 
+function wordCount(text: string): number {
+  return text.trim() ? text.trim().split(/\s+/).length : 0
+}
+
 export async function POST(req: NextRequest) {
   const unauthorized = await requireAdmin()
 
@@ -125,6 +129,7 @@ export async function POST(req: NextRequest) {
   }
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const isShorterRemix = typeof remixInstruction === 'string' && remixInstruction.toLowerCase().includes('shorter')
   const kb = await searchKnowledgeBase(`${question}\n\n${context}`.slice(0, 4000))
 
   const prompt = `Write a completely new answer from scratch to this player's question.
@@ -174,7 +179,24 @@ Write the full answer from scratch now:`
   // The final text block is the answer. Earlier blocks may be tool calls and
   // tool results that we harvest for sources.
   const textBlocks = res.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
-  const newDraft = textBlocks.map((b) => b.text).join('\n\n').trim()
+  let newDraft = textBlocks.map((b) => b.text).join('\n\n').trim()
+  if (isShorterRemix && wordCount(newDraft) > 200) {
+    const compressed = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 700,
+      system: SYSTEM_PROMPT,
+      messages: [{
+        role: 'user',
+        content: `Compress this answer to 140-180 words. This is a hard limit. Keep Elijah's meaning, direct voice, one science-grounded mechanism sentence, and one concrete action step. Remove extra explanation, extra sources, and repeated ideas. Return only the final answer.\n\nQuestion: "${question}"\n\nAnswer to compress:\n${newDraft}`,
+      }],
+    })
+    const compressedText = compressed.content
+      .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
+      .map((b) => b.text)
+      .join('\n\n')
+      .trim()
+    if (compressedText) newDraft = compressedText
+  }
   const sources = Array.from(
     [...kb.sources, ...extractSources(res.content)]
       .reduce((seen, source) => {
