@@ -274,16 +274,17 @@ export default function AdminQuestionsPage() {
     setRemixing(true)
     setError(null)
     setRemixNotice(null)
+    setSources([])
+    setDraft('')
     try {
-      // Whatever's in the textarea is the raw material — previous draft plus
-      // any notes Elijah inlined. The endpoint writes a new cohesive answer
-      // from scratch using it.
+      // Whatever was in the textarea is raw source material only. Clear the
+      // visible box while Remix writes a brand-new answer from a blank page.
       const res = await fetch('/api/admin/regenerate-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: openItem.question,
-          context: draft,
+          context: previousDraft,
           remixInstruction: preset ? getRemixInstruction(preset) : undefined,
         }),
       })
@@ -307,6 +308,7 @@ export default function AdminQuestionsPage() {
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to remix'
       setError(/^\d+$/.test(message) ? `Remix failed with server error ${message}. Try again in a moment.` : message)
+      setDraft(previousDraft)
     } finally {
       setRemixing(false)
     }
@@ -427,6 +429,8 @@ export default function AdminQuestionsPage() {
                   if (remixNotice) setRemixNotice(null)
                 }}
                 rows={13}
+                placeholder={remixing ? 'Cleared. Writing a brand-new answer...' : undefined}
+                disabled={remixing}
                 style={{
                   width: '100%', background: '#0a0a0a', color: '#fff',
                   border: remixNotice?.changed ? '1px solid #1f4030' : '1px solid #333', borderRadius: 10, padding: 16,
@@ -434,6 +438,7 @@ export default function AdminQuestionsPage() {
                   outline: 'none', fontFamily: '-apple-system, sans-serif',
                   boxSizing: 'border-box',
                   boxShadow: remixNotice?.changed ? '0 0 0 3px rgba(52, 211, 153, 0.08)' : 'none',
+                  opacity: remixing ? 0.72 : 1,
                 }}
               />
               {remixNotice && (

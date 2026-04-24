@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
   const prompt = `Write a completely new answer from scratch to this player's question.
 
 Priority order:
-1. Elijah's current notes/draft below are the source of truth. Preserve his point of view, meaning, examples, and coaching angle.
+1. Elijah's current notes/draft below are the source of truth for meaning, examples, corrections, and coaching angle.
 2. Elijah's knowledge-base context can support, clarify, or sharpen the answer only when it clearly connects to what Elijah said.
 3. Web research is only for fact-checking, neuroscience/psychology/sports-psychology grounding, and avoiding inaccurate mechanism claims.
 
@@ -174,9 +174,9 @@ Every remix must follow this answer standard:
 
 Make the psychology easy enough for a young kid to understand, but make the reasoning credible enough that a parent, coach, or sports psych person would respect it.
 
-Use the context below as raw material — it may contain a previous draft, notes Elijah jotted in, or a mix of both. Weave it into one cohesive, polished answer. Do not append or reference anything. Just write a single complete answer as if you knew all of this from the start. Same voice, same directness as Elijah.
+Use the context below as raw material only. It may contain a previous draft, notes Elijah jotted in, or a mix of both. Do NOT preserve the old wording, paragraph order, opening, or ending. Imagine the textarea was deleted and you are writing a brand-new answer from a blank page using only the meaning and best ideas from the raw material.
 
-The remix must be materially different from the current textarea. If Elijah added new lines, rough thoughts, examples, corrections, or extra coaching points, those additions must visibly change the final answer. Do not return the same answer with tiny wording changes. Change the opening, structure, and action step as needed so the new information is clearly integrated.
+The remix must be materially different from the current textarea. If Elijah added new lines, rough thoughts, examples, corrections, or extra coaching points, those additions must visibly change the final answer. Do not return the same answer with tiny wording changes. Change the opening, structure, transitions, and action step so the new information is clearly integrated.
 
 CRITICAL: Return only the words Elijah would say to the player. Never include behind-the-scenes narration, research process, preambles, markdown separators, or model language. Do not write phrases like "Alright, I've got solid research backing," "let me weave this together," "here's the answer," "I researched," "as an AI," "LLM," or anything that sounds like ChatGPT talking. Start directly with the answer to the player.
 
