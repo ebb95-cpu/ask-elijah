@@ -11,12 +11,82 @@ import type { RawInsight, SynthesisOutput } from '@/lib/research/types'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
+const ANSWERED_SCORE_THRESHOLD = 0.62
+
+type PineconeMatch = {
+  score: number
+  metadata?: Record<string, string>
+}
+
+type Coverage = {
+  answered: boolean
+  bestScore: number
+  kbSources: Array<{ title: string; url: string; type: string; text: string }>
+}
+
+async function embedText(text: string): Promise<number[] | null> {
+  if (!process.env.VOYAGE_API_KEY) return null
+  const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ input: [text], model: 'voyage-3-lite' }),
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.data?.[0]?.embedding || null
+}
+
+async function checkKnowledgeCoverage(question: string): Promise<Coverage> {
+  if (!process.env.PINECONE_HOST || !process.env.PINECONE_API_KEY) {
+    return { answered: false, bestScore: 0, kbSources: [] }
+  }
+
+  try {
+    const embedding = await embedText(question)
+    if (!embedding) return { answered: false, bestScore: 0, kbSources: [] }
+
+    const res = await fetch(`${process.env.PINECONE_HOST}/query`, {
+      method: 'POST',
+      headers: {
+        'Api-Key': process.env.PINECONE_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ vector: embedding, topK: 4, includeMetadata: true }),
+    })
+    if (!res.ok) return { answered: false, bestScore: 0, kbSources: [] }
+
+    const data = await res.json()
+    const matches = (data.matches || []) as PineconeMatch[]
+    const bestScore = matches[0]?.score || 0
+    const kbSources = matches
+      .filter((m) => m.score >= 0.35 && m.metadata?.text)
+      .map((m) => ({
+        title: m.metadata?.source_title || 'Elijah Bryant',
+        url: m.metadata?.source_url || m.metadata?.video_url || '',
+        type: m.metadata?.source_type || 'knowledge_base',
+        text: m.metadata?.text || '',
+      }))
+
+    return {
+      answered: bestScore >= ANSWERED_SCORE_THRESHOLD,
+      bestScore,
+      kbSources,
+    }
+  } catch {
+    return { answered: false, bestScore: 0, kbSources: [] }
+  }
+}
+
 async function seedQuestionQueue(
   supabase: ReturnType<typeof getSupabase>,
   synthesis: SynthesisOutput,
   runId: string
-): Promise<number> {
+): Promise<{ queued: number; alreadyAnswered: number }> {
   let inserted = 0
+  let alreadyAnswered = 0
   const questions = synthesis.top_questions.slice(0, 12)
 
   for (const item of questions) {
@@ -31,6 +101,10 @@ async function seedQuestionQueue(
       .maybeSingle()
     if (existing) continue
 
+    const coverage = await checkKnowledgeCoverage(cleaned)
+    const status = coverage.answered ? 'auto_answered' : 'pending'
+    if (coverage.answered) alreadyAnswered++
+
     const matchingPain = synthesis.pain_points.find((p) =>
       cleaned.toLowerCase().includes(p.title.toLowerCase().split(' ')[0] || '')
     ) || synthesis.pain_points[0]
@@ -39,6 +113,7 @@ async function seedQuestionQueue(
     const originalText = [
       matchingPain ? `Pain: ${matchingPain.title}\n${matchingPain.summary}` : 'Daily pain research question',
       `Signal score: ${item.score}`,
+      `Knowledge coverage: ${coverage.answered ? 'answered' : 'needs Elijah'} (${coverage.bestScore.toFixed(2)})`,
       quotes.length ? `Representative quotes:\n${quotes.slice(0, 3).map((q) => `- ${q.text}`).join('\n')}` : '',
     ].filter(Boolean).join('\n\n')
 
@@ -48,15 +123,15 @@ async function seedQuestionQueue(
       source_context: `daily-run:${runId}`,
       original_text: originalText,
       cleaned_question: cleaned,
-      status: 'pending',
+      status,
       draft_answer: null,
-      kb_sources: [],
+      kb_sources: coverage.kbSources,
     })
 
-    if (!error) inserted++
+    if (!error && status === 'pending') inserted++
   }
 
-  return inserted
+  return { queued: inserted, alreadyAnswered }
 }
 
 /**
@@ -112,7 +187,7 @@ export async function GET(req: NextRequest) {
     const rawSamples = rawAll.slice(0, 500)
 
     const synthesis = await synthesize(rawAll)
-    const queued_questions = await seedQuestionQueue(supabase, synthesis, runId)
+    const coverage = await seedQuestionQueue(supabase, synthesis, runId)
 
     await supabase
       .from('pain_research_runs')
@@ -133,7 +208,8 @@ export async function GET(req: NextRequest) {
       raw_count: rawAll.length,
       pain_count: synthesis.pain_points.length,
       question_count: synthesis.top_questions.length,
-      queued_questions,
+      queued_questions: coverage.queued,
+      already_answered: coverage.alreadyAnswered,
       source_breakdown: synthesis.source_breakdown,
     })
   } catch (err) {
