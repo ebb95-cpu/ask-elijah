@@ -252,9 +252,8 @@ export default function AdminQuestionsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: openItem.question,
-          context: preset
-            ? `${draft}\n\nRemix instruction: ${getRemixInstruction(preset)}`
-            : draft,
+          context: draft,
+          remixInstruction: preset ? getRemixInstruction(preset) : undefined,
         }),
       })
       if (!res.ok) {

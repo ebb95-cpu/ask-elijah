@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
 
   if (unauthorized) return unauthorized
 
-  const { question, context } = await req.json()
+  const { question, context, remixInstruction } = await req.json()
   if (!question || !context) {
     return NextResponse.json({ error: 'question and context required' }, { status: 400 })
   }
@@ -137,6 +137,11 @@ Priority order:
 If knowledge-base context does not intertwine with Elijah's current notes, leave it out. Do not force it in. Do not replace Elijah's opinion with generic sports psychology. If web research contradicts a mechanism claim, rewrite the mechanism so it is accurate while keeping Elijah's core point.
 
 Use the context below as raw material — it may contain a previous draft, notes Elijah jotted in, or a mix of both. Weave it into one cohesive, polished answer. Do not append or reference anything. Just write a single complete answer as if you knew all of this from the start. Same voice, same directness as Elijah.
+
+Requested remix direction:
+${remixInstruction || 'General remix: make the answer cleaner, more cohesive, and easier for a young hooper to use.'}
+
+Treat the remix direction as an editing instruction, not as part of the answer. If it asks for shorter, the new answer must be meaningfully shorter than Elijah's current notes/draft and should target 140-180 words unless that would remove the core point. If it asks for more practical, add concrete steps without bloating. If it asks for more Elijah, make the voice more direct and lived-in without adding fake personal stories.
 
 You have web_search and web_fetch. USE THEM proactively. Before stating any mechanism claim (how the brain works under pressure, sleep, nervous-system regulation, HRV, visualization, confidence, recovery — any physiological or psychological "why this works"), verify it with a lookup. Two to four searches is the norm, not the exception.
 
@@ -170,7 +175,14 @@ Write the full answer from scratch now:`
   // tool results that we harvest for sources.
   const textBlocks = res.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
   const newDraft = textBlocks.map((b) => b.text).join('\n\n').trim()
-  const sources = [...kb.sources, ...extractSources(res.content)]
+  const sources = Array.from(
+    [...kb.sources, ...extractSources(res.content)]
+      .reduce((seen, source) => {
+        if (source.url && !seen.has(source.url)) seen.set(source.url, source)
+        return seen
+      }, new Map<string, Source>())
+      .values()
+  ).slice(0, 10)
 
   return NextResponse.json({ draft: newDraft, sources })
 }
