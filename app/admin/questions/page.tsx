@@ -32,6 +32,26 @@ interface PlayerQuestion {
 }
 
 type StatusFilter = 'pending' | 'answered' | 'skipped'
+type QueueReason = { label: string; tone: 'gold' | 'blue' | 'green' | 'gray' }
+
+function dupeCount(q: PlayerQuestion) {
+  return q.dupes?.length ?? 0
+}
+
+function queueScore(q: PlayerQuestion) {
+  const ageHours = Math.max(0, (Date.now() - new Date(q.created_at).getTime()) / 3600000)
+  const recencyBoost = Math.max(0, 24 - ageHours) / 24
+  return dupeCount(q) * 10 + (q.item_type === 'pain_point' ? 6 : 4) + recencyBoost
+}
+
+function getQueueReasons(q: PlayerQuestion): QueueReason[] {
+  const reasons: QueueReason[] = []
+  if (q.item_type === 'pain_point') reasons.push({ label: 'Needs Elijah POV', tone: 'blue' })
+  else reasons.push({ label: 'Real player', tone: 'green' })
+  if (dupeCount(q) > 0) reasons.push({ label: `${dupeCount(q) + 1} players ask this`, tone: 'gold' })
+  if (q.source_context) reasons.push({ label: 'Research signal', tone: 'gray' })
+  return reasons
+}
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
@@ -214,6 +234,11 @@ export default function AdminQuestionsPage() {
   }
 
   const openItem = openId ? items.find((q) => q.id === openId) : null
+  const prioritizedItems = [...items].sort((a, b) => queueScore(b) - queueScore(a))
+  const focusItems = filter === 'pending' ? prioritizedItems.slice(0, 5) : []
+  const focusIds = new Set(focusItems.map((q) => q.id))
+  const backlogItems = filter === 'pending' ? prioritizedItems.filter((q) => !focusIds.has(q.id)) : items
+  const nextFocus = focusItems[0]
 
   const formatDate = (iso: string) => {
     const d = new Date(iso)
@@ -478,133 +503,119 @@ export default function AdminQuestionsPage() {
         </p>
       )}
 
-      {/* Grid */}
+      {/* Focus queue */}
       {!loading && items.length > 0 && (
         <>
-          {filter === 'pending' && researchItems.length > 0 && (
-            <QueueSection title="Researched pain points" subtitle="Answer these to teach the knowledge base your opinion." />
-          )}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-            gap: 10,
-            marginBottom: filter === 'pending' && playerItems.length > 0 ? 28 : 0,
-          }}>
-          {(filter === 'pending' && researchItems.length > 0 ? researchItems : items).map((q) => (
-            <button
-              key={q.id}
-              onClick={() => {
-                setOpenId(q.id)
-                setDraft(q.answer || '')
-                setError(null)
-              }}
-              style={{
-                background: '#0a0d1a',
-                // Reviewed cards get a subtle green accent so they're
-                // visually distinct from raw AI-drafted or pending cards.
-                border: q.reviewed_by_elijah ? '1px solid #1f4030' : '1px solid #1a2040',
-                borderRadius: 8,
-                padding: 14,
-                textAlign: 'left',
-                cursor: 'pointer',
-                fontFamily: '-apple-system, sans-serif',
-                minHeight: 100,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: 8,
-                position: 'relative',
-              }}
-            >
-              {q.reviewed_by_elijah && (
-                <span
-                  title="Reviewed by Elijah"
-                  style={{
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    fontSize: 9,
-                    fontWeight: 700,
-                    color: '#34d399',
-                    background: '#0a1f15',
-                    border: '1px solid #1f4030',
-                    borderRadius: 999,
-                    padding: '2px 6px',
-                    letterSpacing: '0.05em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  ✓ Reviewed
-                </span>
-              )}
-              {q.item_type === 'pain_point' && (
-                <span
-                  title="Researched pain point"
-                  style={{
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    fontSize: 9,
-                    fontWeight: 700,
-                    color: '#7dd3fc',
-                    background: '#07131a',
-                    border: '1px solid #123040',
-                    borderRadius: 999,
-                    padding: '2px 6px',
-                    letterSpacing: '0.05em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Research
-                </span>
-              )}
-              <p style={{
-                fontSize: 13, fontWeight: 600, color: '#fff', margin: 0,
-                lineHeight: 1.4, overflow: 'hidden',
-                display: '-webkit-box',
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: 'vertical' as const,
-                // Leave room for the badge in the top-right corner on reviewed cards.
-                paddingRight: q.reviewed_by_elijah || q.item_type === 'pain_point' ? 72 : 0,
-              }}>
-                {q.question}
-              </p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-                {/* Email can be null on pain-point-style records. Crashed the
-                    admin queue on mobile when .split was called on null. */}
-                <span style={{ fontSize: 10, color: '#555' }}>
-                  {q.item_type === 'pain_point' ? 'research' : q.email ? q.email.split('@')[0] : 'anon'}
-                  {q.dupes && q.dupes.length > 0 && (
-                    <>
-                      {' '}
-                      <span style={{
-                        color: '#fbbf24',
-                        background: '#2a2015',
-                        padding: '1px 6px',
-                        borderRadius: 10,
-                        fontWeight: 700,
-                        marginLeft: 2,
-                      }}>
-                        +{q.dupes.length}
-                      </span>
-                    </>
-                  )}
-                </span>
-                <span style={{ fontSize: 10, color: '#3a4570' }}>{formatDate(q.created_at)}</span>
-              </div>
-            </button>
-          ))}
-          </div>
-
-          {filter === 'pending' && researchItems.length > 0 && playerItems.length > 0 && (
+          {filter === 'pending' ? (
             <>
-              <QueueSection title="Real player questions" subtitle="These came from users and send an email when approved." />
+              <div style={{
+                border: '1px solid #23231b',
+                background: 'linear-gradient(135deg, #11110b 0%, #08090f 52%, #061018 100%)',
+                borderRadius: 14,
+                padding: 'clamp(16px, 4vw, 22px)',
+                marginBottom: 18,
+                boxShadow: '0 18px 60px rgba(0,0,0,0.35)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
+                  <div>
+                    <p style={{ color: '#fbbf24', fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', margin: '0 0 6px' }}>
+                      Today&apos;s focus
+                    </p>
+                    <h2 style={{ color: '#fff', fontSize: 20, lineHeight: 1.15, margin: 0 }}>
+                      Answer these 5 first
+                    </h2>
+                    <p style={{ color: '#777', fontSize: 12, lineHeight: 1.5, margin: '8px 0 0', maxWidth: 460 }}>
+                      Sorted by repeat demand, real-player urgency, research signal, and recency.
+                    </p>
+                  </div>
+                  {nextFocus && (
+                    <button
+                      onClick={() => {
+                        setOpenId(nextFocus.id)
+                        setDraft(nextFocus.answer || '')
+                        setError(null)
+                      }}
+                      style={{
+                        background: '#fbbf24',
+                        border: '1px solid #fbbf24',
+                        borderRadius: 999,
+                        color: '#111',
+                        cursor: 'pointer',
+                        fontFamily: '-apple-system, sans-serif',
+                        fontSize: 12,
+                        fontWeight: 900,
+                        padding: '10px 14px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Start answering →
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {focusItems.map((q, index) => (
+                    <FocusCard
+                      key={q.id}
+                      q={q}
+                      rank={index + 1}
+                      onOpen={() => {
+                        setOpenId(q.id)
+                        setDraft(q.answer || '')
+                        setError(null)
+                      }}
+                      formatDate={formatDate}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {backlogItems.length > 0 && (
+                <details style={{ marginBottom: 22 }}>
+                  <summary style={{
+                    color: '#aaa',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 800,
+                    marginBottom: 12,
+                    userSelect: 'none',
+                  }}>
+                    Backlog ({backlogItems.length}) — open when you want more
+                  </summary>
+                  <QueueSection title="More questions" subtitle="Lower priority for now, but still available." />
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                    gap: 10,
+                  }}>
+                    {backlogItems.map((q) => (
+                      <QueueCard
+                        key={q.id}
+                        q={q}
+                        onOpen={() => {
+                          setOpenId(q.id)
+                          setDraft(q.answer || '')
+                          setError(null)
+                        }}
+                        formatDate={formatDate}
+                      />
+                    ))}
+                  </div>
+                </details>
+              )}
+            </>
+          ) : (
+            <>
+              <QueueSection
+                title={filter === 'answered' ? 'Answered archive' : 'Skipped archive'}
+                subtitle={filter === 'answered' ? 'Questions already approved or answered.' : 'Questions you decided not to answer.'}
+              />
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                 gap: 10,
               }}>
-                {playerItems.map((q) => (
+                {items.map((q) => (
                   <QueueCard
                     key={q.id}
                     q={q}
@@ -640,6 +651,80 @@ function QueueSection({ title, subtitle }: { title: string; subtitle: string }) 
       <p style={{ color: '#fff', fontSize: 13, fontWeight: 800, margin: '0 0 4px' }}>{title}</p>
       <p style={{ color: '#555', fontSize: 12, margin: 0 }}>{subtitle}</p>
     </div>
+  )
+}
+
+function FocusCard({
+  q,
+  rank,
+  onOpen,
+  formatDate,
+}: {
+  q: PlayerQuestion
+  rank: number
+  onOpen: () => void
+  formatDate: (iso: string) => string
+}) {
+  const reasons = getQueueReasons(q)
+
+  return (
+    <button
+      onClick={onOpen}
+      style={{
+        width: '100%',
+        background: rank === 1 ? 'rgba(251, 191, 36, 0.08)' : 'rgba(10, 13, 26, 0.92)',
+        border: rank === 1 ? '1px solid rgba(251, 191, 36, 0.38)' : '1px solid #1a2040',
+        borderRadius: 12,
+        color: '#fff',
+        cursor: 'pointer',
+        display: 'grid',
+        gridTemplateColumns: '34px 1fr auto',
+        gap: 12,
+        alignItems: 'center',
+        padding: 14,
+        textAlign: 'left',
+        fontFamily: '-apple-system, sans-serif',
+      }}
+    >
+      <span style={{
+        alignItems: 'center',
+        background: rank === 1 ? '#fbbf24' : '#111827',
+        border: rank === 1 ? '1px solid #fbbf24' : '1px solid #293044',
+        borderRadius: 999,
+        color: rank === 1 ? '#111' : '#aaa',
+        display: 'flex',
+        fontSize: 12,
+        fontWeight: 900,
+        height: 30,
+        justifyContent: 'center',
+        width: 30,
+      }}>
+        {rank}
+      </span>
+      <span style={{ minWidth: 0 }}>
+        <span style={{
+          color: '#fff',
+          display: '-webkit-box',
+          fontSize: 15,
+          fontWeight: 800,
+          lineHeight: 1.35,
+          marginBottom: 8,
+          overflow: 'hidden',
+          WebkitBoxOrient: 'vertical' as const,
+          WebkitLineClamp: 2,
+        }}>
+          {q.question}
+        </span>
+        <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {reasons.map((reason) => (
+            <ReasonPill key={reason.label} reason={reason} />
+          ))}
+        </span>
+      </span>
+      <span style={{ color: '#596080', fontSize: 11, whiteSpace: 'nowrap' }}>
+        {formatDate(q.created_at)}
+      </span>
+    </button>
   )
 }
 
@@ -700,6 +785,32 @@ function QueueCard({
         <span style={{ fontSize: 10, color: '#3a4570' }}>{formatDate(q.created_at)}</span>
       </div>
     </button>
+  )
+}
+
+function ReasonPill({ reason }: { reason: QueueReason }) {
+  const tones: Record<QueueReason['tone'], { color: string; background: string; border: string }> = {
+    blue: { color: '#7dd3fc', background: '#07131a', border: '#123040' },
+    gold: { color: '#fbbf24', background: '#2a2015', border: '#4a3512' },
+    green: { color: '#34d399', background: '#0a1f15', border: '#1f4030' },
+    gray: { color: '#aaa', background: '#111', border: '#252525' },
+  }
+  const tone = tones[reason.tone]
+
+  return (
+    <span style={{
+      background: tone.background,
+      border: `1px solid ${tone.border}`,
+      borderRadius: 999,
+      color: tone.color,
+      fontSize: 10,
+      fontWeight: 800,
+      letterSpacing: '0.02em',
+      padding: '3px 7px',
+      whiteSpace: 'nowrap',
+    }}>
+      {reason.label}
+    </span>
   )
 }
 
