@@ -5,7 +5,7 @@ export default function PrivacyPage() {
 
         <p className="text-xs text-gray-400 tracking-widest uppercase mb-4">Legal</p>
         <h1 className="text-4xl font-bold tracking-tight mb-2">Privacy Policy</h1>
-        <p className="text-sm text-gray-400 mb-12">Last updated: April 10, 2026</p>
+        <p className="text-sm text-gray-400 mb-12">Last updated: April 26, 2026</p>
 
         <div className="space-y-10 text-gray-700 text-base leading-relaxed">
 
@@ -36,6 +36,8 @@ export default function PrivacyPage() {
               <li><span className="font-semibold text-black">Questions you ask.</span> Stored so we can send you your answer recap and improve the product.</li>
               <li><span className="font-semibold text-black">Email address.</span> Collected when you choose to receive your answer by email or sign in. Used to send your daily recap and authenticate your account.</li>
               <li><span className="font-semibold text-black">Profile information.</span> Name, age, position, level, goals, and struggles — collected optionally to personalize your experience. You can skip all of it.</li>
+              <li><span className="font-semibold text-black">Locker room memory.</span> We may remember details you share, such as your goals, recent setbacks, position, level, and what you are working on, so future answers can understand your context.</li>
+              <li><span className="font-semibold text-black">Reflections and feedback.</span> If you tell us whether an answer helped or what happened after trying it, we save that to improve future answers and product quality.</li>
               <li><span className="font-semibold text-black">IP address.</span> Collected for rate limiting and abuse prevention only.</li>
               <li><span className="font-semibold text-black">Browser language.</span> Detected automatically so we can respond in your language.</li>
             </ul>
@@ -54,9 +56,18 @@ export default function PrivacyPage() {
               <li>To answer your questions using AI grounded in Elijah&apos;s real content.</li>
               <li>To send you your daily answer recap email when you opt in.</li>
               <li>To personalize answers based on your profile (age, level, goals).</li>
+              <li>To remember context you gave us so your locker room gets more useful over time.</li>
+              <li>To identify answers that helped players and improve future answers.</li>
               <li>To prevent abuse and spam.</li>
               <li>To improve the product over time.</li>
             </ul>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-black mb-3">Early access and AI review</h2>
+            <p>
+              Ask Elijah is an early-access product. AI helps draft and organize answers using Elijah&apos;s content, your context, and relevant sources when needed. Final approved answers are reviewed before they are sent. The product is still improving, so if something looks wrong, report it and we will review it.
+            </p>
           </section>
 
           <section>
@@ -81,18 +92,18 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-bold text-black mb-3">Data retention</h2>
             <p>
-              We keep your questions and profile for as long as your account is active. If you want your data deleted, email us at{' '}
+              We keep your questions, profile, locker room memory, reflections, and feedback for as long as your account is active or as long as needed to operate the service. If you want your data deleted, email us at{' '}
               <a href="mailto:hello@consistencyclub.com" className="underline hover:text-black transition-colors">
                 hello@consistencyclub.com
               </a>{' '}
-              and we will remove it within 30 days.
+              from the email address connected to your account and we will remove personal data within 30 days unless we need to keep limited records for legal, security, or abuse-prevention reasons.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-bold text-black mb-3">Your rights</h2>
             <p>
-              You have the right to access, correct, or delete your personal data at any time. If you are in the European Union or California, you have additional rights under GDPR and CCPA respectively. To exercise any of these rights, contact us at{' '}
+              You have the right to access, correct, export, or delete your personal data at any time. If you are in the European Union or California, you have additional rights under GDPR and CCPA respectively. To exercise any of these rights, contact us at{' '}
               <a href="mailto:hello@consistencyclub.com" className="underline hover:text-black transition-colors">
                 hello@consistencyclub.com
               </a>.

@@ -1056,6 +1056,25 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Early access expectation */}
+      <section className="bg-black border-t border-gray-900 px-6 py-16">
+        <div className="mx-auto max-w-2xl">
+          <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.22em] text-gray-600">
+            Early access
+          </p>
+          <div className="border-l border-white/80 pl-6">
+            <h3 className="mb-4 text-3xl font-bold leading-tight tracking-tight text-white">
+              This is live, but it is still being built.
+            </h3>
+            <p className="max-w-xl text-sm leading-relaxed text-gray-500">
+              Your questions, profile, reflections, and feedback help the locker room get sharper.
+              Final answers are reviewed before they go out. If something feels off or breaks,
+              use the report button and I&apos;ll look at it.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Browse feed teaser */}
       <section className="bg-black border-t border-gray-900 px-6 py-16">
         <div className="max-w-3xl mx-auto">
