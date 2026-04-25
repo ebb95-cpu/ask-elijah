@@ -5,6 +5,7 @@ import { checkLimit } from '@/lib/rate-limit'
 import { logError } from '@/lib/log-error'
 import { sanitizeAnswerText } from '@/lib/answer-sanitize'
 import { getFreshnessInstruction } from '@/lib/freshness'
+import { getElijahPreferenceContext } from '@/lib/elijah-learning'
 
 // Web search adds latency; give serverless enough headroom.
 export const maxDuration = 60
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
   const freshnessInstruction = getFreshnessInstruction(`${question}\n${context}`)
+  const preferenceContext = await getElijahPreferenceContext()
 
   const prompt = `The original question was: "${question}"
 
@@ -74,6 +76,7 @@ ${draft}
 Elijah has added his own real thoughts, stories, or corrections:
 ${context}
 ${freshnessInstruction}
+${preferenceContext}
 
 Rewrite the final answer weaving Elijah's additions into the draft. Follow this structure every time:
 1. Open by naming the exact pain or feeling they have — make them feel heard immediately

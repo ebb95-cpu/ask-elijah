@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { sanitizeAnswerText } from '@/lib/answer-sanitize'
 import { logError } from '@/lib/log-error'
 import { getFreshnessInstruction } from '@/lib/freshness'
+import { getElijahPreferenceContext } from '@/lib/elijah-learning'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -162,6 +163,7 @@ export async function POST(req: NextRequest) {
   const isShorterRemix = typeof remixInstruction === 'string' && remixInstruction.toLowerCase().includes('shorter')
   const kb = await searchKnowledgeBase(`${question}\n\n${adminInstructions}\n\n${currentAnswerDraft}`.slice(0, 4000))
   const freshnessInstruction = getFreshnessInstruction(`${question}\n${adminInstructions}\n${currentAnswerDraft}`)
+  const preferenceContext = await getElijahPreferenceContext()
 
   const prompt = `Write a completely new answer from scratch to this player's question.
 
@@ -216,6 +218,7 @@ ${currentAnswerDraft || '(No current answer draft was provided.)'}
 
 Relevant Elijah knowledge-base context. Use only if it fits Elijah's notes:
 ${kb.context || '(No relevant knowledge-base context found.)'}
+${preferenceContext}
 
 Write the full answer from scratch now:`
 

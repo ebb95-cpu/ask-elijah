@@ -44,6 +44,15 @@ type RemixNotice = {
   afterWords: number
   changed: boolean
 }
+type SimilarAnswered = {
+  id: string
+  question: string
+  answer: string
+  sources?: AnswerSource[]
+  similarity: number
+  helpful_count?: number
+  is_gold_answer?: boolean
+}
 
 function dupeCount(q: PlayerQuestion) {
   return q.dupes?.length ?? 0
@@ -154,6 +163,7 @@ export default function AdminQuestionsPage() {
   const [draft, setDraft] = useState('')
   const [lastGeneratedDraft, setLastGeneratedDraft] = useState('')
   const [remixNotes, setRemixNotes] = useState('')
+  const [makeGold, setMakeGold] = useState(false)
   const [approving, setApproving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Remix uses the answer draft plus private Elijah notes, then writes a
@@ -163,6 +173,8 @@ export default function AdminQuestionsPage() {
   // Rendered under the draft so admin can verify quotes before approving.
   const [sources, setSources] = useState<AnswerSource[]>([])
   const [remixNotice, setRemixNotice] = useState<RemixNotice | null>(null)
+  const [similarAnswered, setSimilarAnswered] = useState<SimilarAnswered[]>([])
+  const [similarLoading, setSimilarLoading] = useState(false)
 
   const load = useCallback(async (status: string) => {
     setLoading(true)
@@ -190,6 +202,7 @@ export default function AdminQuestionsPage() {
     load(filter === 'answered' ? 'answered' : filter)
     setOpenId(null)
     setRemixNotes('')
+    setMakeGold(false)
     setRemixNotice(null)
   }, [filter, load])
 
@@ -247,7 +260,7 @@ export default function AdminQuestionsPage() {
         const res = await fetch('/api/admin/bulk-approve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ questionIds: allIds, finalAnswer: draft, sources }),
+          body: JSON.stringify({ questionIds: allIds, finalAnswer: draft, sources, adminNotes: remixNotes }),
         })
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
@@ -263,7 +276,7 @@ export default function AdminQuestionsPage() {
         const res = await fetch('/api/admin/approve-question', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ questionId, finalAnswer: draft, sources }),
+          body: JSON.stringify({ questionId, finalAnswer: draft, sources, adminNotes: remixNotes, makeGold }),
         })
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
@@ -277,6 +290,7 @@ export default function AdminQuestionsPage() {
       setDraft(nextItem?.answer || '')
       setLastGeneratedDraft(nextItem?.answer || '')
       setRemixNotes('')
+      setMakeGold(false)
       setSources(getInitialSources(nextItem))
       setRemixNotice(null)
     } catch (e) {
@@ -355,6 +369,7 @@ export default function AdminQuestionsPage() {
       setDraft('')
       setLastGeneratedDraft('')
       setRemixNotes('')
+      setMakeGold(false)
       setSources([])
       setRemixNotice(null)
       setError(null)
@@ -365,6 +380,34 @@ export default function AdminQuestionsPage() {
   }
 
   const openItem = openId ? items.find((q) => q.id === openId) : null
+  useEffect(() => {
+    if (!openItem || openItem.item_type === 'pain_point') {
+      setSimilarAnswered([])
+      setSimilarLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setSimilarLoading(true)
+    fetch('/api/admin/similar-answered', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId: openItem.id, questionText: openItem.question }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setSimilarAnswered(Array.isArray(data.similar) ? data.similar : [])
+      })
+      .catch(() => {
+        if (!cancelled) setSimilarAnswered([])
+      })
+      .finally(() => {
+        if (!cancelled) setSimilarLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [openItem?.id, openItem?.item_type, openItem?.question])
+
   const prioritizedItems = [...items].sort((a, b) => queueScore(b) - queueScore(a))
   const focusItems = filter === 'pending' ? prioritizedItems.slice(0, 5) : []
   const focusIds = new Set(focusItems.map((q) => q.id))
@@ -391,7 +434,7 @@ export default function AdminQuestionsPage() {
     return (
       <div style={{ maxWidth: 1120, margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
         <button
-          onClick={() => { setOpenId(null); setDraft(''); setLastGeneratedDraft(''); setRemixNotes(''); setError(null); setSources([]); setRemixNotice(null) }}
+          onClick={() => { setOpenId(null); setDraft(''); setLastGeneratedDraft(''); setRemixNotes(''); setMakeGold(false); setError(null); setSources([]); setRemixNotice(null) }}
           style={{
             background: 'none', border: '1px solid #333', borderRadius: 6,
             color: '#888', fontSize: 13, padding: '8px 16px', cursor: 'pointer',
@@ -549,6 +592,28 @@ export default function AdminQuestionsPage() {
               ))}
             </div>
 
+            <label style={{
+              alignItems: 'center',
+              background: makeGold ? '#15100a' : '#050505',
+              border: makeGold ? '1px solid #4a3512' : '1px solid #1f1f1f',
+              borderRadius: 999,
+              color: makeGold ? '#fbbf24' : '#888',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              fontSize: 12,
+              fontWeight: 900,
+              gap: 8,
+              marginBottom: 18,
+              padding: '9px 12px',
+            }}>
+              <input
+                type="checkbox"
+                checked={makeGold}
+                onChange={(e) => setMakeGold(e.target.checked)}
+              />
+              Save as gold answer
+            </label>
+
             {/* Sources consulted by the LLM during Remix. Review each before
                 approving to verify any quotes or facts pulled from the web. */}
             {sources.length > 0 && (
@@ -660,6 +725,17 @@ export default function AdminQuestionsPage() {
           </main>
 
           <aside style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <SimilarAnsweredCard
+              items={similarAnswered}
+              loading={similarLoading}
+              onUse={(item) => {
+                setDraft(item.answer)
+                setLastGeneratedDraft(item.answer)
+                setSources(Array.isArray(item.sources) ? item.sources : [])
+                setRemixNotice(null)
+                setError(null)
+              }}
+            />
             <AnswerBriefCard brief={brief} />
             <QualityChecklist checks={checks} wordCount={wordCount} />
 
@@ -816,6 +892,7 @@ export default function AdminQuestionsPage() {
                         setDraft(nextFocus.answer || '')
                         setLastGeneratedDraft(nextFocus.answer || '')
                         setRemixNotes('')
+                        setMakeGold(false)
                         setError(null)
                         setSources(getInitialSources(nextFocus))
                         setRemixNotice(null)
@@ -849,6 +926,7 @@ export default function AdminQuestionsPage() {
                         setDraft(q.answer || '')
                         setLastGeneratedDraft(q.answer || '')
                         setRemixNotes('')
+                        setMakeGold(false)
                         setError(null)
                         setSources(getInitialSources(q))
                         setRemixNotice(null)
@@ -886,6 +964,7 @@ export default function AdminQuestionsPage() {
                           setDraft(q.answer || '')
                           setLastGeneratedDraft(q.answer || '')
                           setRemixNotes('')
+                          setMakeGold(false)
                           setError(null)
                           setSources(getInitialSources(q))
                           setRemixNotice(null)
@@ -917,6 +996,7 @@ export default function AdminQuestionsPage() {
                       setDraft(q.answer || '')
                       setLastGeneratedDraft(q.answer || '')
                       setRemixNotes('')
+                      setMakeGold(false)
                       setError(null)
                       setSources(getInitialSources(q))
                       setRemixNotice(null)
@@ -949,6 +1029,80 @@ function AnswerBriefCard({ brief }: { brief: ReturnType<typeof getAnswerBrief> }
         <BriefRow label="Topic" value={brief.topic} />
         <BriefRow label="Player needs" value={brief.emotion} />
         <BriefRow label="Include" value={brief.include} />
+      </div>
+    </InfoCard>
+  )
+}
+
+function SimilarAnsweredCard({
+  items,
+  loading,
+  onUse,
+}: {
+  items: SimilarAnswered[]
+  loading: boolean
+  onUse: (item: SimilarAnswered) => void
+}) {
+  if (loading) {
+    return (
+      <InfoCard title="Already answered?">
+        <div style={{ color: '#666', fontSize: 13 }}>
+          <LoadingDots label="Checking" />
+        </div>
+      </InfoCard>
+    )
+  }
+
+  if (items.length === 0) {
+    return (
+      <InfoCard title="Already answered?">
+        <p style={{ color: '#666', fontSize: 13, lineHeight: 1.45, margin: 0 }}>
+          No strong match yet. This can become a new gold answer.
+        </p>
+      </InfoCard>
+    )
+  }
+
+  return (
+    <InfoCard title="Already answered?">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {items.map((item) => (
+          <div key={item.id} style={{ border: '1px solid #252010', borderRadius: 10, background: '#100d06', padding: 10 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 7 }}>
+              {item.is_gold_answer && (
+                <span style={{ color: '#fbbf24', background: '#2a2015', border: '1px solid #4a3512', borderRadius: 999, fontSize: 10, fontWeight: 900, padding: '2px 7px' }}>
+                  Gold
+                </span>
+              )}
+              <span style={{ color: '#aaa', fontSize: 10, fontWeight: 800 }}>
+                {Math.round(item.similarity * 100)}% match
+              </span>
+              {(item.helpful_count || 0) > 0 && (
+                <span style={{ color: '#34d399', fontSize: 10, fontWeight: 800 }}>
+                  {item.helpful_count} helped
+                </span>
+              )}
+            </div>
+            <p style={{ color: '#ddd', fontSize: 12, fontWeight: 800, lineHeight: 1.35, margin: '0 0 8px' }}>
+              {item.question}
+            </p>
+            <button
+              onClick={() => onUse(item)}
+              style={{
+                background: '#fbbf24',
+                border: '1px solid #fbbf24',
+                borderRadius: 999,
+                color: '#111',
+                cursor: 'pointer',
+                fontSize: 11,
+                fontWeight: 900,
+                padding: '7px 10px',
+              }}
+            >
+              Use this answer
+            </button>
+          </div>
+        ))}
       </div>
     </InfoCard>
   )

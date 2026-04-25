@@ -35,6 +35,14 @@ export async function POST(req: NextRequest) {
     const normalizedEmail = email?.trim().toLowerCase() || null
 
     const supabase = getSupabase()
+    const previousQuery = supabase
+      .from('answer_feedback')
+      .select('rating')
+      .eq('question_id', question_id)
+    const { data: previous } = await (normalizedEmail
+      ? previousQuery.eq('email', normalizedEmail).maybeSingle()
+      : previousQuery.is('email', null).maybeSingle())
+
     const { error } = await supabase
       .from('answer_feedback')
       .upsert(
@@ -51,6 +59,23 @@ export async function POST(req: NextRequest) {
     if (error) {
       await logError('feedback:upsert', error, { question_id })
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    if (previous?.rating !== rating) {
+      try {
+        const delta = rating === 'up' ? 1 : previous?.rating === 'up' ? -1 : 0
+        if (delta !== 0) {
+          const { data: q } = await supabase
+            .from('questions')
+            .select('helpful_count')
+            .eq('id', question_id)
+            .single()
+          const next = Math.max(0, (q?.helpful_count || 0) + delta)
+          await supabase.from('questions').update({ helpful_count: next }).eq('id', question_id)
+        }
+      } catch (countErr) {
+        await logError('feedback:helpful-count', countErr, { question_id })
+      }
     }
 
     // Auto-notify Elijah when the feedback is negative AND has a comment —

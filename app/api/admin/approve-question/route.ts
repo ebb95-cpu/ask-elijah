@@ -13,10 +13,12 @@ export async function POST(req: NextRequest) {
   if (unauthorized) return unauthorized
 
   const body = await req.json()
-  const { questionId, finalAnswer, scorecard, scorecardOverall } = body as {
+  const { questionId, finalAnswer, scorecard, scorecardOverall, adminNotes, makeGold } = body as {
     questionId?: string
     finalAnswer?: string
     sources?: { title: string; url: string; type?: string }[] | null
+    adminNotes?: string | null
+    makeGold?: boolean
     scorecard?: { key: string; label: string; score: number; reason: string }[] | null
     scorecardOverall?: number | null
   }
@@ -41,7 +43,14 @@ export async function POST(req: NextRequest) {
   // Call the shared approve pipeline directly in-process. No more HTTP
   // proxy — that pattern was the source of the double-timeout and the
   // trailing-newline-in-env-var URL bugs.
-  const result = await approveAnswer({ questionId, finalAnswer, actionSteps: '', sources: body.sources })
+  const result = await approveAnswer({
+    questionId,
+    finalAnswer,
+    actionSteps: '',
+    sources: body.sources,
+    adminNotes,
+    makeGold,
+  })
 
   if (!result.ok) {
     await logError('admin:approve:pipeline', new Error(result.error), { questionId })

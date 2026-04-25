@@ -3,6 +3,7 @@ import { getSupabase } from './supabase-server'
 import { Resend } from 'resend'
 import { logError } from './log-error'
 import { getSourceAction, getSourceIcon, type AnswerSource } from './source-labels'
+import { gradeApprovedAnswer, learnPreferencesFromAdminNote } from './elijah-learning'
 
 /**
  * Shared "approve an answer" pipeline. Called directly by both:
@@ -39,6 +40,8 @@ async function saveToPinecone(
     age_range?: string | null
     helpful_count?: number
     has_corrections?: boolean
+    is_gold_answer?: boolean
+    answer_quality_overall?: number
   }
 ) {
   const combined = `Q: ${question}\n\nA: ${answer}`
@@ -51,7 +54,9 @@ async function saveToPinecone(
     question,
     helpful_count: opts?.helpful_count ?? 0,
     has_corrections: opts?.has_corrections ? 1 : 0,
+    is_gold_answer: opts?.is_gold_answer ? 1 : 0,
   }
+  if (opts?.answer_quality_overall) metadata.answer_quality_overall = opts.answer_quality_overall
   if (opts?.topic) metadata.topic = opts.topic
   if (opts?.trigger) metadata.trigger = opts.trigger
   if (opts?.level) metadata.level = opts.level
@@ -91,6 +96,8 @@ export async function approveAnswer(args: {
   finalAnswer: string
   actionSteps?: string | null
   sources?: AnswerSource[] | null
+  adminNotes?: string | null
+  makeGold?: boolean
 }): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   const { questionId, finalAnswer } = args
   const actionSteps = args.actionSteps ?? null
@@ -140,10 +147,13 @@ export async function approveAnswer(args: {
   const corrections = hadCorrections && draftChanged
     ? { flagged: flaggedClaims, corrected_at: new Date().toISOString() }
     : null
+  const quality = await gradeApprovedAnswer({
+    question: record.question,
+    answer: finalAnswer,
+    sourceCount: approvedSources.length,
+  })
 
-  const { error: updateError } = await supabase
-    .from('questions')
-    .update({
+  const baseUpdate: Record<string, unknown> = {
       answer: finalAnswer,
       status: 'approved',
       sources: approvedSources,
@@ -156,12 +166,52 @@ export async function approveAnswer(args: {
       reviewed_by_elijah: true,
       edit_count: draftChanged ? (record.edit_count || 0) + 1 : (record.edit_count || 0),
       corrections,
-    })
-    .eq('id', questionId)
+  }
+
+  if (quality) {
+    baseUpdate.answer_quality = quality.scores
+    baseUpdate.answer_quality_overall = quality.overall
+    baseUpdate.answer_quality_top_weakness = quality.topWeakness
+    baseUpdate.scorecard = quality.scores
+    baseUpdate.scorecard_overall = quality.overall
+  }
+  if (args.makeGold || (quality && quality.overall >= 88 && approvedSources.length > 0)) {
+    baseUpdate.is_gold_answer = true
+    baseUpdate.gold_reason = args.makeGold ? 'Marked gold by admin' : 'Auto-marked from high quality score with sources'
+  }
+
+  let updateError = (await supabase
+    .from('questions')
+    .update(baseUpdate)
+    .eq('id', questionId)).error
+
+  // Some older Supabase projects may not have the learning-loop migration yet.
+  // If those columns are missing, approve the answer without blocking email.
+  if (updateError && /answer_quality|is_gold_answer|gold_reason|scorecard/.test(updateError.message || '')) {
+    const fallbackUpdate = { ...baseUpdate }
+    delete fallbackUpdate.answer_quality
+    delete fallbackUpdate.answer_quality_overall
+    delete fallbackUpdate.answer_quality_top_weakness
+    delete fallbackUpdate.is_gold_answer
+    delete fallbackUpdate.gold_reason
+    updateError = (await supabase
+      .from('questions')
+      .update(fallbackUpdate)
+      .eq('id', questionId)
+    ).error
+  }
 
   if (updateError) {
     await logError('approve:update', updateError, { questionId })
     return { ok: false, status: 500, error: updateError.message }
+  }
+
+  if (args.adminNotes?.trim()) {
+    learnPreferencesFromAdminNote({
+      questionId,
+      question: record.question,
+      note: args.adminNotes,
+    }).catch((err) => logError('approve:learn-preferences', err, { questionId }))
   }
 
   // Send email to user. Defensive .trim() on env vars since they've had
@@ -239,6 +289,8 @@ export async function approveAnswer(args: {
       level: profile?.level ?? null,
       age_range: profile?.age_range ?? null,
       has_corrections: !!corrections,
+      is_gold_answer: Boolean(baseUpdate.is_gold_answer),
+      answer_quality_overall: quality?.overall,
     })
   } catch (err) {
     await logError('approve:pinecone-save', err, { questionId })

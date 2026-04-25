@@ -5,6 +5,7 @@ import { logError } from '@/lib/log-error'
 import { requireAdmin } from '@/lib/admin-auth'
 import { sanitizeAnswerText } from '@/lib/answer-sanitize'
 import { getFreshnessInstruction } from '@/lib/freshness'
+import { getElijahPreferenceContext } from '@/lib/elijah-learning'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -180,6 +181,7 @@ Keep each pushback under 20 words, in the player's voice, specific to what they 
       ? `\n\nBEFORE WRITING, anticipate the player's pushback. They will be thinking:\n${pushbacks.map((p) => `- "${p}"`).join('\n')}\n\nWrite the answer in a way that preemptively addresses each of those without calling them out explicitly. The player should feel like you already thought of everything they might object to.`
       : ''
     const freshnessInstruction = getFreshnessInstruction(`${question}\n${draft}\n${notes || ''}\n${convoText}`)
+    const preferenceContext = await getElijahPreferenceContext()
 
     const finalPrompt = `Write a completely new polished answer to the player's question. Weave in Elijah's notes AND everything he said during the refinement conversation. Do not reference the old draft, do not append — produce ONE cohesive final answer as if you knew all this from the start. Structure: pain → simple science-backed mechanism → Elijah's pro perspective → one concrete action plan today.
 
@@ -206,6 +208,7 @@ ${notes || '(none)'}
 """
 
 ${convoText ? `Clarifying Q&A with Elijah:\n\n${convoText}\n\n` : ''}${pushbackSection}
+${preferenceContext}
 
 Write the full answer now. Length: however long it needs to be to cover every angle without padding — typically 8 to 14 sentences when the Q&A was deep. No lists. No em-dashes. First person. Same conversational voice as always.`
 
