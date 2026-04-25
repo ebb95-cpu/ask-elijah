@@ -9,6 +9,7 @@ import LoadingDots from '@/components/ui/LoadingDots'
 import ThumbsFeedback from '@/components/ThumbsFeedback'
 import ProfileCapture from '@/components/ProfileCapture'
 import ShareAnswerButton from '@/components/ShareAnswerButton'
+import { getSourceAction, getSourceIcon } from '@/lib/source-labels'
 
 type Question = {
   id: string
@@ -350,7 +351,7 @@ export default function HistoryPage() {
             {/* Sources */}
             {openQuestion.sources && openQuestion.sources.length > 0 && (
               <div className="mb-8">
-                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">This answer drew from</p>
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">Go deeper</p>
                 <div className="flex flex-col gap-1.5">
                   {openQuestion.sources.map((s, i) => (
                     <a
@@ -360,7 +361,7 @@ export default function HistoryPage() {
                       rel="noopener noreferrer"
                       className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
-                      {s.type === 'newsletter' ? '✉' : '▶'}&nbsp;&nbsp;{s.title}
+                      {getSourceIcon(s)}&nbsp;&nbsp;{getSourceAction(s)}: {s.title}
                     </a>
                   ))}
                 </div>

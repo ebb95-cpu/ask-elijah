@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
   if (unauthorized) return unauthorized
 
-  const { questionIds, finalAnswer } = await req.json()
+  const { questionIds, finalAnswer, sources } = await req.json()
   if (!questionIds?.length || !finalAnswer) {
     return NextResponse.json({ error: 'questionIds and finalAnswer required' }, { status: 400 })
   }
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   // failure reason instead of a vague 500.
   const results = await Promise.all(
     questionIds.map(async (questionId: string) => {
-      const result = await approveAnswer({ questionId, finalAnswer, actionSteps: '' })
+      const result = await approveAnswer({ questionId, finalAnswer, actionSteps: '', sources })
       if (!result.ok) {
         await logError('admin:bulk-approve:item', new Error(result.error), { questionId, status: result.status })
       }

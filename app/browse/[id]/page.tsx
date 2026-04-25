@@ -2,6 +2,7 @@ import { getSupabase } from '@/lib/supabase-server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { getSourceAction, getSourceIcon } from '@/lib/source-labels'
 
 export const dynamic = 'force-dynamic'
 
@@ -105,7 +106,7 @@ export default async function BrowseAnswerPage({ params }: { params: Params }) {
 
         {Array.isArray(q.sources) && q.sources.length > 0 && (
           <div className="border-t border-gray-900 pt-6 mb-12">
-            <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-3">This answer drew from</p>
+            <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-3">Go deeper</p>
             <div className="flex flex-col gap-2">
               {(q.sources as { title: string; url: string; type: string }[]).slice(0, 4).map((s, i) => (
                 <a
@@ -115,7 +116,7 @@ export default async function BrowseAnswerPage({ params }: { params: Params }) {
                   rel="noopener noreferrer"
                   className="text-sm text-gray-400 hover:text-white transition-colors"
                 >
-                  {s.type === 'newsletter' ? '✉' : '▶'}&nbsp;&nbsp;{s.title}
+                  {getSourceIcon(s)}&nbsp;&nbsp;{getSourceAction(s)}: {s.title}
                 </a>
               ))}
             </div>

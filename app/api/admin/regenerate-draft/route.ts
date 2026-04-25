@@ -8,7 +8,7 @@ import { logError } from '@/lib/log-error'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-type Source = { title: string; url: string }
+type Source = { title: string; url: string; type?: string }
 type PineconeMatch = {
   score: number
   metadata?: Record<string, string>
@@ -67,6 +67,7 @@ async function searchKnowledgeBase(query: string): Promise<{ context: string; so
       return [{
         title: m.metadata?.source_title || m.metadata?.title || 'Elijah knowledge base',
         url,
+        type: m.metadata?.source_type || 'knowledge_base',
       }]
     })
 
@@ -90,7 +91,7 @@ function extractSources(content: Anthropic.Messages.ContentBlock[]): Source[] {
       const items = (block as unknown as { content: Array<{ url?: string; title?: string }> }).content || []
       for (const item of items) {
         if (item.url && !seen.has(item.url)) {
-          seen.set(item.url, { url: item.url, title: item.title || item.url })
+          seen.set(item.url, { url: item.url, title: item.title || item.url, type: 'web' })
         }
       }
     }
@@ -98,7 +99,7 @@ function extractSources(content: Anthropic.Messages.ContentBlock[]): Source[] {
     if (block.type === 'web_fetch_tool_result') {
       const fetched = (block as unknown as { content?: { url?: string; title?: string } }).content
       if (fetched?.url && !seen.has(fetched.url)) {
-        seen.set(fetched.url, { url: fetched.url, title: fetched.title || fetched.url })
+        seen.set(fetched.url, { url: fetched.url, title: fetched.title || fetched.url, type: 'web' })
       }
     }
     // Also pick up any citations attached to text blocks.
@@ -107,7 +108,7 @@ function extractSources(content: Anthropic.Messages.ContentBlock[]): Source[] {
       if (Array.isArray(citations)) {
         for (const c of citations) {
           if (c.url && !seen.has(c.url)) {
-            seen.set(c.url, { url: c.url, title: c.title || c.url })
+            seen.set(c.url, { url: c.url, title: c.title || c.url, type: 'web' })
           }
         }
       }

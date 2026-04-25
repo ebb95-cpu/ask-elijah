@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import ThreeDots from '@/components/ui/ThreeDots'
 import LoadingDots from '@/components/ui/LoadingDots'
+import { getAdminSourceCta, type AnswerSource } from '@/lib/source-labels'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ interface PlayerQuestion {
   status: string
   email: string | null
   created_at: string
+  sources?: AnswerSource[]
   item_type?: 'question' | 'pain_point'
   source_url?: string | null
   source_context?: string | null
@@ -109,13 +111,14 @@ function remixChangedEnough(before: string, after: string) {
   return overlap < 0.86 || wordDelta >= 12
 }
 
-function getQualityChecks(draft: string) {
+function getQualityChecks(draft: string, sourceCount = 0) {
   const wordCount = getWordCount(draft)
   const lower = draft.toLowerCase()
   return [
     { label: 'Clear answer', passed: wordCount >= 35 },
     { label: 'Action step', passed: /today|next game|practice|write|try|do this|routine|drill/.test(lower) },
     { label: 'Sounds personal', passed: /\byou\b|\byour\b|\bi\b|\bmy\b/.test(lower) },
+    { label: 'Resource attached', passed: sourceCount > 0 },
     { label: 'Not too long', passed: wordCount > 0 && wordCount <= 260 },
   ]
 }
@@ -124,6 +127,19 @@ function getRemixInstruction(preset: RemixPreset) {
   if (preset === 'shorter') return 'Make this tighter, clearer, and under 180 words without losing the main point.'
   if (preset === 'more_elijah') return 'Make this sound more direct, lived-in, and personal in Elijah Bryant’s voice.'
   return 'Make this more practical with a specific next action the player can do today.'
+}
+
+function getInitialSources(q: PlayerQuestion | null | undefined): AnswerSource[] {
+  if (!q) return []
+  if (Array.isArray(q.sources) && q.sources.length > 0) return q.sources
+  if (q.source_url) {
+    return [{
+      title: q.source_context || 'Original source',
+      url: q.source_url,
+      type: q.item_type === 'pain_point' ? 'research' : 'web',
+    }]
+  }
+  return []
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -145,7 +161,7 @@ export default function AdminQuestionsPage() {
   const [remixing, setRemixing] = useState(false)
   // Sources the LLM consulted via web_search / web_fetch when remixing.
   // Rendered under the draft so admin can verify quotes before approving.
-  const [sources, setSources] = useState<{ title: string; url: string }[]>([])
+  const [sources, setSources] = useState<AnswerSource[]>([])
   const [remixNotice, setRemixNotice] = useState<RemixNotice | null>(null)
 
   const load = useCallback(async (status: string) => {
@@ -218,7 +234,7 @@ export default function AdminQuestionsPage() {
         const res = await fetch(`/api/admin/questions/${questionId}/answer`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ finalAnswer: draft }),
+          body: JSON.stringify({ finalAnswer: draft, sources }),
         })
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
@@ -231,7 +247,7 @@ export default function AdminQuestionsPage() {
         const res = await fetch('/api/admin/bulk-approve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ questionIds: allIds, finalAnswer: draft }),
+          body: JSON.stringify({ questionIds: allIds, finalAnswer: draft, sources }),
         })
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
@@ -247,7 +263,7 @@ export default function AdminQuestionsPage() {
         const res = await fetch('/api/admin/approve-question', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ questionId, finalAnswer: draft }),
+          body: JSON.stringify({ questionId, finalAnswer: draft, sources }),
         })
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
@@ -261,7 +277,7 @@ export default function AdminQuestionsPage() {
       setDraft(nextItem?.answer || '')
       setLastGeneratedDraft(nextItem?.answer || '')
       setRemixNotes('')
-      setSources([])
+      setSources(getInitialSources(nextItem))
       setRemixNotice(null)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to approve'
@@ -368,7 +384,7 @@ export default function AdminQuestionsPage() {
   // ── Detail overlay ──────────────────────────────────────────────────────────
   if (openItem) {
     const brief = getAnswerBrief(openItem)
-    const checks = getQualityChecks(draft)
+    const checks = getQualityChecks(draft, sources.length)
     const wordCount = getWordCount(draft)
     const hasNextAfterApprove = items.some((q) => q.id !== openItem.id)
 
@@ -546,11 +562,14 @@ export default function AdminQuestionsPage() {
                 }}
               >
                 <p style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0, marginBottom: 8 }}>
-                  Sources consulted ({sources.length}) — verify before approving
+                  Resources for this answer ({sources.length}) — verify before approving
                 </p>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {sources.map((s, i) => (
                     <li key={i} style={{ fontSize: 13, lineHeight: 1.4 }}>
+                      <span style={{ color: '#fbbf24', fontSize: 10, fontWeight: 900, marginRight: 8, textTransform: 'uppercase' }}>
+                        {getAdminSourceCta(s)}
+                      </span>
                       <a
                         href={s.url}
                         target="_blank"
@@ -798,7 +817,7 @@ export default function AdminQuestionsPage() {
                         setLastGeneratedDraft(nextFocus.answer || '')
                         setRemixNotes('')
                         setError(null)
-                        setSources([])
+                        setSources(getInitialSources(nextFocus))
                         setRemixNotice(null)
                       }}
                       style={{
@@ -831,7 +850,7 @@ export default function AdminQuestionsPage() {
                         setLastGeneratedDraft(q.answer || '')
                         setRemixNotes('')
                         setError(null)
-                        setSources([])
+                        setSources(getInitialSources(q))
                         setRemixNotice(null)
                       }}
                       formatDate={formatDate}
@@ -868,7 +887,7 @@ export default function AdminQuestionsPage() {
                           setLastGeneratedDraft(q.answer || '')
                           setRemixNotes('')
                           setError(null)
-                          setSources([])
+                          setSources(getInitialSources(q))
                           setRemixNotice(null)
                         }}
                         formatDate={formatDate}
@@ -899,7 +918,7 @@ export default function AdminQuestionsPage() {
                       setLastGeneratedDraft(q.answer || '')
                       setRemixNotes('')
                       setError(null)
-                      setSources([])
+                      setSources(getInitialSources(q))
                       setRemixNotice(null)
                     }}
                     formatDate={formatDate}

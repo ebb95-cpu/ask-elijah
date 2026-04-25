@@ -51,7 +51,7 @@ export async function POST(
     const unauthorized = await requireAdmin()
     if (unauthorized) return unauthorized
 
-    const { finalAnswer } = await req.json()
+    const { finalAnswer, sources } = await req.json()
     if (!finalAnswer?.trim()) {
       return NextResponse.json({ error: 'finalAnswer is required' }, { status: 400 })
     }
@@ -76,15 +76,18 @@ export async function POST(
     // Upsert to Pinecone
     await upsertToPinecone(id, embedding, combinedText, record.cleaned_question)
 
+    const update: Record<string, unknown> = {
+      status: 'answered',
+      final_answer: finalAnswer,
+      pinecone_ingested: true,
+      answered_at: new Date().toISOString(),
+    }
+    if (Array.isArray(sources)) update.kb_sources = sources
+
     // Update Supabase
     await supabase
       .from('pain_points')
-      .update({
-        status: 'answered',
-        final_answer: finalAnswer,
-        pinecone_ingested: true,
-        answered_at: new Date().toISOString(),
-      })
+      .update(update)
       .eq('id', id)
 
     return NextResponse.json({ ok: true })

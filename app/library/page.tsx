@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import LoadingDots from '@/components/ui/LoadingDots'
 import { getSupabaseClient } from '@/lib/supabase-client'
+import { getSourceAction, getSourceIcon } from '@/lib/source-labels'
 
 function Logo() {
   return (
@@ -169,7 +170,7 @@ export default function LibraryPage() {
                     <p className="text-black text-sm mt-4 leading-relaxed whitespace-pre-wrap">{a.answer}</p>
                     {a.sources && a.sources.length > 0 && (
                       <div className="mt-5 pt-4 border-t border-gray-100">
-                        <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-2">This answer drew from</p>
+                        <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-2">Go deeper</p>
                         <div className="flex flex-col gap-1">
                           {a.sources.slice(0, 3).map((s, i) => (
                             <a
@@ -180,7 +181,7 @@ export default function LibraryPage() {
                               onClick={(e) => e.stopPropagation()}
                               className="text-xs text-gray-500 hover:text-black transition-colors underline underline-offset-2"
                             >
-                              {s.type === 'newsletter' ? '✉' : '▶'}&nbsp;&nbsp;{s.title}
+                              {getSourceIcon(s)}&nbsp;&nbsp;{getSourceAction(s)}: {s.title}
                             </a>
                           ))}
                         </div>

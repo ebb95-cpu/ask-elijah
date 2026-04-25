@@ -2,6 +2,7 @@ import { escapeHtml } from './escape-html'
 import { getSupabase } from './supabase-server'
 import { Resend } from 'resend'
 import { logError } from './log-error'
+import { getSourceAction, getSourceIcon, type AnswerSource } from './source-labels'
 
 /**
  * Shared "approve an answer" pipeline. Called directly by both:
@@ -89,6 +90,7 @@ export async function approveAnswer(args: {
   questionId: string
   finalAnswer: string
   actionSteps?: string | null
+  sources?: AnswerSource[] | null
 }): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   const { questionId, finalAnswer } = args
   const actionSteps = args.actionSteps ?? null
@@ -123,6 +125,16 @@ export async function approveAnswer(args: {
   const firstName = profile?.first_name || null
 
   const draftChanged = (record.ai_draft || record.answer || '').trim() !== finalAnswer.trim()
+  const approvedSources = Array.isArray(args.sources) && args.sources.length > 0
+    ? args.sources
+        .filter((s) => typeof s?.url === 'string' && s.url.trim())
+        .map((s) => ({
+          title: typeof s.title === 'string' && s.title.trim() ? s.title.trim() : s.url.trim(),
+          url: s.url.trim(),
+          type: typeof s.type === 'string' && s.type.trim() ? s.type.trim() : 'web',
+        }))
+        .slice(0, 6)
+    : (Array.isArray(record.sources) ? record.sources as AnswerSource[] : [])
 
   const { hadCorrections, flaggedClaims } = extractCorrections(record.ai_draft || '')
   const corrections = hadCorrections && draftChanged
@@ -134,6 +146,7 @@ export async function approveAnswer(args: {
     .update({
       answer: finalAnswer,
       status: 'approved',
+      sources: approvedSources,
       action_steps: actionSteps,
       approved_at: new Date().toISOString(),
       // This path is only hit when the admin explicitly approves in the queue.
@@ -190,15 +203,16 @@ export async function approveAnswer(args: {
             <a href="${siteUrl}/history" style="color:#555555;text-decoration:none;">Read his full answer →</a>
           </p>
           ${(() => {
-            const srcs = Array.isArray(record.sources) ? record.sources as { title: string; url: string; type: string }[] : []
+            const srcs = approvedSources
             if (srcs.length === 0) return ''
             const items = srcs.slice(0, 3).map((s) => {
-              const icon = s.type === 'newsletter' ? '✉' : '▶'
-              return `<a href="${escapeHtml(s.url)}" style="display:block;font-size:13px;color:#777;text-decoration:none;padding:4px 0;font-family:-apple-system,sans-serif;">${icon}&nbsp;&nbsp;${escapeHtml(s.title)}</a>`
+              const icon = getSourceIcon(s)
+              const cta = getSourceAction(s)
+              return `<a href="${escapeHtml(s.url)}" style="display:block;font-size:13px;color:#777;text-decoration:none;padding:4px 0;font-family:-apple-system,sans-serif;">${icon}&nbsp;&nbsp;${cta}: ${escapeHtml(s.title)}</a>`
             }).join('')
             return `
           <div style="border-top:1px solid #222;padding-top:20px;margin-bottom:32px;">
-            <p style="font-size:10px;color:#444;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">This answer drew from</p>
+            <p style="font-size:10px;color:#444;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">Go deeper</p>
             ${items}
           </div>`
           })()}
