@@ -868,20 +868,16 @@ export default function HomePage() {
             <div className="mb-3 flex items-center gap-3">
               <span className="h-px w-8 bg-white/70" />
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-500">
-                Locker room standard
+                Locker room
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-3 border-y border-gray-900 py-4">
-              {[
-                ['01', 'Ask something real'],
-                ['02', 'Use the answer'],
-                ['03', 'Come back better'],
-              ].map(([num, text]) => (
-                <div key={num}>
-                  <p className="mb-1 text-[10px] font-bold text-gray-700">{num}</p>
-                  <p className="text-xs font-semibold leading-snug text-gray-300 sm:text-sm">{text}</p>
-                </div>
-              ))}
+            <div className="border-y border-gray-900 py-4">
+              <p className="text-lg font-bold leading-tight text-white sm:text-xl">
+                Ask something real.
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                Take the answer, try the rep, come back better.
+              </p>
             </div>
           </div>
 
