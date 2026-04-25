@@ -6,6 +6,13 @@ import { useRouter } from 'next/navigation'
 import LoadingDots from '@/components/ui/LoadingDots'
 import { getLocal } from '@/lib/safe-storage'
 import { simFetch } from '@/lib/simulator'
+import { getSourceAction, getSourceIcon } from '@/lib/source-labels'
+
+type AnswerSource = {
+  title: string
+  url: string
+  type?: string | null
+}
 
 type Question = {
   id: string
@@ -16,6 +23,7 @@ type Question = {
   upvote_count: number
   user_upvoted: boolean
   reviewed_by_elijah: boolean
+  sources?: AnswerSource[]
 }
 
 const CATEGORIES = ['All', 'Confidence', 'Pressure', 'Coach', 'Slumps', 'Mindset']
@@ -228,6 +236,26 @@ export default function BrowsePage() {
             {/* Topic */}
             {openQuestion.topic && (
               <p className="text-xs text-gray-600 mb-8">Topic: {openQuestion.topic}</p>
+            )}
+
+            {/* Sources */}
+            {Array.isArray(openQuestion.sources) && openQuestion.sources.length > 0 && (
+              <div className="border-t border-gray-900 pt-6 mb-8">
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-3">Go deeper</p>
+                <div className="flex flex-col gap-2">
+                  {openQuestion.sources.slice(0, 4).map((s, i) => (
+                    <a
+                      key={`${s.url}-${i}`}
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      {getSourceIcon(s)}&nbsp;&nbsp;{getSourceAction(s)}: {s.title}
+                    </a>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Actions */}

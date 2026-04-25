@@ -243,7 +243,7 @@ function ReturningView({
             />
             <div className="flex justify-end w-full mt-4">
               <button
-                onClick={handleSubmit}
+                onClick={() => handleSubmit()}
                 disabled={!question.trim()}
                 className="text-sm font-semibold text-white disabled:text-gray-800 disabled:cursor-not-allowed hover:opacity-70 transition-all"
               >
@@ -273,6 +273,8 @@ export default function HomePage() {
   const [revealed, setRevealed] = useState(false)
   const [askError, setAskError] = useState('')
   const [welcomeBackName, setWelcomeBackName] = useState<string | null>(null)
+  const [showCommitment, setShowCommitment] = useState(false)
+  const [hasCommitted, setHasCommitted] = useState(false)
   const fullAnswerRef = useRef('')
   const prevQuestionRef = useRef('')
   const prevAnswerRef = useRef('')
@@ -371,8 +373,16 @@ export default function HomePage() {
     run()
   }, [])
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (commitmentConfirmed = false) => {
     if (!question.trim() || (mode !== 'idle' && mode !== 'returning')) return
+    if (mode === 'idle' && !hasCommitted && !commitmentConfirmed) {
+      setShowCommitment(true)
+      return
+    }
+    if (commitmentConfirmed) {
+      setHasCommitted(true)
+      setShowCommitment(false)
+    }
     setAskError('')
     setMode('loading')
     setStreamedText('')
@@ -751,7 +761,7 @@ export default function HomePage() {
         <div className="flex-1 flex flex-col items-center justify-center px-5 text-center gap-6 max-w-sm mx-auto">
           <div>
             <h2 className="text-3xl font-bold mb-2">Got your question.</h2>
-            <p className="text-gray-500 text-base leading-relaxed mt-4">I read every one. I&apos;ll send you something real.</p>
+            <p className="text-gray-500 text-base leading-relaxed mt-4">Your question is saved. I&apos;ll review it and send you something real.</p>
             <p className="text-gray-500 text-base leading-relaxed">Keep an eye on your inbox.</p>
           </div>
 
@@ -787,6 +797,36 @@ export default function HomePage() {
   // ── Idle (homepage) ────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-screen bg-black">
+      {showCommitment && (
+        <div className="fixed inset-0 z-[60] bg-black/85 px-5 flex items-center justify-center">
+          <div className="w-full max-w-md rounded-3xl border border-gray-800 bg-[#070707] p-6 text-left shadow-2xl">
+            <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.22em] text-gray-500">
+              Locker room standard
+            </p>
+            <h3 className="mb-4 text-3xl font-bold leading-tight tracking-tight text-white">
+              Before you ask, be real.
+            </h3>
+            <p className="mb-6 text-sm leading-relaxed text-gray-400">
+              This is for players who actually want to get better. Ask something you&apos;re willing to work on.
+              Elijah&apos;s answer will give you one thing to try. If you&apos;re not going to try it, don&apos;t waste the rep.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => handleSubmit(true)}
+                className="w-full rounded-full bg-white px-5 py-4 text-sm font-bold text-black hover:opacity-80 transition-opacity"
+              >
+                I&apos;ll do the work →
+              </button>
+              <button
+                onClick={() => setShowCommitment(false)}
+                className="w-full rounded-full border border-gray-800 px-5 py-3 text-sm font-semibold text-gray-500 hover:border-gray-600 hover:text-white transition-colors"
+              >
+                Let me think first
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-5">
@@ -828,7 +868,7 @@ export default function HomePage() {
               Locker room standard
             </p>
             <p className="text-sm leading-relaxed text-gray-300">
-              This is for players who are still trying. Ask something real. Take the answer seriously. Do the work.
+              This is for players who are still trying. Ask something real. Take the answer seriously. Try the rep.
             </p>
           </div>
 
@@ -860,7 +900,7 @@ export default function HomePage() {
               />
             </div>
             <button
-              onClick={handleSubmit}
+              onClick={() => handleSubmit()}
               disabled={!question.trim()}
               className="text-sm font-semibold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all flex-shrink-0"
             >
@@ -911,7 +951,7 @@ export default function HomePage() {
             <div className="flex items-start gap-5">
               <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0 tabular-nums">30s</span>
               <div>
-                <p className="text-white text-lg font-semibold leading-tight mb-1">My first take on your screen.</p>
+                <p className="text-white text-lg font-semibold leading-tight mb-1">A real first take on your screen.</p>
                 <p className="text-gray-500 text-sm leading-relaxed">The first thing I&apos;d tell you if you asked me in person.</p>
               </div>
             </div>
@@ -919,8 +959,8 @@ export default function HomePage() {
             <div className="flex items-start gap-5">
               <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0 tabular-nums">24-48h</span>
               <div>
-                <p className="text-white text-lg font-semibold leading-tight mb-1">My personal reply in your inbox.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">Every single one. I read them all. I answer them all.</p>
+                <p className="text-white text-lg font-semibold leading-tight mb-1">A reviewed answer in your locker room.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">While this is in beta, final answers are reviewed before they go out.</p>
               </div>
             </div>
 
@@ -928,7 +968,15 @@ export default function HomePage() {
               <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0">Forever</span>
               <div>
                 <p className="text-white text-lg font-semibold leading-tight mb-1">Every answer saved to your locker room.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">Go back any time. Any device. Your library of what I&apos;ve told you.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">Go back any time. Track what you tried. Ask better follow-ups.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-5">
+              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0">Sources</span>
+              <div>
+                <p className="text-white text-lg font-semibold leading-tight mb-1">Receipts when they matter.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">If the answer uses my videos, newsletters, guides, or current research, you&apos;ll see where to go deeper.</p>
               </div>
             </div>
 
@@ -956,7 +1004,7 @@ export default function HomePage() {
 
           <div className="border-l-4 border-black pl-6 my-10">
             <p className="text-black font-bold text-2xl md:text-4xl leading-tight tracking-tight">
-              The game is 90% mental.<br />Your training has been 90% physical.<br />
+              Most players train their body every day.<br />Almost nobody trains the pressure in their head.<br />
               <span className="text-gray-400">That is the gap.</span>
             </p>
           </div>
@@ -983,8 +1031,8 @@ export default function HomePage() {
         </blockquote>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-px max-w-2xl mx-auto bg-gray-900">
-          {[
-            { title: "He reads every one.", sub: "Elijah reads it. Elijah writes back." },
+            {[
+            { title: "Reviewed before it reaches you.", sub: "AI helps organize the draft. Elijah's standard decides what goes out." },
             { title: "NBA. EuroLeague finals. 3 continents.", sub: "Advice from inside the arena, not from the stands." },
           ].map(({ title, sub }) => (
             <div key={title} className="bg-black text-white p-8">

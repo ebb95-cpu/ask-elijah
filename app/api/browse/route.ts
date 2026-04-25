@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
   const email = req.nextUrl.searchParams.get('email') || ''
 
   // Fetch approved questions via direct REST
-  const questions: { id: string; question: string; answer: string; topic: string | null; created_at: string; reviewed_by_elijah: boolean | null }[] | null = await sbFetch(
-    '/rest/v1/questions?status=eq.approved&deleted_at=is.null&select=id,question,answer,topic,created_at,reviewed_by_elijah&order=created_at.desc&limit=100'
+  const questions: { id: string; question: string; answer: string; topic: string | null; created_at: string; reviewed_by_elijah: boolean | null; sources?: { title: string; url: string; type?: string | null }[] | null }[] | null = await sbFetch(
+    '/rest/v1/questions?status=eq.approved&deleted_at=is.null&select=id,question,answer,topic,created_at,reviewed_by_elijah,sources&order=created_at.desc&limit=100'
   )
 
   if (!questions?.length) return NextResponse.json({ questions: [] })
@@ -63,6 +63,7 @@ export async function GET(req: NextRequest) {
     upvote_count: countMap[q.id] || 0,
     user_upvoted: userSet.has(q.id),
     reviewed_by_elijah: q.reviewed_by_elijah === true,
+    sources: Array.isArray(q.sources) ? q.sources : [],
   })).sort((a, b) => b.upvote_count - a.upvote_count)
 
   return NextResponse.json({ questions: result })
