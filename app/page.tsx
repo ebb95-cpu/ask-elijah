@@ -864,23 +864,6 @@ export default function HomePage() {
         </h2>
 
         <div className="w-full max-w-xl mt-6">
-          <div className="mb-7 text-left">
-            <div className="mb-3 flex items-center gap-3">
-              <span className="h-px w-8 bg-white/70" />
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-500">
-                Locker room
-              </p>
-            </div>
-            <div className="border-y border-gray-900 py-4">
-              <p className="text-lg font-bold leading-tight text-white sm:text-xl">
-                Ask something real.
-              </p>
-              <p className="mt-1 text-sm leading-relaxed text-gray-500">
-                Take the answer, try the rep, come back better.
-              </p>
-            </div>
-          </div>
-
           <div className="flex items-end gap-4 border-b border-gray-700 focus-within:border-gray-400 transition-colors pb-3">
             <div className="relative flex-1">
               {!question && (
