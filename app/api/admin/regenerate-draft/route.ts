@@ -148,10 +148,11 @@ export async function POST(req: NextRequest) {
 
   if (unauthorized) return unauthorized
 
-  const { question, context, remixInstruction } = await req.json()
+  const { question, context, originalDraft, remixInstruction } = await req.json()
   if (!question || !context) {
     return NextResponse.json({ error: 'question and context required' }, { status: 400 })
   }
+  const previousGeneratedDraft = typeof originalDraft === 'string' ? originalDraft.trim() : ''
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   const isShorterRemix = typeof remixInstruction === 'string' && remixInstruction.toLowerCase().includes('shorter')
@@ -160,11 +161,14 @@ export async function POST(req: NextRequest) {
   const prompt = `Write a completely new answer from scratch to this player's question.
 
 Priority order:
-1. Elijah's current notes/draft below are the source of truth for meaning, examples, corrections, and coaching angle.
-2. Elijah's knowledge-base context can support, clarify, or sharpen the answer only when it clearly connects to what Elijah said.
-3. Web research is only for fact-checking, neuroscience/psychology/sports-psychology grounding, and avoiding inaccurate mechanism claims.
+1. Elijah's NEW or CHANGED information in the current edited textbox is the source of truth. It beats the old draft, the knowledge base, and web research.
+2. The previous generated draft is only reference material so you can see what changed. Do not copy it.
+3. Elijah's knowledge-base context can support, clarify, or sharpen the answer only when it clearly connects to Elijah's new/changed information.
+4. Web research is only for fact-checking, neuroscience/psychology/sports-psychology grounding, and avoiding inaccurate mechanism claims.
 
-If knowledge-base context does not intertwine with Elijah's current notes, leave it out. Do not force it in. Do not replace Elijah's opinion with generic sports psychology. If web research contradicts a mechanism claim, rewrite the mechanism so it is accurate while keeping Elijah's core point.
+Your first job is to compare the previous generated draft against the current edited textbox. Identify what Elijah added, removed, corrected, emphasized, or changed. Build the new answer around that new/different information.
+
+If the knowledge base does not intertwine with Elijah's new/changed information, leave it out. Do not force it in. Do not replace Elijah's opinion with generic sports psychology. If web research contradicts a mechanism claim, rewrite the mechanism so it is accurate while keeping Elijah's core point.
 
 Every remix must follow this answer standard:
 1. What the player is feeling.
@@ -174,7 +178,7 @@ Every remix must follow this answer standard:
 
 Make the psychology easy enough for a young kid to understand, but make the reasoning credible enough that a parent, coach, or sports psych person would respect it.
 
-Use the context below as raw material only. It may contain a previous draft, notes Elijah jotted in, or a mix of both. Do NOT preserve the old wording, paragraph order, opening, or ending. Imagine the textarea was deleted and you are writing a brand-new answer from a blank page using only the meaning and best ideas from the raw material.
+Use the current edited textbox below as raw material only. It may contain a previous draft, notes Elijah jotted in, or a mix of both. Do NOT preserve the old wording, paragraph order, opening, or ending. Imagine the textarea was deleted and you are writing a brand-new answer from a blank page using Elijah's new/different information as the spine.
 
 The remix must be materially different from the current textarea. If Elijah added new lines, rough thoughts, examples, corrections, or extra coaching points, those additions must visibly change the final answer. Do not return the same answer with tiny wording changes. Change the opening, structure, transitions, and action step so the new information is clearly integrated.
 
@@ -194,7 +198,10 @@ Also use web_fetch when a URL is pasted in the notes, and verify any specific na
 Player's question:
 "${question}"
 
-Elijah's current notes/draft to prioritize:
+Previous generated answer before Elijah edited it:
+${previousGeneratedDraft || '(No previous generated answer was provided.)'}
+
+Current edited textbox from Elijah. Compare this to the previous answer and prioritize what is new or different:
 ${context}
 
 Relevant Elijah knowledge-base context. Use only if it fits Elijah's notes:

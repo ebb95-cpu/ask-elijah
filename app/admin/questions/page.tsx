@@ -136,6 +136,7 @@ export default function AdminQuestionsPage() {
   const [researching, setResearching] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
+  const [lastGeneratedDraft, setLastGeneratedDraft] = useState('')
   const [approving, setApproving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Remix: takes whatever's currently in the answer textarea (original draft
@@ -257,6 +258,7 @@ export default function AdminQuestionsPage() {
       setItems((prev) => prev.filter((q) => q.id !== questionId))
       setOpenId(nextItem?.id ?? null)
       setDraft(nextItem?.answer || '')
+      setLastGeneratedDraft(nextItem?.answer || '')
       setSources([])
       setRemixNotice(null)
     } catch (e) {
@@ -285,6 +287,7 @@ export default function AdminQuestionsPage() {
         body: JSON.stringify({
           question: openItem.question,
           context: previousDraft,
+          originalDraft: lastGeneratedDraft,
           remixInstruction: preset ? getRemixInstruction(preset) : undefined,
         }),
       })
@@ -295,6 +298,7 @@ export default function AdminQuestionsPage() {
       const data = await res.json()
       if (!data.draft) throw new Error('Empty remix response')
       setDraft(data.draft)
+      setLastGeneratedDraft(data.draft)
       setSources(Array.isArray(data.sources) ? data.sources : [])
       const afterWords = getWordCount(data.draft)
       const changed = remixChangedEnough(previousDraft, data.draft)
@@ -329,6 +333,7 @@ export default function AdminQuestionsPage() {
       setItems((prev) => prev.filter((q) => q.id !== questionId))
       setOpenId(null)
       setDraft('')
+      setLastGeneratedDraft('')
       setSources([])
       setRemixNotice(null)
       setError(null)
@@ -365,7 +370,7 @@ export default function AdminQuestionsPage() {
     return (
       <div style={{ maxWidth: 1120, margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
         <button
-          onClick={() => { setOpenId(null); setDraft(''); setError(null); setSources([]); setRemixNotice(null) }}
+          onClick={() => { setOpenId(null); setDraft(''); setLastGeneratedDraft(''); setError(null); setSources([]); setRemixNotice(null) }}
           style={{
             background: 'none', border: '1px solid #333', borderRadius: 6,
             color: '#888', fontSize: 13, padding: '8px 16px', cursor: 'pointer',
@@ -740,6 +745,7 @@ export default function AdminQuestionsPage() {
                       onClick={() => {
                         setOpenId(nextFocus.id)
                         setDraft(nextFocus.answer || '')
+                        setLastGeneratedDraft(nextFocus.answer || '')
                         setError(null)
                         setSources([])
                         setRemixNotice(null)
@@ -771,6 +777,7 @@ export default function AdminQuestionsPage() {
                       onOpen={() => {
                         setOpenId(q.id)
                         setDraft(q.answer || '')
+                        setLastGeneratedDraft(q.answer || '')
                         setError(null)
                         setSources([])
                         setRemixNotice(null)
@@ -806,6 +813,7 @@ export default function AdminQuestionsPage() {
                         onOpen={() => {
                           setOpenId(q.id)
                           setDraft(q.answer || '')
+                          setLastGeneratedDraft(q.answer || '')
                           setError(null)
                           setSources([])
                           setRemixNotice(null)
@@ -835,6 +843,7 @@ export default function AdminQuestionsPage() {
                     onOpen={() => {
                       setOpenId(q.id)
                       setDraft(q.answer || '')
+                      setLastGeneratedDraft(q.answer || '')
                       setError(null)
                       setSources([])
                       setRemixNotice(null)
