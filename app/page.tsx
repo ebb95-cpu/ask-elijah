@@ -865,7 +865,7 @@ export default function HomePage() {
 
         <div className="w-full max-w-xl mt-6">
           <p className="mb-4 text-sm font-semibold text-gray-500">
-            Ask a question. Get one answer. Try one action today.
+            Ask a question. Get an answer. Apply it.
           </p>
           <div className="flex items-end gap-4 border-b border-gray-700 focus-within:border-gray-400 transition-colors pb-3">
             <div className="relative flex-1">
