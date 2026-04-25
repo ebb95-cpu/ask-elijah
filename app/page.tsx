@@ -798,19 +798,20 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-black">
       {showCommitment && (
-        <div className="fixed inset-0 z-[60] bg-black/85 px-5 flex items-center justify-center">
-          <div className="w-full max-w-md rounded-3xl border border-gray-800 bg-[#070707] p-6 text-left shadow-2xl">
-            <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.22em] text-gray-500">
+        <div className="fixed inset-0 z-[60] bg-black/90 px-5 flex items-center justify-center">
+          <div className="w-full max-w-lg border-l border-white/80 pl-6 pr-2 py-2 text-left">
+            <p className="mb-5 text-[10px] font-bold uppercase tracking-[0.28em] text-gray-500">
               Locker room standard
             </p>
-            <h3 className="mb-4 text-3xl font-bold leading-tight tracking-tight text-white">
-              Before you ask, be real.
+            <h3 className="mb-5 text-4xl font-bold leading-[0.95] tracking-tight text-white sm:text-5xl">
+              Do not ask for motivation.
+              <span className="block text-gray-500">Ask for the rep.</span>
             </h3>
-            <p className="mb-6 text-sm leading-relaxed text-gray-400">
-              This is for players who actually want to get better. Ask something you&apos;re willing to work on.
-              Elijah&apos;s answer will give you one thing to try. If you&apos;re not going to try it, don&apos;t waste the rep.
+            <p className="mb-8 max-w-md text-base leading-relaxed text-gray-400">
+              This is for players who are still trying. Ask something you&apos;re willing to work on today.
+              The answer will give you one move. Your job is to try it.
             </p>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 sm:max-w-sm">
               <button
                 onClick={() => handleSubmit(true)}
                 className="w-full rounded-full bg-white px-5 py-4 text-sm font-bold text-black hover:opacity-80 transition-opacity"
@@ -819,7 +820,7 @@ export default function HomePage() {
               </button>
               <button
                 onClick={() => setShowCommitment(false)}
-                className="w-full rounded-full border border-gray-800 px-5 py-3 text-sm font-semibold text-gray-500 hover:border-gray-600 hover:text-white transition-colors"
+                className="w-full px-5 py-3 text-sm font-semibold text-gray-600 hover:text-white transition-colors"
               >
                 Let me think first
               </button>
@@ -863,13 +864,25 @@ export default function HomePage() {
         </h2>
 
         <div className="w-full max-w-xl mt-6">
-          <div className="mb-5 rounded-2xl border border-gray-800 bg-[#070707] px-5 py-4 text-left">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">
-              Locker room standard
-            </p>
-            <p className="text-sm leading-relaxed text-gray-300">
-              This is for players who are still trying. Ask something real. Take the answer seriously. Try the rep.
-            </p>
+          <div className="mb-7 text-left">
+            <div className="mb-3 flex items-center gap-3">
+              <span className="h-px w-8 bg-white/70" />
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-500">
+                Locker room standard
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-3 border-y border-gray-900 py-4">
+              {[
+                ['01', 'Ask something real'],
+                ['02', 'Use the answer'],
+                ['03', 'Come back better'],
+              ].map(([num, text]) => (
+                <div key={num}>
+                  <p className="mb-1 text-[10px] font-bold text-gray-700">{num}</p>
+                  <p className="text-xs font-semibold leading-snug text-gray-300 sm:text-sm">{text}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="flex items-end gap-4 border-b border-gray-700 focus-within:border-gray-400 transition-colors pb-3">
