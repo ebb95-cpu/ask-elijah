@@ -5,6 +5,7 @@ import LoadingDots from '@/components/ui/LoadingDots'
 
 type AccessEntry = {
   id: string
+  waitlist_id: string | null
   email: string
   name: string | null
   challenge: string | null
@@ -12,6 +13,18 @@ type AccessEntry = {
   approved: boolean
   notified: boolean
   created_at: string
+  profile_created_at: string | null
+  position: string | null
+  level: string | null
+  question_count: number
+  pending_count: number
+  approved_count: number
+  skipped_count: number
+  feedback_up_count: number
+  feedback_down_count: number
+  last_question_at: string | null
+  last_answered_at: string | null
+  has_profile: boolean
 }
 
 export default function AdminAccessPage() {
@@ -24,6 +37,8 @@ export default function AdminAccessPage() {
 
   const approvedCount = useMemo(() => entries.filter((e) => e.approved).length, [entries])
   const waitingCount = entries.length - approvedCount
+  const totalQuestions = useMemo(() => entries.reduce((sum, entry) => sum + entry.question_count, 0), [entries])
+  const pendingQuestions = useMemo(() => entries.reduce((sum, entry) => sum + entry.pending_count, 0), [entries])
 
   async function loadEntries() {
     setLoading(true)
@@ -70,14 +85,20 @@ export default function AdminAccessPage() {
   async function setApproved(entry: AccessEntry, approved: boolean) {
     setEntries((prev) => prev.map((item) => (item.id === entry.id ? { ...item, approved } : item)))
     try {
-      const res = await fetch('/api/admin/access', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: entry.id, approved }),
-      })
+      const res = entry.waitlist_id
+        ? await fetch('/api/admin/access', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ waitlist_id: entry.waitlist_id, approved }),
+          })
+        : await fetch('/api/admin/access', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: entry.email, name: entry.name || '' }),
+          })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to update access')
-      setEntries((prev) => prev.map((item) => (item.id === entry.id ? data.entry : item)))
+      setEntries((prev) => prev.map((item) => (item.id === entry.id ? { ...item, ...data.entry } : item)))
     } catch (e) {
       setEntries((prev) => prev.map((item) => (item.id === entry.id ? entry : item)))
       setError(e instanceof Error ? e.message : 'Failed to update access')
@@ -100,6 +121,8 @@ export default function AdminAccessPage() {
           <div className="flex gap-3 text-sm">
             <Stat label="Approved" value={approvedCount} />
             <Stat label="Waiting" value={waitingCount} />
+            <Stat label="Questions" value={totalQuestions} />
+            <Stat label="Pending" value={pendingQuestions} />
           </div>
         </div>
 
@@ -133,9 +156,10 @@ export default function AdminAccessPage() {
         )}
 
         <div className="overflow-hidden rounded-2xl border border-gray-900">
-          <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-gray-900 bg-[#050505] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-600 sm:grid-cols-[1.2fr_0.7fr_0.6fr_auto]">
-            <span>Email</span>
-            <span className="hidden sm:block">Name</span>
+          <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-gray-900 bg-[#050505] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-600 sm:grid-cols-[1.25fr_0.65fr_0.7fr_0.8fr_auto]">
+            <span>Player</span>
+            <span className="hidden sm:block">Questions</span>
+            <span className="hidden sm:block">Feedback</span>
             <span className="hidden sm:block">Status</span>
             <span>Action</span>
           </div>
@@ -152,27 +176,57 @@ export default function AdminAccessPage() {
             entries.map((entry) => (
               <div
                 key={entry.id}
-                className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-gray-900 px-4 py-4 last:border-b-0 sm:grid-cols-[1.2fr_0.7fr_0.6fr_auto]"
+                className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-gray-900 px-4 py-4 last:border-b-0 sm:grid-cols-[1.25fr_0.65fr_0.7fr_0.8fr_auto]"
               >
                 <div>
-                  <p className="text-sm font-semibold text-white">{entry.email}</p>
+                  <p className="text-sm font-semibold text-white">{entry.name || entry.email}</p>
+                  <p className="mt-1 text-xs text-gray-600">{entry.email}</p>
+                  {(entry.position || entry.level) && (
+                    <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-gray-700">
+                      {[entry.position, entry.level].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
                   {entry.challenge && (
                     <p className="mt-1 line-clamp-1 text-xs text-gray-600">{entry.challenge}</p>
                   )}
                 </div>
-                <p className="hidden text-sm text-gray-500 sm:block">{entry.name || '-'}</p>
-                <p className={`hidden text-sm font-semibold sm:block ${entry.approved ? 'text-green-400' : 'text-yellow-400'}`}>
-                  {entry.approved ? 'Approved' : 'Waiting'}
-                </p>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-bold text-white">{entry.question_count}</p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    {entry.pending_count} pending · {entry.approved_count} answered
+                  </p>
+                  <p className="mt-1 text-xs text-gray-700">
+                    Last: {formatDate(entry.last_question_at)}
+                  </p>
+                </div>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-bold text-white">
+                    {entry.feedback_up_count} yes · {entry.feedback_down_count} no
+                  </p>
+                  <p className="mt-1 text-xs text-gray-700">
+                    Answered: {formatDate(entry.last_answered_at)}
+                  </p>
+                </div>
+                <div className="hidden sm:block">
+                  <p className={`text-sm font-semibold ${entry.approved ? 'text-green-400' : 'text-yellow-400'}`}>
+                    {entry.approved ? 'Approved' : 'Waiting'}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-700">
+                    {entry.has_profile ? 'Has profile' : entry.confirmed ? 'Confirmed' : 'No profile yet'}
+                  </p>
+                </div>
                 <button
                   onClick={() => setApproved(entry, !entry.approved)}
+                  disabled={entry.has_profile && !entry.waitlist_id}
                   className={`rounded-full border px-4 py-2 text-xs font-bold transition-colors ${
-                    entry.approved
+                    entry.has_profile && !entry.waitlist_id
+                      ? 'cursor-not-allowed border-gray-900 text-gray-700'
+                      : entry.approved
                       ? 'border-gray-800 text-gray-400 hover:border-red-900 hover:text-red-300'
                       : 'border-white bg-white text-black hover:opacity-80'
                   }`}
                 >
-                  {entry.approved ? 'Remove' : 'Approve'}
+                  {entry.has_profile && !entry.waitlist_id ? 'Existing' : entry.approved ? 'Remove' : 'Approve'}
                 </button>
               </div>
             ))
@@ -181,6 +235,11 @@ export default function AdminAccessPage() {
       </div>
     </main>
   )
+}
+
+function formatDate(value: string | null) {
+  if (!value) return '-'
+  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
