@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 import { verifyEmail } from '@/lib/email-verify'
 import { Resend } from 'resend'
+import { ACCESS_REQUIRED_MESSAGE, hasPlayerAccess } from '@/lib/access-gate'
 
 export async function POST(req: NextRequest) {
   const { email, password, firstName, challenge, weaknesses, strengths, age, position, skipEmailVerify } = await req.json()
@@ -17,6 +18,14 @@ export async function POST(req: NextRequest) {
   const cleanStrengths = typeof strengths === 'string' ? strengths.trim() : ''
   const cleanAge = typeof age === 'string' ? age.trim() : ''
   const cleanPosition = typeof position === 'string' ? position.trim() : ''
+
+  const hasAccess = await hasPlayerAccess(cleanEmail)
+  if (!hasAccess) {
+    return NextResponse.json(
+      { error: ACCESS_REQUIRED_MESSAGE, code: 'access_required' },
+      { status: 403 }
+    )
+  }
 
   // Verify email is deliverable before we create an account or send mail.
   // Protects Resend sender reputation from bouncing welcome emails to fake

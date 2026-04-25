@@ -2,6 +2,7 @@ import { escapeHtml } from '@/lib/escape-html'
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getSupabase } from '@/lib/supabase-server'
+import { ACCESS_REQUIRED_MESSAGE, hasPlayerAccess } from '@/lib/access-gate'
 import { Resend } from 'resend'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { checkLimit } from '@/lib/rate-limit'
@@ -744,6 +745,14 @@ export async function POST(req: NextRequest) {
     const cleanEmailEarly = email.trim().toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmailEarly)) {
       return NextResponse.json({ error: 'Enter a valid email' }, { status: 400 })
+    }
+
+    const hasAccess = await hasPlayerAccess(cleanEmailEarly)
+    if (!hasAccess) {
+      return NextResponse.json(
+        { error: ACCESS_REQUIRED_MESSAGE, code: 'access_required' },
+        { status: 403 }
+      )
     }
 
     // Throttle 2: Email-based — protect our API budget (10/day per email).

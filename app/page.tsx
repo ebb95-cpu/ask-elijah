@@ -485,6 +485,16 @@ export default function HomePage() {
           ...utm,
         }),
       })
+
+      if (!askRes.ok) {
+        const askData = await askRes.json().catch(() => null)
+        if (askData?.code === 'access_required') {
+          setEmailError(askData.error || "Access isn't open for this email yet.")
+          setEmailLoading(false)
+          return
+        }
+      }
+
       prevQuestionRef.current = question.trim()
       prevAnswerRef.current = fullAnswerRef.current
       userEmailRef.current = email.trim()

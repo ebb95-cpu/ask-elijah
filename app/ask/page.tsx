@@ -696,6 +696,13 @@ function AskPageInner() {
       const data = await res.json()
 
       if (!res.ok) {
+        if (data.code === 'access_required') {
+          setWaitlistEmail(userEmail)
+          setWaitlistName('')
+          setWaitlistChallenge(finalQuestion.slice(0, 160))
+          setMode('beta_full')
+          return
+        }
         setEmailError(data.error || 'Something went wrong.')
         setMode('email_gate')
         return
