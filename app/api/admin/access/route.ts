@@ -37,6 +37,19 @@ type FeedbackRow = {
   rating: string | null
 }
 
+type ReflectionRow = {
+  email: string | null
+  sentiment: string | null
+  created_at: string | null
+}
+
+type AdminNoteRow = {
+  email: string
+  note: string | null
+  high_value: boolean
+  updated_at: string | null
+}
+
 function cleanEmail(input: unknown): string {
   return typeof input === 'string' ? input.trim().toLowerCase() : ''
 }
@@ -52,6 +65,8 @@ export async function GET() {
     profilesResult,
     questionsResult,
     feedbackResult,
+    reflectionsResult,
+    adminNotesResult,
   ] = await Promise.all([
     supabase
     .from('waitlist')
@@ -73,6 +88,16 @@ export async function GET() {
       .from('answer_feedback')
       .select('email, rating')
       .not('email', 'is', null)
+      .limit(1000),
+    supabase
+      .from('reflections')
+      .select('email, sentiment, created_at')
+      .not('email', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1000),
+    supabase
+      .from('player_admin_notes')
+      .select('email, note, high_value, updated_at')
       .limit(1000),
   ])
 
@@ -101,6 +126,13 @@ export async function GET() {
     feedback_down_count: number
     last_question_at: string | null
     last_answered_at: string | null
+    reflection_count: number
+    positive_reflection_count: number
+    negative_reflection_count: number
+    last_reflection_at: string | null
+    admin_note: string | null
+    high_value: boolean
+    admin_note_updated_at: string | null
     has_profile: boolean
   }>()
 
@@ -129,6 +161,13 @@ export async function GET() {
         feedback_down_count: 0,
         last_question_at: null,
         last_answered_at: null,
+        reflection_count: 0,
+        positive_reflection_count: 0,
+        negative_reflection_count: 0,
+        last_reflection_at: null,
+        admin_note: null,
+        high_value: false,
+        admin_note_updated_at: null,
         has_profile: false,
       }
       byEmail.set(clean, entry)
@@ -183,6 +222,28 @@ export async function GET() {
     const entry = ensureEntry(row.email)
     if (row.rating === 'up') entry.feedback_up_count += 1
     if (row.rating === 'down') entry.feedback_down_count += 1
+  }
+
+  if (!reflectionsResult.error) {
+    for (const row of (reflectionsResult.data || []) as ReflectionRow[]) {
+      if (!row.email) continue
+      const entry = ensureEntry(row.email)
+      entry.reflection_count += 1
+      if (row.sentiment === 'positive') entry.positive_reflection_count += 1
+      if (row.sentiment === 'negative') entry.negative_reflection_count += 1
+      if (row.created_at && (!entry.last_reflection_at || row.created_at > entry.last_reflection_at)) {
+        entry.last_reflection_at = row.created_at
+      }
+    }
+  }
+
+  if (!adminNotesResult.error) {
+    for (const row of (adminNotesResult.data || []) as AdminNoteRow[]) {
+      const entry = ensureEntry(row.email)
+      entry.admin_note = row.note
+      entry.high_value = row.high_value
+      entry.admin_note_updated_at = row.updated_at
+    }
   }
 
   const entries = Array.from(byEmail.values()).sort((a, b) => {
@@ -242,6 +303,13 @@ export async function POST(req: NextRequest) {
       feedback_down_count: 0,
       last_question_at: null,
       last_answered_at: null,
+      reflection_count: 0,
+      positive_reflection_count: 0,
+      negative_reflection_count: 0,
+      last_reflection_at: null,
+      admin_note: null,
+      high_value: false,
+      admin_note_updated_at: null,
       has_profile: false,
     },
   })
@@ -258,6 +326,39 @@ export async function PATCH(req: NextRequest) {
       ? body.id
       : ''
   const approved = body.approved === true
+  const email = cleanEmail(body.email)
+
+  if (email && (Object.prototype.hasOwnProperty.call(body, 'admin_note') || Object.prototype.hasOwnProperty.call(body, 'high_value'))) {
+    const note = typeof body.admin_note === 'string' ? body.admin_note.trim() : null
+    const highValue = body.high_value === true
+
+    const { data, error } = await getSupabase()
+      .from('player_admin_notes')
+      .upsert(
+        {
+          email,
+          note: note || null,
+          high_value: highValue,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'email' }
+      )
+      .select('email, note, high_value, updated_at')
+      .single()
+
+    if (error || !data) {
+      return NextResponse.json({ error: 'Failed to update player note' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      entry: {
+        email: data.email,
+        admin_note: data.note,
+        high_value: data.high_value,
+        admin_note_updated_at: data.updated_at,
+      },
+    })
+  }
 
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
@@ -287,6 +388,13 @@ export async function PATCH(req: NextRequest) {
       feedback_down_count: 0,
       last_question_at: null,
       last_answered_at: null,
+      reflection_count: 0,
+      positive_reflection_count: 0,
+      negative_reflection_count: 0,
+      last_reflection_at: null,
+      admin_note: null,
+      high_value: false,
+      admin_note_updated_at: null,
       has_profile: false,
     },
   })

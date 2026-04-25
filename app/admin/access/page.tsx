@@ -24,6 +24,13 @@ type AccessEntry = {
   feedback_down_count: number
   last_question_at: string | null
   last_answered_at: string | null
+  reflection_count: number
+  positive_reflection_count: number
+  negative_reflection_count: number
+  last_reflection_at: string | null
+  admin_note: string | null
+  high_value: boolean
+  admin_note_updated_at: string | null
   has_profile: boolean
 }
 
@@ -33,6 +40,7 @@ export default function AdminAccessPage() {
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingNoteEmail, setSavingNoteEmail] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   const approvedCount = useMemo(() => entries.filter((e) => e.approved).length, [entries])
@@ -105,6 +113,53 @@ export default function AdminAccessPage() {
     }
   }
 
+  async function updatePlayerNote(entry: AccessEntry, updates: { admin_note?: string; high_value?: boolean }) {
+    const previous = entry
+    setSavingNoteEmail(entry.email)
+    setEntries((prev) =>
+      prev.map((item) =>
+        item.email === entry.email
+          ? {
+              ...item,
+              admin_note: updates.admin_note ?? item.admin_note,
+              high_value: updates.high_value ?? item.high_value,
+            }
+          : item
+      )
+    )
+
+    try {
+      const res = await fetch('/api/admin/access', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: entry.email,
+          admin_note: updates.admin_note ?? entry.admin_note ?? '',
+          high_value: updates.high_value ?? entry.high_value,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to update player note')
+      setEntries((prev) =>
+        prev.map((item) =>
+          item.email === entry.email
+            ? {
+                ...item,
+                admin_note: data.entry.admin_note,
+                high_value: data.entry.high_value,
+                admin_note_updated_at: data.entry.admin_note_updated_at,
+              }
+            : item
+        )
+      )
+    } catch (e) {
+      setEntries((prev) => prev.map((item) => (item.email === previous.email ? previous : item)))
+      setError(e instanceof Error ? e.message : 'Failed to update player note')
+    } finally {
+      setSavingNoteEmail(null)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-black px-6 py-12 text-white">
       <div className="mx-auto max-w-5xl">
@@ -156,10 +211,10 @@ export default function AdminAccessPage() {
         )}
 
         <div className="overflow-hidden rounded-2xl border border-gray-900">
-          <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-gray-900 bg-[#050505] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-600 sm:grid-cols-[1.25fr_0.65fr_0.7fr_0.8fr_auto]">
+          <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-gray-900 bg-[#050505] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-600 sm:grid-cols-[1.35fr_0.6fr_0.7fr_0.8fr_auto]">
             <span>Player</span>
             <span className="hidden sm:block">Questions</span>
-            <span className="hidden sm:block">Feedback</span>
+            <span className="hidden sm:block">Application</span>
             <span className="hidden sm:block">Status</span>
             <span>Action</span>
           </div>
@@ -176,10 +231,17 @@ export default function AdminAccessPage() {
             entries.map((entry) => (
               <div
                 key={entry.id}
-                className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-gray-900 px-4 py-4 last:border-b-0 sm:grid-cols-[1.25fr_0.65fr_0.7fr_0.8fr_auto]"
+                className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-gray-900 px-4 py-4 last:border-b-0 sm:grid-cols-[1.35fr_0.6fr_0.7fr_0.8fr_auto]"
               >
                 <div>
-                  <p className="text-sm font-semibold text-white">{entry.name || entry.email}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-white">{entry.name || entry.email}</p>
+                    {entry.high_value && (
+                      <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-yellow-300">
+                        High value
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-1 text-xs text-gray-600">{entry.email}</p>
                   {(entry.position || entry.level) && (
                     <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-gray-700">
@@ -188,6 +250,24 @@ export default function AdminAccessPage() {
                   )}
                   {entry.challenge && (
                     <p className="mt-1 line-clamp-1 text-xs text-gray-600">{entry.challenge}</p>
+                  )}
+                  <textarea
+                    value={entry.admin_note || ''}
+                    onChange={(e) => {
+                      const note = e.target.value
+                      setEntries((prev) =>
+                        prev.map((item) => (item.email === entry.email ? { ...item, admin_note: note } : item))
+                      )
+                    }}
+                    onBlur={(e) => {
+                      updatePlayerNote(entry, { admin_note: e.target.value })
+                    }}
+                    placeholder="Private note: serious parent, follow up, invite to beta..."
+                    rows={2}
+                    className="mt-3 w-full rounded-xl border border-gray-900 bg-black px-3 py-2 text-xs text-gray-300 outline-none placeholder:text-gray-800 focus:border-gray-700"
+                  />
+                  {savingNoteEmail === entry.email && (
+                    <p className="mt-1 text-[11px] text-gray-700">Saving note...</p>
                   )}
                 </div>
                 <div className="hidden sm:block">
@@ -204,7 +284,10 @@ export default function AdminAccessPage() {
                     {entry.feedback_up_count} yes · {entry.feedback_down_count} no
                   </p>
                   <p className="mt-1 text-xs text-gray-700">
-                    Answered: {formatDate(entry.last_answered_at)}
+                    {entry.reflection_count} reflected · {entry.positive_reflection_count} positive
+                  </p>
+                  <p className="mt-1 text-xs text-gray-700">
+                    Last reflection: {formatDate(entry.last_reflection_at)}
                   </p>
                 </div>
                 <div className="hidden sm:block">
@@ -214,6 +297,16 @@ export default function AdminAccessPage() {
                   <p className="mt-1 text-xs text-gray-700">
                     {entry.has_profile ? 'Has profile' : entry.confirmed ? 'Confirmed' : 'No profile yet'}
                   </p>
+                  <button
+                    onClick={() => updatePlayerNote(entry, { high_value: !entry.high_value })}
+                    className={`mt-3 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                      entry.high_value
+                        ? 'border-yellow-500/40 text-yellow-300 hover:border-gray-800 hover:text-gray-500'
+                        : 'border-gray-800 text-gray-500 hover:border-yellow-500/40 hover:text-yellow-300'
+                    }`}
+                  >
+                    {entry.high_value ? 'Marked valuable' : 'Mark high-value'}
+                  </button>
                 </div>
                 <button
                   onClick={() => setApproved(entry, !entry.approved)}
