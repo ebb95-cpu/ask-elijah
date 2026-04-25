@@ -864,19 +864,9 @@ export default function HomePage() {
         </h2>
 
         <div className="w-full max-w-xl mt-6">
-          <div className="mb-7 grid grid-cols-3 gap-2 text-left">
-            {[
-              ['1', 'Ask a question'],
-              ['2', 'Get an answer'],
-              ['3', 'Try one action today'],
-            ].map(([step, text]) => (
-              <div key={step} className="border-t border-gray-900 pt-3">
-                <p className="mb-1 text-[10px] font-bold text-gray-700">{step}</p>
-                <p className="text-xs font-bold leading-tight text-gray-300 sm:text-sm">{text}</p>
-              </div>
-            ))}
-          </div>
-
+          <p className="mb-4 text-sm font-semibold text-gray-500">
+            Ask a question. Get one answer. Try one action today.
+          </p>
           <div className="flex items-end gap-4 border-b border-gray-700 focus-within:border-gray-400 transition-colors pb-3">
             <div className="relative flex-1">
               {!question && (
