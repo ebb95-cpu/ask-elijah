@@ -823,6 +823,15 @@ export default function HomePage() {
         </h2>
 
         <div className="w-full max-w-xl mt-6">
+          <div className="mb-5 rounded-2xl border border-gray-800 bg-[#070707] px-5 py-4 text-left">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">
+              Locker room standard
+            </p>
+            <p className="text-sm leading-relaxed text-gray-300">
+              This is for players who are still trying. Ask something real. Take the answer seriously. Do the work.
+            </p>
+          </div>
+
           <div className="flex items-end gap-4 border-b border-gray-700 focus-within:border-gray-400 transition-colors pb-3">
             <div className="relative flex-1">
               {!question && (
