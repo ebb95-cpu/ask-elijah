@@ -9,6 +9,7 @@ import { logError } from '@/lib/log-error'
 import { sanitizeAnswerText } from '@/lib/answer-sanitize'
 import { getFreshnessInstruction, requiresFreshWeb } from '@/lib/freshness'
 import { getElijahPreferenceContext } from '@/lib/elijah-learning'
+import { savePlayerMemories } from '@/lib/player-memory'
 
 // Draft generation now uses web_search/web_fetch to ground mechanism claims
 // in real research. Search + weave adds 5–10s of latency per answer, so the
@@ -344,6 +345,14 @@ const BLOCKED = [
   /shut\s+up/i,
   /stupid|idiot|moron|loser|bum\b/i,
 ]
+
+const DAILY_LIMIT_MESSAGE = "Okay, I've answered enough of your questions for today. Time for you to go do some work. Come back tomorrow and tell me how it went."
+
+function todayStartIso() {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d.toISOString()
+}
 
 async function detectLanguage(text: string): Promise<{ language: string; englishTranslation: string | null }> {
   try {
@@ -743,15 +752,28 @@ export async function POST(req: NextRequest) {
     const emailLimit = await checkLimit('rl:ask:email', cleanEmailEarly, 10, '1 d')
     if (!emailLimit.success) {
       return NextResponse.json(
-        { error: "You've hit today's limit. Come back tomorrow — Elijah will still be here." },
+        { error: DAILY_LIMIT_MESSAGE },
         { status: 429 }
       )
     }
 
+    // Database fallback/backup: Redis is fail-open by design, so enforce the
+    // same daily cap against questions already saved today. This keeps API
+    // cost protected even if Upstash is missing or temporarily unavailable.
+    const supabaseLimitCheck = getSupabase()
+    const { count: todayCount } = await supabaseLimitCheck
+      .from('questions')
+      .select('id', { count: 'exact', head: true })
+      .eq('email', cleanEmailEarly)
+      .gte('created_at', todayStartIso())
+      .is('deleted_at', null)
+    if ((todayCount || 0) >= 10) {
+      return NextResponse.json({ error: DAILY_LIMIT_MESSAGE }, { status: 429 })
+    }
+
     // Duplicate submission guard — same email within 2 minutes
-    const supabaseCheck = getSupabase()
     const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString()
-    const { data: recentQ } = await supabaseCheck
+    const { data: recentQ } = await supabaseLimitCheck
       .from('questions')
       .select('id')
       .eq('email', cleanEmailEarly)
@@ -867,11 +889,8 @@ export async function POST(req: NextRequest) {
       // Fire-and-forget memory extraction
       extractMemories(question).then(memories => {
         if (memories.length && record?.id) {
-          fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'}/api/memories`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: cleanEmailEarly, memories, source_question_id: record.id }),
-          }).catch((e) => logError('ask:memories-post', e, { questionId: record.id }))
+          savePlayerMemories(cleanEmailEarly, memories, record.id)
+            .catch((e) => logError('ask:memories-save', e, { questionId: record.id }))
         }
       }).catch((e) => logError('ask:extract-memories', e, { email: cleanEmailEarly }))
       // Fire-and-forget founding-member check for new profiles
@@ -1033,11 +1052,8 @@ export async function POST(req: NextRequest) {
     if (questionId) {
       extractMemories(question).then(memories => {
         if (memories.length) {
-          fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'}/api/memories`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: cleanEmailEarly, memories, source_question_id: questionId }),
-          }).catch((e) => logError('ask:memories-post', e, { questionId }))
+          savePlayerMemories(cleanEmailEarly, memories, questionId)
+            .catch((e) => logError('ask:memories-save', e, { questionId }))
         }
       }).catch((e) => logError('ask:extract-memories', e, { email: cleanEmailEarly }))
     }

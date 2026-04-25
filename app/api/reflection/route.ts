@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 import Anthropic from '@anthropic-ai/sdk'
+import { requireAuthorizedEmail } from '@/lib/session-email'
 
 function getAnthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -68,14 +69,31 @@ async function boostInPinecone(questionId: string, question: string, answer: str
 
 export async function POST(req: NextRequest) {
   try {
+    const authorized = await requireAuthorizedEmail(req)
+    if (authorized instanceof NextResponse) return authorized
+
     const { email, question_id, text } = await req.json()
-    if (!email || !text?.trim()) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    if (email && email.trim().toLowerCase() !== authorized) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    if (!text?.trim()) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
     const supabase = getSupabase()
 
+    if (question_id) {
+      const { data: owned } = await supabase
+        .from('questions')
+        .select('id')
+        .eq('id', question_id)
+        .eq('email', authorized)
+        .limit(1)
+        .single()
+      if (!owned) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     // Save reflection first (fast path)
     await supabase.from('reflections').insert({
-      email: email.trim().toLowerCase(),
+      email: authorized,
       question_id: question_id || null,
       text: text.trim(),
     })
@@ -89,7 +107,7 @@ export async function POST(req: NextRequest) {
         await supabase
           .from('reflections')
           .update({ sentiment })
-          .eq('email', email.trim().toLowerCase())
+          .eq('email', authorized)
           .eq('text', text.trim())
 
         if (sentiment === 'positive' && question_id) {

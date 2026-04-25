@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
+import { requireAuthorizedEmail } from '@/lib/session-email'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const email = req.nextUrl.searchParams.get('email')
-  if (!email) return NextResponse.json({ entries: [] })
+  const authorized = await requireAuthorizedEmail(req)
+  if (authorized instanceof NextResponse) return authorized
+  const requested = req.nextUrl.searchParams.get('email')?.trim().toLowerCase()
+  if (requested && requested !== authorized) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const supabase = getSupabase()
 
@@ -13,7 +18,7 @@ export async function GET(req: NextRequest) {
   const { data: questions } = await supabase
     .from('questions')
     .select('id, question, answer, action_steps, created_at, updated_at')
-    .eq('email', email.toLowerCase())
+    .eq('email', authorized)
     .eq('status', 'approved')
     .order('updated_at', { ascending: false })
     .limit(20)

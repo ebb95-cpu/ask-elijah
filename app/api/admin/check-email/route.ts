@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { checkLimit } from '@/lib/rate-limit'
 
 /**
  * Called by the pre-login /sign-in flow to decide whether to show a password
@@ -15,6 +16,10 @@ import { NextRequest, NextResponse } from 'next/server'
  * which an attacker could already infer by observing different UI paths.
  */
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
+  const limit = await checkLimit('rl:admin-check-email', ip, 20, '1 h')
+  if (!limit.success) return NextResponse.json({ isAdmin: false }, { status: 429 })
+
   const { email } = await req.json()
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase() ?? ''
   const incoming = email?.trim().toLowerCase() ?? ''
