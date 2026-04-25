@@ -148,27 +148,30 @@ export async function POST(req: NextRequest) {
 
   if (unauthorized) return unauthorized
 
-  const { question, context, originalDraft, remixInstruction } = await req.json()
-  if (!question || !context) {
-    return NextResponse.json({ error: 'question and context required' }, { status: 400 })
+  const { question, context, originalDraft, adminNotes, remixInstruction } = await req.json()
+  if (!question || (!context && !adminNotes)) {
+    return NextResponse.json({ error: 'question and answer context or admin notes required' }, { status: 400 })
   }
   const previousGeneratedDraft = typeof originalDraft === 'string' ? originalDraft.trim() : ''
+  const currentAnswerDraft = typeof context === 'string' ? context.trim() : ''
+  const adminInstructions = typeof adminNotes === 'string' ? adminNotes.trim() : ''
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   const isShorterRemix = typeof remixInstruction === 'string' && remixInstruction.toLowerCase().includes('shorter')
-  const kb = await searchKnowledgeBase(`${question}\n\n${context}`.slice(0, 4000))
+  const kb = await searchKnowledgeBase(`${question}\n\n${adminInstructions}\n\n${currentAnswerDraft}`.slice(0, 4000))
 
   const prompt = `Write a completely new answer from scratch to this player's question.
 
 Priority order:
-1. Elijah's NEW or CHANGED information in the current edited textbox is the source of truth. It beats the old draft, the knowledge base, and web research.
-2. The previous generated draft is only reference material so you can see what changed. Do not copy it.
-3. Elijah's knowledge-base context can support, clarify, or sharpen the answer only when it clearly connects to Elijah's new/changed information.
-4. Web research is only for fact-checking, neuroscience/psychology/sports-psychology grounding, and avoiding inaccurate mechanism claims.
+1. Elijah's private remix instructions are the source of truth. They beat the old answer draft, the knowledge base, and web research.
+2. Elijah's NEW or CHANGED information in the current answer draft is also source-of-truth material.
+3. The previous generated draft is only reference material so you can see what changed. Do not copy it.
+4. Elijah's knowledge-base context can support, clarify, or sharpen the answer only when it clearly connects to Elijah's current instructions or edits.
+5. Web research is only for fact-checking, neuroscience/psychology/sports-psychology grounding, and avoiding inaccurate mechanism claims.
 
-Your first job is to compare the previous generated draft against the current edited textbox. Identify what Elijah added, removed, corrected, emphasized, or changed. Build the new answer around that new/different information.
+Your first job is to read Elijah's private remix instructions. If he gave instructions, they must visibly change the answer. Then compare the previous generated draft against the current answer draft. Identify what Elijah added, removed, corrected, emphasized, or changed. Build the new answer around those instructions and new/different information.
 
-If the knowledge base does not intertwine with Elijah's new/changed information, leave it out. Do not force it in. Do not replace Elijah's opinion with generic sports psychology. If web research contradicts a mechanism claim, rewrite the mechanism so it is accurate while keeping Elijah's core point.
+If the knowledge base does not intertwine with Elijah's instructions or new/changed information, leave it out. Do not force it in. Do not replace Elijah's opinion with generic sports psychology. If web research contradicts a mechanism claim, rewrite the mechanism so it is accurate while keeping Elijah's core point.
 
 Every remix must follow this answer standard:
 1. What the player is feeling.
@@ -178,9 +181,9 @@ Every remix must follow this answer standard:
 
 Make the psychology easy enough for a young kid to understand, but make the reasoning credible enough that a parent, coach, or sports psych person would respect it.
 
-Use the current edited textbox below as raw material only. It may contain a previous draft, notes Elijah jotted in, or a mix of both. Do NOT preserve the old wording, paragraph order, opening, or ending. Imagine the textarea was deleted and you are writing a brand-new answer from a blank page using Elijah's new/different information as the spine.
+Use the current answer draft below as raw material only. It may contain a previous draft, notes Elijah jotted in, or a mix of both. Do NOT preserve the old wording, paragraph order, opening, or ending. Imagine the textarea was deleted and you are writing a brand-new answer from a blank page using Elijah's private instructions and new/different information as the spine.
 
-The remix must be materially different from the current textarea. If Elijah added new lines, rough thoughts, examples, corrections, or extra coaching points, those additions must visibly change the final answer. Do not return the same answer with tiny wording changes. Change the opening, structure, transitions, and action step so the new information is clearly integrated.
+The remix must be materially different from the current answer draft. If Elijah wrote private remix instructions, added new lines, rough thoughts, examples, corrections, or extra coaching points, those additions must visibly change the final answer. Do not return the same answer with tiny wording changes. Change the opening, structure, transitions, and action step so the new information is clearly integrated.
 
 CRITICAL: Return only the words Elijah would say to the player. Never include behind-the-scenes narration, research process, preambles, markdown separators, or model language. Do not write phrases like "Alright, I've got solid research backing," "let me weave this together," "here's the answer," "I researched," "as an AI," "LLM," or anything that sounds like ChatGPT talking. Start directly with the answer to the player.
 
@@ -201,8 +204,11 @@ Player's question:
 Previous generated answer before Elijah edited it:
 ${previousGeneratedDraft || '(No previous generated answer was provided.)'}
 
-Current edited textbox from Elijah. Compare this to the previous answer and prioritize what is new or different:
-${context}
+Private remix instructions from Elijah. These are NOT player-facing, but they are the highest priority:
+${adminInstructions || '(No private remix instructions were provided.)'}
+
+Current answer draft. Compare this to the previous answer and prioritize what is new or different:
+${currentAnswerDraft || '(No current answer draft was provided.)'}
 
 Relevant Elijah knowledge-base context. Use only if it fits Elijah's notes:
 ${kb.context || '(No relevant knowledge-base context found.)'}
@@ -243,7 +249,7 @@ Write the full answer from scratch now:`
   // tool results that we harvest for sources.
   const textBlocks = res.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
   let newDraft = sanitizeAnswerText(textBlocks.map((b) => b.text).join('\n\n'))
-  if (isTooSimilar(context, newDraft)) {
+  if (isTooSimilar(currentAnswerDraft, newDraft)) {
     try {
       const forced = await anthropic.messages.create({
         model: 'claude-sonnet-4-5',
@@ -255,7 +261,8 @@ Write the full answer from scratch now:`
 
 Rules:
 - Keep Elijah's meaning and voice.
-- Integrate any added notes, corrections, examples, or rough thoughts from the textarea.
+- Integrate Elijah's private remix instructions.
+- Integrate any added notes, corrections, examples, or rough thoughts from the answer draft.
 - Change the opening, structure, and action step.
 - Add at least one sentence that was not in the previous answer.
 - Remove or rephrase at least one sentence from the previous answer.
@@ -265,8 +272,11 @@ Rules:
 Player's question:
 "${question}"
 
-Current textarea that must be transformed:
-${context}`,
+Private remix instructions from Elijah:
+${adminInstructions || '(No private remix instructions were provided.)'}
+
+Current answer draft that must be transformed:
+${currentAnswerDraft}`,
         }],
       })
       const forcedText = forced.content

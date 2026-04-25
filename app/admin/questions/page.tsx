@@ -137,11 +137,11 @@ export default function AdminQuestionsPage() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [lastGeneratedDraft, setLastGeneratedDraft] = useState('')
+  const [remixNotes, setRemixNotes] = useState('')
   const [approving, setApproving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Remix: takes whatever's currently in the answer textarea (original draft
-  // plus whatever notes the admin inlined) and regenerates a fresh, cohesive
-  // answer from it via /api/admin/regenerate-draft.
+  // Remix uses the answer draft plus private Elijah notes, then writes a
+  // fresh player-facing answer without exposing those notes to the player.
   const [remixing, setRemixing] = useState(false)
   // Sources the LLM consulted via web_search / web_fetch when remixing.
   // Rendered under the draft so admin can verify quotes before approving.
@@ -173,6 +173,7 @@ export default function AdminQuestionsPage() {
   useEffect(() => {
     load(filter === 'answered' ? 'answered' : filter)
     setOpenId(null)
+    setRemixNotes('')
     setRemixNotice(null)
   }, [filter, load])
 
@@ -259,6 +260,7 @@ export default function AdminQuestionsPage() {
       setOpenId(nextItem?.id ?? null)
       setDraft(nextItem?.answer || '')
       setLastGeneratedDraft(nextItem?.answer || '')
+      setRemixNotes('')
       setSources([])
       setRemixNotice(null)
     } catch (e) {
@@ -288,6 +290,7 @@ export default function AdminQuestionsPage() {
           question: openItem.question,
           context: previousDraft,
           originalDraft: lastGeneratedDraft,
+          adminNotes: remixNotes,
           remixInstruction: preset ? getRemixInstruction(preset) : undefined,
         }),
       })
@@ -299,6 +302,7 @@ export default function AdminQuestionsPage() {
       if (!data.draft) throw new Error('Empty remix response')
       setDraft(data.draft)
       setLastGeneratedDraft(data.draft)
+      setRemixNotes('')
       setSources(Array.isArray(data.sources) ? data.sources : [])
       const afterWords = getWordCount(data.draft)
       const changed = remixChangedEnough(previousDraft, data.draft)
@@ -334,6 +338,7 @@ export default function AdminQuestionsPage() {
       setOpenId(null)
       setDraft('')
       setLastGeneratedDraft('')
+      setRemixNotes('')
       setSources([])
       setRemixNotice(null)
       setError(null)
@@ -370,7 +375,7 @@ export default function AdminQuestionsPage() {
     return (
       <div style={{ maxWidth: 1120, margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
         <button
-          onClick={() => { setOpenId(null); setDraft(''); setLastGeneratedDraft(''); setError(null); setSources([]); setRemixNotice(null) }}
+          onClick={() => { setOpenId(null); setDraft(''); setLastGeneratedDraft(''); setRemixNotes(''); setError(null); setSources([]); setRemixNotice(null) }}
           style={{
             background: 'none', border: '1px solid #333', borderRadius: 6,
             color: '#888', fontSize: 13, padding: '8px 16px', cursor: 'pointer',
@@ -453,6 +458,51 @@ export default function AdminQuestionsPage() {
                     : 'Remix completed, but the answer looked the same. Add a direct note like "include this exact point..." and remix again.'}
                 </p>
               )}
+            </div>
+
+            <div style={{
+              background: '#050505',
+              border: remixNotes.trim() ? '1px solid #2a3d22' : '1px solid #1f1f1f',
+              borderRadius: 12,
+              marginBottom: 16,
+              padding: 14,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                <p style={{ color: '#9ca3af', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em', margin: 0, textTransform: 'uppercase' }}>
+                  What to add or change
+                </p>
+                <span style={{ color: '#555', fontSize: 11, fontWeight: 700 }}>
+                  Private remix instructions
+                </span>
+              </div>
+              <textarea
+                value={remixNotes}
+                onChange={(e) => {
+                  setRemixNotes(e.target.value)
+                  if (error) setError(null)
+                  if (remixNotice) setRemixNotice(null)
+                }}
+                rows={4}
+                placeholder="Example: Add my point about choosing 3 game cues. Make the action step specific. Remove the part about visualization."
+                disabled={remixing}
+                style={{
+                  width: '100%',
+                  background: '#090909',
+                  border: '1px solid #262626',
+                  borderRadius: 10,
+                  boxSizing: 'border-box',
+                  color: '#fff',
+                  fontFamily: '-apple-system, sans-serif',
+                  fontSize: 14,
+                  lineHeight: 1.55,
+                  outline: 'none',
+                  padding: 12,
+                  resize: 'vertical',
+                }}
+              />
+              <p style={{ color: '#666', fontSize: 12, lineHeight: 1.45, margin: '8px 0 0' }}>
+                These notes guide Remix only. They will not be sent to the player.
+              </p>
             </div>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
@@ -746,6 +796,7 @@ export default function AdminQuestionsPage() {
                         setOpenId(nextFocus.id)
                         setDraft(nextFocus.answer || '')
                         setLastGeneratedDraft(nextFocus.answer || '')
+                        setRemixNotes('')
                         setError(null)
                         setSources([])
                         setRemixNotice(null)
@@ -778,6 +829,7 @@ export default function AdminQuestionsPage() {
                         setOpenId(q.id)
                         setDraft(q.answer || '')
                         setLastGeneratedDraft(q.answer || '')
+                        setRemixNotes('')
                         setError(null)
                         setSources([])
                         setRemixNotice(null)
@@ -814,6 +866,7 @@ export default function AdminQuestionsPage() {
                           setOpenId(q.id)
                           setDraft(q.answer || '')
                           setLastGeneratedDraft(q.answer || '')
+                          setRemixNotes('')
                           setError(null)
                           setSources([])
                           setRemixNotice(null)
@@ -844,6 +897,7 @@ export default function AdminQuestionsPage() {
                       setOpenId(q.id)
                       setDraft(q.answer || '')
                       setLastGeneratedDraft(q.answer || '')
+                      setRemixNotes('')
                       setError(null)
                       setSources([])
                       setRemixNotice(null)
