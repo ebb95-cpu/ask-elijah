@@ -4,6 +4,7 @@ import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { checkLimit } from '@/lib/rate-limit'
 import { logError } from '@/lib/log-error'
 import { sanitizeAnswerText } from '@/lib/answer-sanitize'
+import { getFreshnessInstruction } from '@/lib/freshness'
 
 // Web search adds latency; give serverless enough headroom.
 export const maxDuration = 60
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
   if (!question || !context) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
+  const freshnessInstruction = getFreshnessInstruction(`${question}\n${context}`)
 
   const prompt = `The original question was: "${question}"
 
@@ -71,6 +73,7 @@ ${draft}
 
 Elijah has added his own real thoughts, stories, or corrections:
 ${context}
+${freshnessInstruction}
 
 Rewrite the final answer weaving Elijah's additions into the draft. Follow this structure every time:
 1. Open by naming the exact pain or feeling they have — make them feel heard immediately

@@ -4,6 +4,7 @@ import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { requireAdmin } from '@/lib/admin-auth'
 import { sanitizeAnswerText } from '@/lib/answer-sanitize'
 import { logError } from '@/lib/log-error'
+import { getFreshnessInstruction } from '@/lib/freshness'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -160,6 +161,7 @@ export async function POST(req: NextRequest) {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   const isShorterRemix = typeof remixInstruction === 'string' && remixInstruction.toLowerCase().includes('shorter')
   const kb = await searchKnowledgeBase(`${question}\n\n${adminInstructions}\n\n${currentAnswerDraft}`.slice(0, 4000))
+  const freshnessInstruction = getFreshnessInstruction(`${question}\n${adminInstructions}\n${currentAnswerDraft}`)
 
   const prompt = `Write a completely new answer from scratch to this player's question.
 
@@ -198,6 +200,7 @@ You have web_search and web_fetch. USE THEM proactively. Before stating any mech
 Ground the answer in real neuroscience, psychology, sports psychology, physiology, or performance research when a mechanism is being explained. But the voice always wins. Never say "studies show" or use footnote-style citations inside the answer. Phrase research in first-person Elijah voice: "the reason this works is your nervous system..." or "I read something from a Stanford lab that said...". The science makes the mechanism credible; Elijah's voice keeps it human. Make it simple, not simplistic. Weave, don't stack.
 
 Also use web_fetch when a URL is pasted in the notes, and verify any specific name, quote, or stat before putting it in Elijah's mouth.
+${freshnessInstruction}
 
 Player's question:
 "${question}"

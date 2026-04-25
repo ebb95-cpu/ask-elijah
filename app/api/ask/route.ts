@@ -7,6 +7,7 @@ import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { checkLimit } from '@/lib/rate-limit'
 import { logError } from '@/lib/log-error'
 import { sanitizeAnswerText } from '@/lib/answer-sanitize'
+import { getFreshnessInstruction, requiresFreshWeb } from '@/lib/freshness'
 
 // Draft generation now uses web_search/web_fetch to ground mechanism claims
 // in real research. Search + weave adds 5–10s of latency per answer, so the
@@ -848,10 +849,11 @@ export async function POST(req: NextRequest) {
     }
 
     const levelSnapshot = await levelPromise
+    const needsFreshWeb = requiresFreshWeb(question)
 
     // If no relevant chunks and no preview answer, use fallback
     const FALLBACK = "I want to make sure I give you something real on this one. Try asking me again with a bit more detail about your situation and I'll find the right angle."
-    if (!hasChunks && !previewAnswer?.trim()) {
+    if (!hasChunks && !previewAnswer?.trim() && !needsFreshWeb) {
       const supabase = getSupabase()
       const { data: record } = await supabase
         .from('questions')
@@ -888,14 +890,15 @@ export async function POST(req: NextRequest) {
       ? `CONTEXT ABOUT THIS PLAYER — use this to personalize your answer:\n${playerContext}\n\n---\n\n`
       : ''
 
+    const freshnessInstruction = getFreshnessInstruction(question)
     const preamble = modePreamble(mode, askerType)
     const voiceAnchors = await getVoiceAnchors(topic)
-    const userMessage = `${preamble}${voiceAnchors}${playerContextBlock}${ragContext}Now answer this question using the above context where relevant:\n\n${question}\n\nEvery answer must follow this standard: name what the player is feeling, explain why it happens in simple psychology/body language, connect it to Elijah's credible pro perspective, and end with a clear action plan they can do today. Keep the science simple enough for a young kid to understand but credible enough that it is clearly grounded.\n\nReturn only the words Elijah would say to the player. No preamble, no research-process narration, no "let me weave this together," no "here's the answer," no ChatGPT/LLM language. Start directly with the answer.`
+    const userMessage = `${preamble}${voiceAnchors}${playerContextBlock}${ragContext}Now answer this question using the above context where relevant:\n\n${question}${freshnessInstruction}\n\nEvery answer must follow this standard: name what the player is feeling, explain why it happens in simple psychology/body language, connect it to Elijah's credible pro perspective, and end with a clear action plan they can do today. Keep the science simple enough for a young kid to understand but credible enough that it is clearly grounded.\n\nReturn only the words Elijah would say to the player. No preamble, no research-process narration, no "let me weave this together," no "here's the answer," no ChatGPT/LLM language. Start directly with the answer.`
 
     // Use preview answer if already generated on the frontend, otherwise generate fresh
     let draft = ''
     let webSources: WebSource[] = []
-    if (previewAnswer?.trim()) {
+    if (previewAnswer?.trim() && !needsFreshWeb) {
       draft = previewAnswer.trim()
     } else {
       const generate = async (extraInstructions: string): Promise<{ text: string; webSources: WebSource[] }> => {

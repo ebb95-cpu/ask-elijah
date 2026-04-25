@@ -4,6 +4,7 @@ import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { logError } from '@/lib/log-error'
 import { requireAdmin } from '@/lib/admin-auth'
 import { sanitizeAnswerText } from '@/lib/answer-sanitize'
+import { getFreshnessInstruction } from '@/lib/freshness'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -178,6 +179,7 @@ Keep each pushback under 20 words, in the player's voice, specific to what they 
     const pushbackSection = pushbacks.length > 0
       ? `\n\nBEFORE WRITING, anticipate the player's pushback. They will be thinking:\n${pushbacks.map((p) => `- "${p}"`).join('\n')}\n\nWrite the answer in a way that preemptively addresses each of those without calling them out explicitly. The player should feel like you already thought of everything they might object to.`
       : ''
+    const freshnessInstruction = getFreshnessInstruction(`${question}\n${draft}\n${notes || ''}\n${convoText}`)
 
     const finalPrompt = `Write a completely new polished answer to the player's question. Weave in Elijah's notes AND everything he said during the refinement conversation. Do not reference the old draft, do not append — produce ONE cohesive final answer as if you knew all this from the start. Structure: pain → simple science-backed mechanism → Elijah's pro perspective → one concrete action plan today.
 
@@ -186,6 +188,7 @@ You have web_search and web_fetch. USE THEM proactively. Before you state any me
 But never read like a research paper. Elijah's voice wins every time. Weave the science into first-person phrasing — "the reason this works is your nervous system actually..." or "I read something from a Stanford lab that said...". Never "studies show" or footnote-style citations in the body. The research makes the mechanism credible; the voice keeps it human. Make the psychology easy enough for a young kid to understand, but credible enough for a coach or sports psych person to respect.
 
 Also use web_fetch when a URL is present in the notes, and verify any specific name, quote, or stat before you put it in Elijah's mouth.
+${freshnessInstruction}
 
 CRITICAL: Return only the words Elijah would say to the player. Never include behind-the-scenes narration, research process, markdown separators, or model language. Do not write phrases like "Alright, I've got solid research backing," "let me weave this together," "here's the answer," "I researched," "as an AI," "LLM," or anything that sounds like ChatGPT talking. Start directly with the answer to the player.
 
