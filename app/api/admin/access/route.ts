@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Resend } from 'resend'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getSupabase } from '@/lib/supabase-server'
 
@@ -52,6 +53,72 @@ type AdminNoteRow = {
 
 function cleanEmail(input: unknown): string {
   return typeof input === 'string' ? input.trim().toLowerCase() : ''
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+async function sendAccessInviteEmail(args: { email: string; name?: string | null }) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
+  const firstName = args.name?.trim().split(' ')[0] || 'You'
+  const signUpUrl = `${siteUrl}/sign-up?email=${encodeURIComponent(args.email)}`
+
+  await new Resend(process.env.RESEND_API_KEY).emails.send({
+    from: 'Elijah Bryant <elijah@elijahbryant.pro>',
+    to: args.email,
+    subject: "You're in.",
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+</head>
+<body style="margin:0;padding:0;background-color:#000000;" bgcolor="#000000">
+  <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#000000" style="background-color:#000000;">
+    <tr><td align="center" bgcolor="#000000" style="background-color:#000000;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
+
+          <p style="text-align:center;margin:0 0 48px;line-height:0;">
+            <img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:inline-block;border:0;width:52px;height:8px;" />
+          </p>
+
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">You're in,</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">${escapeHtml(firstName)}.</p>
+
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
+            Ask the question you've been sitting on. I'll send back one answer you can actually use.
+          </p>
+
+          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
+            <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0;font-family:-apple-system,sans-serif;">
+              Ask. Elijah answers. Apply it.
+            </p>
+          </div>
+
+          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
+            <a href="${signUpUrl}" style="color:#777777;text-decoration:none;">Set up my locker room →</a>
+          </p>
+
+          <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
+          <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
+
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  })
 }
 
 export async function GET() {
@@ -268,8 +335,10 @@ export async function POST(req: NextRequest) {
 
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   const challenge = typeof body.challenge === 'string' ? body.challenge.trim() : ''
+  const shouldSendInvite = body.sendInvite === true
 
-  const { data, error } = await getSupabase()
+  const supabase = getSupabase()
+  const { data, error } = await supabase
     .from('waitlist')
     .upsert(
       {
@@ -288,9 +357,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to approve email' }, { status: 500 })
   }
 
+  let notified = data.notified
+  let inviteError: string | null = null
+  if (shouldSendInvite) {
+    try {
+      await sendAccessInviteEmail({ email, name: name || data.name })
+      notified = true
+      await supabase.from('waitlist').update({ notified: true }).eq('id', data.id)
+    } catch {
+      inviteError = 'Approved, but the invite email failed to send.'
+    }
+  }
+
   return NextResponse.json({
     entry: {
       ...data,
+      notified,
       waitlist_id: data.id,
       profile_created_at: null,
       position: null,
@@ -312,6 +394,8 @@ export async function POST(req: NextRequest) {
       admin_note_updated_at: null,
       has_profile: false,
     },
+    invite_sent: shouldSendInvite && !inviteError,
+    invite_error: inviteError,
   })
 }
 
@@ -327,6 +411,7 @@ export async function PATCH(req: NextRequest) {
       : ''
   const approved = body.approved === true
   const email = cleanEmail(body.email)
+  const shouldSendInvite = body.sendInvite === true
 
   if (email && (Object.prototype.hasOwnProperty.call(body, 'admin_note') || Object.prototype.hasOwnProperty.call(body, 'high_value'))) {
     const note = typeof body.admin_note === 'string' ? body.admin_note.trim() : null
@@ -362,7 +447,8 @@ export async function PATCH(req: NextRequest) {
 
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-  const { data, error } = await getSupabase()
+  const supabase = getSupabase()
+  const { data, error } = await supabase
     .from('waitlist')
     .update({ approved })
     .eq('id', id)
@@ -373,9 +459,22 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to update access' }, { status: 500 })
   }
 
+  let notified = data.notified
+  let inviteError: string | null = null
+  if (shouldSendInvite) {
+    try {
+      await sendAccessInviteEmail({ email: data.email, name: data.name })
+      notified = true
+      await supabase.from('waitlist').update({ notified: true }).eq('id', data.id)
+    } catch {
+      inviteError = 'Access updated, but the invite email failed to send.'
+    }
+  }
+
   return NextResponse.json({
     entry: {
       ...data,
+      notified,
       waitlist_id: data.id,
       profile_created_at: null,
       position: null,
@@ -397,5 +496,7 @@ export async function PATCH(req: NextRequest) {
       admin_note_updated_at: null,
       has_profile: false,
     },
+    invite_sent: shouldSendInvite && !inviteError,
+    invite_error: inviteError,
   })
 }

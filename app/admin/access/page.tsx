@@ -38,10 +38,13 @@ export default function AdminAccessPage() {
   const [entries, setEntries] = useState<AccessEntry[]>([])
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const [sendInviteOnAdd, setSendInviteOnAdd] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [savingNoteEmail, setSavingNoteEmail] = useState<string | null>(null)
+  const [sendingInviteEmail, setSendingInviteEmail] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
   const approvedCount = useMemo(() => entries.filter((e) => e.approved).length, [entries])
   const waitingCount = entries.length - approvedCount
@@ -72,15 +75,17 @@ export default function AdminAccessPage() {
     if (!email.trim()) return
     setSaving(true)
     setError('')
+    setNotice('')
     try {
       const res = await fetch('/api/admin/access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ email, name, sendInvite: sendInviteOnAdd }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to approve email')
       setEntries((prev) => [data.entry, ...prev.filter((entry) => entry.id !== data.entry.id)])
+      setNotice(data.invite_error || (data.invite_sent ? `Invite sent to ${data.entry.email}.` : `${data.entry.email} approved.`))
       setEmail('')
       setName('')
     } catch (e) {
@@ -90,27 +95,59 @@ export default function AdminAccessPage() {
     }
   }
 
-  async function setApproved(entry: AccessEntry, approved: boolean) {
+  async function setApproved(entry: AccessEntry, approved: boolean, sendInvite = false) {
     setEntries((prev) => prev.map((item) => (item.id === entry.id ? { ...item, approved } : item)))
+    if (sendInvite) setSendingInviteEmail(entry.email)
+    setNotice('')
     try {
       const res = entry.waitlist_id
         ? await fetch('/api/admin/access', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ waitlist_id: entry.waitlist_id, approved }),
+            body: JSON.stringify({ waitlist_id: entry.waitlist_id, approved, sendInvite }),
           })
         : await fetch('/api/admin/access', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: entry.email, name: entry.name || '' }),
+            body: JSON.stringify({ email: entry.email, name: entry.name || '', sendInvite }),
           })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to update access')
       setEntries((prev) => prev.map((item) => (item.id === entry.id ? { ...item, ...data.entry } : item)))
+      if (data.invite_error) setNotice(data.invite_error)
+      else if (data.invite_sent) setNotice(`Invite sent to ${entry.email}.`)
     } catch (e) {
       setEntries((prev) => prev.map((item) => (item.id === entry.id ? entry : item)))
       setError(e instanceof Error ? e.message : 'Failed to update access')
+    } finally {
+      if (sendInvite) setSendingInviteEmail(null)
     }
+  }
+
+  async function sendInvite(entry: AccessEntry) {
+    if (!entry.waitlist_id) return
+    await setApproved(entry, true, true)
+  }
+
+  function actionLabel(entry: AccessEntry) {
+    if (sendingInviteEmail === entry.email) return 'Sending...'
+    if (entry.has_profile && !entry.waitlist_id) return 'Existing'
+    if (!entry.approved) return 'Approve & invite'
+    if (!entry.notified) return 'Send invite'
+    return 'Remove'
+  }
+
+  async function handleAction(entry: AccessEntry) {
+    if (entry.has_profile && !entry.waitlist_id) return
+    if (!entry.approved) {
+      await setApproved(entry, true, true)
+      return
+    }
+    if (!entry.notified) {
+      await sendInvite(entry)
+      return
+    }
+    await setApproved(entry, false, false)
   }
 
   async function updatePlayerNote(entry: AccessEntry, updates: { admin_note?: string; high_value?: boolean }) {
@@ -200,9 +237,24 @@ export default function AdminAccessPage() {
             disabled={saving || !email.trim()}
             className="rounded-xl bg-white px-5 py-3 text-sm font-bold text-black transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
           >
-            {saving ? <LoadingDots label="Adding" /> : 'Approve email'}
+            {saving ? <LoadingDots label={sendInviteOnAdd ? 'Sending' : 'Adding'} /> : sendInviteOnAdd ? 'Approve & invite' : 'Approve email'}
           </button>
+          <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 sm:col-span-3">
+            <input
+              type="checkbox"
+              checked={sendInviteOnAdd}
+              onChange={(e) => setSendInviteOnAdd(e.target.checked)}
+              className="h-4 w-4 accent-white"
+            />
+            Send welcome invite email now
+          </label>
         </form>
+
+        {notice && (
+          <p className="mb-6 rounded-xl border border-green-900/60 bg-green-950/20 px-4 py-3 text-sm text-green-300">
+            {notice}
+          </p>
+        )}
 
         {error && (
           <p className="mb-6 rounded-xl border border-red-900/60 bg-red-950/30 px-4 py-3 text-sm text-red-300">
@@ -327,17 +379,19 @@ export default function AdminAccessPage() {
                   </button>
                 </div>
                 <button
-                  onClick={() => setApproved(entry, !entry.approved)}
-                  disabled={entry.has_profile && !entry.waitlist_id}
+                  onClick={() => handleAction(entry)}
+                  disabled={(entry.has_profile && !entry.waitlist_id) || sendingInviteEmail === entry.email}
                   className={`rounded-full border px-4 py-2 text-xs font-bold transition-colors ${
                     entry.has_profile && !entry.waitlist_id
                       ? 'cursor-not-allowed border-gray-900 text-gray-700'
+                      : !entry.approved || !entry.notified
+                      ? 'border-white bg-white text-black hover:opacity-80'
                       : entry.approved
                       ? 'border-gray-800 text-gray-400 hover:border-red-900 hover:text-red-300'
                       : 'border-white bg-white text-black hover:opacity-80'
                   }`}
                 >
-                  {entry.has_profile && !entry.waitlist_id ? 'Existing' : entry.approved ? 'Remove' : 'Approve'}
+                  {actionLabel(entry)}
                 </button>
               </div>
             ))
