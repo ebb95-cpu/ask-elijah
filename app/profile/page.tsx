@@ -25,6 +25,7 @@ type SavePhase = 'idle' | 'saving' | 'dots' | 'reveal'
 
 export default function ProfilePage() {
   const [email, setEmail] = useState('')
+  const [firstName, setFirstName] = useState('')
   const [position, setPosition] = useState('')
   const [level, setLevel] = useState('')
   const [country, setCountry] = useState('')
@@ -48,6 +49,7 @@ export default function ProfilePage() {
       fetch(`/api/profile?email=${encodeURIComponent(stored)}`)
         .then(r => r.json())
         .then(d => {
+          if (d.first_name) setFirstName(d.first_name)
           if (d.position) setPosition(d.position)
           if (d.level) setLevel(d.level)
           if (d.country) setCountry(d.country)
@@ -68,22 +70,34 @@ export default function ProfilePage() {
     }
   }, [])
 
-  const hasProfile = profileLoaded && !!(position || level || country || challenge)
+  const hasProfile = profileLoaded && !!(firstName || position || level || country || challenge)
   const showDashboard = hasProfile && !isEditing
 
   const save = async () => {
     if (!email.trim()) return
     const firstTime = isFirstSave.current
+    const cleanFirstName = firstName.trim()
     setSavePhase('saving')
     await simFetch(
       '/api/profile',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, position, level, country, challenge, age_range: ageRange, team_school: teamSchool }),
+        body: JSON.stringify({
+          email,
+          first_name: cleanFirstName || null,
+          name: cleanFirstName || null,
+          position,
+          level,
+          country,
+          challenge,
+          age_range: ageRange,
+          team_school: teamSchool,
+        }),
       },
       { ok: true }
     )
+    setFirstName(cleanFirstName)
     setLocal('ask_elijah_email', email)
     isFirstSave.current = false
 
@@ -96,8 +110,8 @@ export default function ProfilePage() {
     }
   }
 
-  const filled = [position, level, country, challenge].filter(Boolean).length
-  const pct = Math.round((filled / 4) * 100)
+  const filled = [firstName, position, level, country, challenge].filter(Boolean).length
+  const pct = Math.round((filled / 5) * 100)
 
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
@@ -160,7 +174,9 @@ export default function ProfilePage() {
             <div className="border border-gray-900 p-6 mb-8">
               <div className="flex items-start justify-between mb-5">
                 <div>
-                  <p className="text-xs text-gray-600 uppercase tracking-widest mb-2">Your player profile</p>
+                  <p className="text-xs text-gray-600 uppercase tracking-widest mb-2">
+                    {firstName ? `${firstName}'s player profile` : 'Your player profile'}
+                  </p>
                   <p className="text-2xl font-bold text-white leading-tight">
                     {[
                       position === 'PG' ? 'Point Guard' :
@@ -284,6 +300,18 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-8 mb-16">
+              <div>
+                <label className="text-xs text-gray-600 uppercase tracking-widest block mb-3">First name</label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={e => setFirstName(e.target.value)}
+                  placeholder="Josh"
+                  autoComplete="given-name"
+                  className="w-full bg-transparent border-b border-gray-800 focus:border-gray-500 text-white placeholder-gray-700 text-base outline-none pb-2 transition-colors"
+                />
+              </div>
+
               <div>
                 <label className="text-xs text-gray-600 uppercase tracking-widest block mb-3">Email</label>
                 <input

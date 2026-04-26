@@ -6,7 +6,7 @@ import { getSupabase } from '@/lib/supabase-server'
 // `weaknesses` and `strengths` are captured during the post-verify Endel-style
 // onboarding flow. Make sure the corresponding columns exist in the Supabase
 // `profiles` table — see scripts/add-profile-columns.sql for the migration.
-const ALLOWED_WRITE_FIELDS = ['position', 'level', 'country', 'challenge', 'first_name', 'name', 'age', 'language', 'timeline', 'system', 'weaknesses', 'strengths']
+const ALLOWED_WRITE_FIELDS = ['position', 'level', 'country', 'challenge', 'first_name', 'name', 'age', 'age_range', 'team_school', 'language', 'timeline', 'system', 'weaknesses', 'strengths']
 
 async function getSessionEmail(req: NextRequest): Promise<string | null> {
   const res = NextResponse.next()
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   // is populated and expose a single first_name field to every caller.
   const { data } = await supabase
     .from('profiles')
-    .select('email, position, level, country, challenge, first_name, name, timeline, system')
+    .select('email, position, level, country, challenge, first_name, name, age_range, team_school, timeline, system')
     .eq('email', email)
     .single()
   if (!data) return NextResponse.json({})
