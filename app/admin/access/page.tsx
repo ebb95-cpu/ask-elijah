@@ -251,6 +251,14 @@ export default function AdminAccessPage() {
                   {entry.challenge && (
                     <p className="mt-1 line-clamp-1 text-xs text-gray-600">{entry.challenge}</p>
                   )}
+                  <div className="mt-3 grid gap-1 text-xs text-gray-700 sm:hidden">
+                    <p>
+                      {entry.question_count} questions · {entry.pending_count} pending · {entry.approved_count} answered
+                    </p>
+                    <p>
+                      {entry.reflection_count} reflected · {entry.feedback_up_count} yes · {entry.feedback_down_count} no
+                    </p>
+                  </div>
                   <textarea
                     value={entry.admin_note || ''}
                     onChange={(e) => {
@@ -269,6 +277,16 @@ export default function AdminAccessPage() {
                   {savingNoteEmail === entry.email && (
                     <p className="mt-1 text-[11px] text-gray-700">Saving note...</p>
                   )}
+                  <button
+                    onClick={() => updatePlayerNote(entry, { high_value: !entry.high_value })}
+                    className={`mt-3 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors sm:hidden ${
+                      entry.high_value
+                        ? 'border-yellow-500/40 text-yellow-300 hover:border-gray-800 hover:text-gray-500'
+                        : 'border-gray-800 text-gray-500 hover:border-yellow-500/40 hover:text-yellow-300'
+                    }`}
+                  >
+                    {entry.high_value ? 'Marked valuable' : 'Mark high-value'}
+                  </button>
                 </div>
                 <div className="hidden sm:block">
                   <p className="text-sm font-bold text-white">{entry.question_count}</p>
