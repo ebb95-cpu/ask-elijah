@@ -194,24 +194,30 @@ function prettyLevel(raw: string | null): string | null {
 async function fetchProfile(email: string): Promise<PlayerProfile> {
   try {
     const supabase = getSupabase()
-    const { data } = await supabase
-      .from('profiles')
-      .select('first_name, name, position, level, challenge, is_founding_member')
-      .eq('email', email)
-      .single()
-    if (!data) {
-      return { firstName: null, position: null, level: null, challenge: null, isFoundingMember: false }
-    }
-    const raw = (data.first_name || data.name || '').trim()
+    const [profileResult, waitlistResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('first_name, name, position, level, challenge, is_founding_member')
+        .eq('email', email)
+        .maybeSingle(),
+      supabase
+        .from('waitlist')
+        .select('name, challenge')
+        .eq('email', email)
+        .maybeSingle(),
+    ])
+    const data = profileResult.data
+    const waitlist = waitlistResult.data
+    const raw = (data?.first_name || data?.name || waitlist?.name || '').trim()
     // If they registered with a full name, just take the first token so the
     // greeting stays personal ("Hey Marcus") rather than formal.
     const firstName = raw ? raw.split(/\s+/)[0] : null
     return {
       firstName,
-      position: data.position || null,
-      level: data.level || null,
-      challenge: data.challenge || null,
-      isFoundingMember: data.is_founding_member === true,
+      position: data?.position || null,
+      level: data?.level || null,
+      challenge: data?.challenge || waitlist?.challenge || null,
+      isFoundingMember: data?.is_founding_member === true,
     }
   } catch {
     return { firstName: null, position: null, level: null, challenge: null, isFoundingMember: false }
