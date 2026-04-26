@@ -1,5 +1,6 @@
 import { emailAdmin, esc } from './email-admin'
 import { logError } from './log-error'
+import { fetchSentryIssues, isSentryConfigured } from './sentry'
 import { getSupabase } from './supabase-server'
 
 export type WatchdogStatus = 'ok' | 'warning' | 'fail'
@@ -141,6 +142,35 @@ async function checkErrorSignals(): Promise<WatchdogCheck> {
   return { name: 'Bug/crash signals', status, detail, ms: result.ms }
 }
 
+async function checkSentry(): Promise<WatchdogCheck> {
+  if (!isSentryConfigured()) {
+    return {
+      name: 'Sentry',
+      status: 'warning',
+      detail: 'Sentry API env vars are not configured',
+    }
+  }
+
+  const result = await timed(async () => fetchSentryIssues(10))
+
+  if (result.error) {
+    return {
+      name: 'Sentry',
+      status: 'warning',
+      detail: result.error instanceof Error ? result.error.message : 'Could not fetch Sentry issues',
+      ms: result.ms,
+    }
+  }
+
+  const count = result.value?.length || 0
+  return {
+    name: 'Sentry',
+    status: count > 0 ? 'warning' : 'ok',
+    detail: count > 0 ? `${count} unresolved issue${count === 1 ? '' : 's'}` : 'No unresolved issues',
+    ms: result.ms,
+  }
+}
+
 export async function runWatchdog(options: RunOptions = {}): Promise<WatchdogResult> {
   const base = siteUrl(options.origin)
   const checks = await Promise.all([
@@ -161,6 +191,7 @@ export async function runWatchdog(options: RunOptions = {}): Promise<WatchdogRes
     }),
     checkDatabase(),
     checkErrorSignals(),
+    checkSentry(),
   ])
 
   const result: WatchdogResult = {
