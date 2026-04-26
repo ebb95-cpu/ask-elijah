@@ -289,7 +289,7 @@ export default function ReturningDashboard({
             {trending.slice(0, 5).map((t) => (
               <li key={t.id}>
                 <Link
-                  href={`/browse?q=${encodeURIComponent(t.question)}`}
+                  href={`/browse/${t.id}`}
                   className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-gray-950 transition-colors"
                 >
                   <span className="text-xs text-gray-600 mt-0.5 shrink-0 w-6">

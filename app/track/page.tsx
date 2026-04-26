@@ -485,7 +485,7 @@ async function SignedInState({ email }: { email: string }) {
             {feed.map((p) => (
               <Link
                 key={p.id}
-                href={`/?q=${encodeURIComponent(p.question)}`}
+                href={`/ask?q=${encodeURIComponent(p.question)}`}
                 className="group rounded-[18px] border border-white/10 bg-white/[0.02] p-4 transition-colors hover:border-white/25"
               >
                 <div className="flex items-start justify-between gap-4">
