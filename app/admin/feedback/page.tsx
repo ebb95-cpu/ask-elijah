@@ -62,6 +62,26 @@ type Crash = {
   context: Record<string, unknown> | null
   created_at: string
 }
+type WatchdogStatus = 'ok' | 'warning' | 'fail'
+type WatchdogCheck = {
+  name: string
+  status: WatchdogStatus
+  detail: string
+  ms?: number
+}
+type WatchdogResult = {
+  status: WatchdogStatus
+  checked_at: string
+  checks: WatchdogCheck[]
+}
+type CrashGroup = {
+  id: string
+  message: string
+  url: string | null
+  extra: string | null
+  count: number
+  latest: string
+}
 
 type Tab = 'feedback' | 'bugs' | 'crashes' | 'sentry'
 
@@ -85,6 +105,8 @@ export default function FeedbackPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('feedback')
   const [hideResolved, setHideResolved] = useState(true)
+  const [watchdog, setWatchdog] = useState<WatchdogResult | null>(null)
+  const [watchdogLoading, setWatchdogLoading] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -116,6 +138,24 @@ export default function FeedbackPage() {
     load()
   }
 
+  async function runWatchdogNow() {
+    setWatchdogLoading(true)
+    try {
+      const res = await fetch('/api/admin/watchdog', { method: 'POST' })
+      if (!res.ok) throw new Error(`${res.status}`)
+      setWatchdog(await res.json())
+    } catch {
+      setWatchdog({
+        status: 'fail',
+        checked_at: new Date().toISOString(),
+        checks: [{ name: 'Watchdog request', status: 'fail', detail: 'Could not run the health check' }],
+      })
+    } finally {
+      setWatchdogLoading(false)
+      load()
+    }
+  }
+
   const visibleBugs = useMemo(
     () => (hideResolved ? bugs.filter((b) => !b.resolved_at) : bugs),
     [bugs, hideResolved]
@@ -132,6 +172,34 @@ export default function FeedbackPage() {
     }
     return [...feedback].sort((a, b) => priority(a) - priority(b))
   }, [feedback])
+
+  const crashGroups = useMemo<CrashGroup[]>(() => {
+    const groups = new Map<string, CrashGroup>()
+    for (const c of crashes) {
+      const ctx = (c.context || {}) as Record<string, unknown>
+      const url = typeof ctx.url === 'string' ? ctx.url : null
+      const extra = typeof ctx.extra === 'string' ? ctx.extra : null
+      const key = `${c.message}::${url || ''}`
+      const existing = groups.get(key)
+      if (existing) {
+        existing.count += 1
+        if (new Date(c.created_at).getTime() > new Date(existing.latest).getTime()) {
+          existing.latest = c.created_at
+          existing.extra = extra
+        }
+      } else {
+        groups.set(key, {
+          id: c.id,
+          message: c.message,
+          url,
+          extra,
+          count: 1,
+          latest: c.created_at,
+        })
+      }
+    }
+    return Array.from(groups.values()).sort((a, b) => new Date(b.latest).getTime() - new Date(a.latest).getTime())
+  }, [crashes])
 
   return (
     <div style={{ padding: '24px', maxWidth: 1000, margin: '0 auto' }}>
@@ -172,6 +240,86 @@ export default function FeedbackPage() {
           />
         </div>
       )}
+
+      <div style={{
+        ...cardStyle,
+        marginBottom: 18,
+        borderColor:
+          watchdog?.status === 'fail' ? 'rgba(239,68,68,0.45)' :
+          watchdog?.status === 'warning' ? 'rgba(245,158,11,0.45)' :
+          watchdog?.status === 'ok' ? 'rgba(52,211,153,0.35)' :
+          '#1a1a1a',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 260px' }}>
+            <p style={{ margin: '0 0 4px', color: '#fff', fontSize: 14, fontWeight: 700 }}>Watchdog</p>
+            <p style={{ margin: 0, color: '#777', fontSize: 12, lineHeight: 1.5 }}>
+              Runs the important checks: homepage, browse API, beta gate, Supabase, and bug/crash signals.
+            </p>
+          </div>
+          <button
+            onClick={runWatchdogNow}
+            disabled={watchdogLoading}
+            style={{
+              fontSize: 12,
+              padding: '8px 12px',
+              background: '#fff',
+              color: '#000',
+              border: 'none',
+              borderRadius: 5,
+              cursor: watchdogLoading ? 'wait' : 'pointer',
+              fontWeight: 700,
+              minWidth: 126,
+            }}
+          >
+            {watchdogLoading ? <LoadingDots label="Checking" /> : 'Run health check'}
+          </button>
+        </div>
+        {watchdog && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color:
+                  watchdog.status === 'ok' ? '#34d399' :
+                  watchdog.status === 'warning' ? '#f59e0b' :
+                  '#ef4444',
+              }}>
+                {watchdog.status}
+              </span>
+              <span style={{ color: '#555', fontSize: 11 }}>{timeAgo(watchdog.checked_at)} ago</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 8 }}>
+              {watchdog.checks.map((check) => (
+                <div key={check.name} style={{
+                  padding: '8px 10px',
+                  border: '1px solid #1f1f1f',
+                  borderRadius: 5,
+                  background: '#050505',
+                }}>
+                  <p style={{ margin: '0 0 4px', color: '#ddd', fontSize: 12, fontWeight: 650 }}>{check.name}</p>
+                  <p style={{ margin: 0, color: '#777', fontSize: 11, lineHeight: 1.4 }}>
+                    <span style={{
+                      color:
+                        check.status === 'ok' ? '#34d399' :
+                        check.status === 'warning' ? '#f59e0b' :
+                        '#ef4444',
+                    }}>
+                      {check.status}
+                    </span>
+                    {' · '}
+                    {check.detail}
+                    {typeof check.ms === 'number' ? ` · ${check.ms}ms` : ''}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #1a1a1a', marginBottom: 16 }}>
@@ -377,19 +525,17 @@ export default function FeedbackPage() {
 
       {tab === 'crashes' && (
         <>
-          {crashes.length === 0 ? (
+          {crashGroups.length === 0 ? (
             <Empty>No client crashes recorded. Good.</Empty>
           ) : (
             <ul style={listStyle}>
-              {crashes.map((c) => {
-                const ctx = (c.context || {}) as Record<string, unknown>
-                const url = typeof ctx.url === 'string' ? ctx.url : null
-                const extra = typeof ctx.extra === 'string' ? ctx.extra : null
+              {crashGroups.map((c) => {
                 return (
                   <li key={c.id} style={cardStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                       <span style={{ fontSize: 14 }}>💥</span>
-                      <span style={{ fontSize: 11, color: '#555', marginLeft: 'auto' }}>{timeAgo(c.created_at)} ago</span>
+                      {c.count > 1 && <Counter n={c.count} attn />}
+                      <span style={{ fontSize: 11, color: '#555', marginLeft: 'auto' }}>{timeAgo(c.latest)} ago</span>
                     </div>
                     <p style={{
                       fontSize: 13, color: '#eee', margin: '0 0 6px 0',
@@ -398,14 +544,14 @@ export default function FeedbackPage() {
                     }}>
                       {c.message}
                     </p>
-                    {url && (
-                      <p style={{ fontSize: 11, color: '#888', margin: '0 0 4px 0' }}>{url}</p>
+                    {c.url && (
+                      <p style={{ fontSize: 11, color: '#888', margin: '0 0 4px 0' }}>{c.url}</p>
                     )}
-                    {extra && (
+                    {c.extra && (
                       <details style={{ fontSize: 11, color: '#666' }}>
                         <summary style={{ cursor: 'pointer' }}>Stack</summary>
                         <pre style={{ marginTop: 6, padding: 8, background: '#050505', borderRadius: 4, overflow: 'auto', fontSize: 10, color: '#999' }}>
-                          {extra}
+                          {c.extra}
                         </pre>
                       </details>
                     )}
