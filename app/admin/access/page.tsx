@@ -53,6 +53,10 @@ export default function AdminAccessPage() {
   const waitingCount = entries.length - approvedCount
   const totalQuestions = useMemo(() => entries.reduce((sum, entry) => sum + entry.question_count, 0), [entries])
   const pendingQuestions = useMemo(() => entries.reduce((sum, entry) => sum + entry.pending_count, 0), [entries])
+  const heldSpots = useMemo(
+    () => entries.filter((entry) => getInviteStatus(entry).tone === 'countdown').length,
+    [entries]
+  )
 
   async function loadEntries() {
     setLoading(true)
@@ -221,6 +225,7 @@ export default function AdminAccessPage() {
           <div className="flex gap-3 text-sm">
             <Stat label="Approved" value={approvedCount} />
             <Stat label="Waiting" value={waitingCount} />
+            <Stat label="Held spots" value={heldSpots} />
             <Stat label="Questions" value={totalQuestions} />
             <Stat label="Pending" value={pendingQuestions} />
           </div>
@@ -271,10 +276,11 @@ export default function AdminAccessPage() {
         )}
 
         <div className="overflow-hidden rounded-2xl border border-gray-900">
-          <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-gray-900 bg-[#050505] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-600 sm:grid-cols-[1.35fr_0.6fr_0.7fr_0.8fr_auto]">
+          <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-gray-900 bg-[#050505] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-600 sm:grid-cols-[1.3fr_0.55fr_0.65fr_0.6fr_0.65fr_auto]">
             <span>Player</span>
             <span className="hidden sm:block">Questions</span>
             <span className="hidden sm:block">Application</span>
+            <span className="hidden sm:block">Invite</span>
             <span className="hidden sm:block">Status</span>
             <span>Action</span>
           </div>
@@ -291,7 +297,7 @@ export default function AdminAccessPage() {
             entries.map((entry) => (
               <div
                 key={entry.id}
-                className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-gray-900 px-4 py-4 last:border-b-0 sm:grid-cols-[1.35fr_0.6fr_0.7fr_0.8fr_auto]"
+                className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-gray-900 px-4 py-4 last:border-b-0 sm:grid-cols-[1.3fr_0.55fr_0.65fr_0.6fr_0.65fr_auto]"
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -317,6 +323,9 @@ export default function AdminAccessPage() {
                     </p>
                     <p>
                       {entry.reflection_count} reflected · {entry.feedback_up_count} yes · {entry.feedback_down_count} no
+                    </p>
+                    <p className={getInviteStatus(entry).className}>
+                      {getInviteStatus(entry).label}
                     </p>
                   </div>
                   <textarea
@@ -366,6 +375,19 @@ export default function AdminAccessPage() {
                   </p>
                   <p className="mt-1 text-xs text-gray-700">
                     Last reflection: {formatDate(entry.last_reflection_at)}
+                  </p>
+                </div>
+                <div className="hidden sm:block">
+                  {(() => {
+                    const inviteStatus = getInviteStatus(entry)
+                    return (
+                      <p className={`text-sm font-bold ${inviteStatus.className}`}>
+                        {inviteStatus.label}
+                      </p>
+                    )
+                  })()}
+                  <p className="mt-1 text-xs text-gray-700">
+                    {entry.access_expires_at ? `Spot opens ${formatDate(entry.access_expires_at)}` : 'No invite clock'}
                   </p>
                 </div>
                 <div className="hidden sm:block">
@@ -424,6 +446,32 @@ export default function AdminAccessPage() {
 function formatDate(value: string | null) {
   if (!value) return '-'
   return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function getInviteStatus(entry: AccessEntry): {
+  label: string
+  className: string
+  tone: 'countdown' | 'active' | 'expired' | 'none'
+} {
+  if (entry.question_count > 0 && entry.access_expires_at) {
+    return { label: 'Activated', className: 'text-green-400', tone: 'active' }
+  }
+
+  if (entry.access_expired) {
+    return { label: 'Expired', className: 'text-red-300', tone: 'expired' }
+  }
+
+  if (!entry.access_expires_at) {
+    return { label: entry.notified ? 'Invite sent' : 'No clock', className: 'text-gray-600', tone: 'none' }
+  }
+
+  const now = Date.now()
+  const expires = new Date(entry.access_expires_at).getTime()
+  const daysLeft = Math.ceil((expires - now) / (1000 * 60 * 60 * 24))
+
+  if (daysLeft <= 0) return { label: 'Expires today', className: 'text-yellow-300', tone: 'countdown' }
+  if (daysLeft === 1) return { label: '1 day left', className: 'text-yellow-300', tone: 'countdown' }
+  return { label: `${daysLeft} days left`, className: daysLeft <= 2 ? 'text-yellow-300' : 'text-white', tone: 'countdown' }
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
