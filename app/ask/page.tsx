@@ -1201,8 +1201,8 @@ function AskPageInner() {
     return (
       <div className="min-h-[100dvh] bg-black text-white flex flex-col">
         <nav className="flex items-center justify-between px-5 py-4 md:px-6 md:py-5 shrink-0">
-          <Link href="/" className="text-gray-500 hover:text-white transition-colors text-sm">
-            ← Home
+          <Link href="/track" className="text-gray-500 hover:text-white transition-colors text-sm">
+            ← Locker room
           </Link>
           <Logo dark />
           <div className="w-16" />
@@ -1425,8 +1425,8 @@ function AskPageInner() {
     return (
       <div className="min-h-[100dvh] bg-black text-white flex flex-col">
         <nav className="flex items-center justify-between px-5 py-4 md:px-6 md:py-5 shrink-0">
-          <Link href="/" className="text-gray-500 hover:text-white transition-colors text-sm">
-            ← Home
+          <Link href="/track" className="text-gray-500 hover:text-white transition-colors text-sm">
+            ← Locker room
           </Link>
           <Logo dark />
           <Link href="/history" className="text-xs text-gray-500 hover:text-white transition-colors">

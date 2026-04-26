@@ -144,7 +144,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <nav className="flex items-center justify-between px-5 py-5 border-b border-gray-900">
-        <Link href="/" className="text-xs text-gray-600 hover:text-white transition-colors">← Back</Link>
+        <Link href="/track" className="text-xs text-gray-600 hover:text-white transition-colors">← Locker room</Link>
         <p className="text-xs text-gray-600 tracking-widest uppercase">
           {showDashboard ? 'Your Profile' : isEditing && hasProfile ? 'Edit Profile' : 'Your Profile'}
         </p>

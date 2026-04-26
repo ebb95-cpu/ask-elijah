@@ -16,7 +16,7 @@ export default function Nav({ dark = false, loggedIn = false, firstName }: NavPr
 
   return (
     <nav className={`flex items-center justify-between px-6 py-5 ${dark ? 'bg-black' : 'bg-white'}`}>
-      <Link href={loggedIn ? '/home' : '/'} className={textClass}>
+      <Link href={loggedIn ? '/track' : '/'} className={textClass}>
         <ThreeDots size={4} color={dark ? '#fff' : '#000'} />
       </Link>
 
@@ -26,7 +26,7 @@ export default function Nav({ dark = false, loggedIn = false, firstName }: NavPr
             <Link href="/library" className={`hidden md:block text-sm ${mutedClass} hover:${textClass} transition-colors`}>Library</Link>
             <Link href="/browse" className={`hidden md:block text-sm ${mutedClass} hover:${textClass} transition-colors`}>Browse</Link>
             <Link href="/ask-directly" className={`hidden md:block text-sm ${mutedClass} hover:${textClass} transition-colors`}>Ask Directly</Link>
-            <Link href="/home" className={`text-sm font-semibold ${textClass}`}>{firstName || 'You'}</Link>
+            <Link href="/track" className={`text-sm font-semibold ${textClass}`}>{firstName || 'Locker room'}</Link>
           </>
         ) : (
           <>

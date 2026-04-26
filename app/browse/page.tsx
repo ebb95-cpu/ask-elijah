@@ -91,7 +91,9 @@ export default function BrowsePage() {
     <div className="min-h-[100dvh] bg-black text-white flex flex-col">
       {/* Nav */}
       <nav className="flex items-center justify-between px-5 py-4 shrink-0">
-        <Link href="/" className="text-gray-500 hover:text-white text-sm transition-colors">← Home</Link>
+        <Link href={userEmail ? '/track' : '/'} className="text-gray-500 hover:text-white text-sm transition-colors">
+          {userEmail ? '← Locker room' : '← Home'}
+        </Link>
         <Link href="/ask" className="text-xs text-white font-semibold hover:opacity-70 transition-opacity">Ask Elijah →</Link>
       </nav>
 

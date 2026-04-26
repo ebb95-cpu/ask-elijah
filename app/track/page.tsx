@@ -5,6 +5,7 @@ import LockerRoomWelcomeBanner from '@/components/LockerRoomWelcomeBanner'
 import ShareAnswerButton from '@/components/ShareAnswerButton'
 import InlineAskComposer from '@/components/InlineAskComposer'
 import ProfileSyncer from '@/components/ProfileSyncer'
+import SignOutButton from '@/components/SignOutButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -70,14 +71,24 @@ export default async function TrackPage() {
   return (
     <div className="min-h-[100dvh] bg-black text-white flex flex-col">
       <nav className="flex items-center justify-between px-5 py-4">
-        <Link href="/" className="text-gray-500 hover:text-white transition-colors text-sm">← Home</Link>
-        <Logo />
-        <Link
-          href="/"
-          className="bg-white text-black px-4 py-2 text-xs font-bold rounded-full hover:opacity-80 transition-opacity whitespace-nowrap"
-        >
-          Ask →
+        <Link href={email ? '/track' : '/'} className="text-gray-500 hover:text-white transition-colors text-sm">
+          {email ? '← Locker room' : '← Home'}
         </Link>
+        <Logo />
+        <div className="flex items-center gap-3">
+          {email && (
+            <SignOutButton
+              className="text-xs text-gray-600 hover:text-white transition-colors"
+              label="Sign out"
+            />
+          )}
+          <Link
+            href="/ask"
+            className="bg-white text-black px-4 py-2 text-xs font-bold rounded-full hover:opacity-80 transition-opacity whitespace-nowrap"
+          >
+            Ask →
+          </Link>
+        </div>
       </nav>
 
       {!email ? <NoCookieState /> : <SignedInState email={email} />}

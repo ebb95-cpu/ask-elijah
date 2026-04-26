@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import LoadingDots from '@/components/ui/LoadingDots'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import { setSession } from '@/lib/safe-storage'
+import SignOutButton from '@/components/SignOutButton'
 
 function Logo() {
   return (
@@ -61,34 +62,24 @@ export default function HomePage() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit() }
   }
 
-  const handleSignOut = async () => {
-    const supabase = getSupabaseClient()
-    await supabase.auth.signOut()
-    router.push('/')
-  }
-
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
       {/* Desktop nav */}
       <nav className="hidden md:flex items-center justify-between px-6 py-5 border-b border-gray-100">
-        <Link href="/home"><Logo /></Link>
+        <Link href="/track"><Logo /></Link>
         <div className="flex items-center gap-8">
-          <Link href="/home" className="text-sm font-semibold">Home</Link>
+          <Link href="/track" className="text-sm font-semibold">Locker room</Link>
           <Link href="/library" className="text-sm text-gray-400 hover:text-black transition-colors">Library</Link>
           <Link href="/browse" className="text-sm text-gray-400 hover:text-black transition-colors">Browse</Link>
           <Link href="/ask-directly" className="text-sm text-gray-400 hover:text-black transition-colors">Ask Directly</Link>
-          <button onClick={handleSignOut} className="text-sm text-gray-400 hover:text-black transition-colors">
-            {firstName || 'Profile'}
-          </button>
+          <SignOutButton className="text-sm text-gray-400 hover:text-black transition-colors" />
         </div>
       </nav>
 
       {/* Mobile nav */}
       <nav className="flex md:hidden items-center justify-between px-6 py-5 border-b border-gray-100">
         <Logo />
-        <button onClick={handleSignOut} className="text-xs text-gray-400">
-          {firstName}
-        </button>
+        <SignOutButton className="text-xs text-gray-400" />
       </nav>
 
       <main className="flex-1 px-6 py-12 max-w-2xl mx-auto w-full pb-28">

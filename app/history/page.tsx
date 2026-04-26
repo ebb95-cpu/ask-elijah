@@ -9,6 +9,7 @@ import LoadingDots from '@/components/ui/LoadingDots'
 import ThumbsFeedback from '@/components/ThumbsFeedback'
 import ProfileCapture from '@/components/ProfileCapture'
 import ShareAnswerButton from '@/components/ShareAnswerButton'
+import SignOutButton from '@/components/SignOutButton'
 import { getSourceAction, getSourceIcon } from '@/lib/source-labels'
 
 type Question = {
@@ -101,12 +102,6 @@ export default function HistoryPage() {
     return () => clearInterval(interval)
   }, [questions])
 
-  const handleSignOut = async () => {
-    const supabase = getSupabaseClient()
-    await supabase.auth.signOut()
-    router.push('/')
-  }
-
   const openQuestion = openId ? questions.find((q) => q.id === openId) : null
 
   return (
@@ -125,7 +120,7 @@ export default function HistoryPage() {
       {/* Nav — minimal */}
       <nav className="flex items-center justify-between px-5 py-4 shrink-0">
         <Link href="/ask" className="text-gray-500 hover:text-white transition-colors text-sm">← Ask</Link>
-        <button onClick={handleSignOut} className="text-xs text-gray-600 hover:text-white transition-colors">Sign out</button>
+        <SignOutButton className="text-xs text-gray-600 hover:text-white transition-colors" />
       </nav>
 
       {/* Header — retention anchor. Totals + prominent Ask CTA up top so

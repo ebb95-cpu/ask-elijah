@@ -86,7 +86,7 @@ export default function LibraryPage() {
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
       <nav className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-        <Link href="/home"><Logo /></Link>
+        <Link href="/track"><Logo /></Link>
         <Link href="/ask" className="text-sm font-semibold bg-black text-white px-4 py-2 hover:opacity-80 transition-opacity">
           Ask now
         </Link>
