@@ -53,6 +53,11 @@ function firstActionStep(q: QuestionRow | null): string | null {
   return previewText(actionLine || lines[lines.length - 1] || null, 180)
 }
 
+function possessiveName(name: string | null): string {
+  if (!name) return 'Your'
+  return `${name}${name.toLowerCase().endsWith('s') ? '\'' : '\'s'}`
+}
+
 function Logo() {
   return (
     <svg width="52" height="8" viewBox="0 0 52 8" fill="none" aria-hidden="true">
@@ -246,7 +251,7 @@ async function SignedInState({ email }: { email: string }) {
     ? new Date(oldestQuestion.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : null
 
-  const greeting = profile.firstName ? `Hey ${profile.firstName}` : 'Your locker room'
+  const lockerRoomTitle = `${possessiveName(profile.firstName)} locker room`
   const initial = (profile.firstName || email)[0].toUpperCase()
   const profileLine = [prettyLevel(profile.level), profile.position].filter(Boolean).join(' · ')
   const profileComplete = Boolean(profile.firstName && profile.level && profile.position && profile.challenge)
@@ -275,7 +280,7 @@ async function SignedInState({ email }: { email: string }) {
           stand, and what to do next. The full answer lives below the reward. */}
       <div className="mb-10">
         <div className="flex items-start justify-between mb-1">
-          <h1 className="text-4xl font-bold tracking-tight leading-tight">{greeting}.</h1>
+          <h1 className="text-4xl font-bold tracking-tight leading-tight">{lockerRoomTitle}.</h1>
           <Link
             href="/profile"
             className="text-[10px] text-gray-700 hover:text-white transition-colors uppercase tracking-widest mt-3"
@@ -400,20 +405,23 @@ async function SignedInState({ email }: { email: string }) {
           <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-6">
             {pending.length === 1 ? 'In progress' : 'In progress'}
           </p>
-          <div className="space-y-8">
+          <div className="grid gap-3">
             {pending.map((q) => (
-              <div key={q.id} className="border-l border-gray-800 pl-6">
-                <p className="text-sm text-gray-500 italic leading-relaxed mb-3">
+              <div key={q.id} className="rounded-[22px] border border-white/10 bg-white/[0.03] p-5">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <span className="text-[10px] text-amber-300 uppercase tracking-[0.2em] font-bold">Waiting</span>
+                  <span className="text-[10px] text-gray-700">{formatDate(q.created_at)}</span>
+                </div>
+                <p className="text-base text-white italic leading-relaxed mb-3">
                   &ldquo;{q.question}&rdquo;
                 </p>
                 {q.answer ? (
-                  <p className="text-base text-gray-100 leading-[1.85] whitespace-pre-wrap">
-                    {q.answer}
+                  <p className="text-sm text-gray-400 leading-relaxed">
+                    {previewText(q.answer, 180)}
                   </p>
                 ) : (
-                  <p className="text-xs text-gray-700 italic">On my way.</p>
+                  <p className="text-sm text-gray-600">Elijah has this in the queue.</p>
                 )}
-                <p className="text-[10px] text-gray-800 mt-4">{formatDate(q.created_at)}</p>
               </div>
             ))}
           </div>
@@ -428,20 +436,31 @@ async function SignedInState({ email }: { email: string }) {
           <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-6">
             {libraryAnswers.length === 1 ? 'Your answer' : 'Your answers'}
           </p>
-          <div className="space-y-10">
+          <div className="grid gap-3">
             {libraryAnswers.map((q) => (
-              <div key={q.id} className="border-l border-gray-800 pl-6">
-                <p className="text-sm text-gray-500 italic leading-relaxed mb-4">
+              <div key={q.id} className="rounded-[22px] border border-white/10 bg-white/[0.03] p-5">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <span className="text-[10px] text-gray-600 uppercase tracking-[0.2em] font-bold">Flashcard</span>
+                  <span className="text-[10px] text-gray-700">
+                    {formatDate(q.approved_at || q.created_at)}
+                  </span>
+                </div>
+                <p className="text-base text-white italic leading-relaxed mb-4">
                   &ldquo;{q.question}&rdquo;
                 </p>
                 {q.answer && (
-                  <p className="text-base text-gray-100 leading-[1.85] whitespace-pre-wrap">
-                    {q.answer}
+                  <p className="text-sm text-gray-400 leading-relaxed">
+                    {previewText(q.answer, 190)}
                   </p>
                 )}
                 <div className="flex items-center justify-between mt-5">
-                  <p className="text-xs text-gray-700">— Elijah</p>
+                  <a href={`#answer-${q.id}`} className="text-xs font-semibold text-white hover:opacity-60 transition-opacity">
+                    Open →
+                  </a>
                   <ShareAnswerButton questionId={q.id} question={q.question} />
+                </div>
+                <div id={`answer-${q.id}`} className="mt-6 border-t border-white/10 pt-5 scroll-mt-8">
+                  <p className="text-sm text-gray-200 leading-[1.8] whitespace-pre-wrap">{q.answer}</p>
                 </div>
               </div>
             ))}
@@ -456,19 +475,21 @@ async function SignedInState({ email }: { email: string }) {
           <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-6">
             What other players asked
           </p>
-          <div className="flex flex-col">
+          <div className="grid gap-3">
             {feed.map((p) => (
               <Link
                 key={p.id}
                 href={`/?q=${encodeURIComponent(p.question)}`}
-                className="group flex items-start justify-between gap-4 py-4 border-b border-gray-900 last:border-0"
+                className="group rounded-[18px] border border-white/10 bg-white/[0.02] p-4 transition-colors hover:border-white/25"
               >
-                <p className="text-sm text-gray-500 italic leading-snug group-hover:text-white transition-colors">
-                  &ldquo;{p.question}&rdquo;
-                </p>
-                <span className="shrink-0 text-[10px] text-gray-700 group-hover:text-white transition-colors whitespace-nowrap mt-0.5">
-                  Ask →
-                </span>
+                <div className="flex items-start justify-between gap-4">
+                  <p className="text-sm text-gray-500 italic leading-snug group-hover:text-white transition-colors">
+                    &ldquo;{p.question}&rdquo;
+                  </p>
+                  <span className="shrink-0 text-[10px] text-gray-700 group-hover:text-white transition-colors whitespace-nowrap mt-0.5">
+                    Ask →
+                  </span>
+                </div>
               </Link>
             ))}
           </div>
