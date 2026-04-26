@@ -53,6 +53,15 @@ type SimilarAnswered = {
   helpful_count?: number
   is_gold_answer?: boolean
 }
+type AnswerVersion = {
+  id: string
+  version_number: number
+  answer: string
+  sources?: AnswerSource[]
+  change_note?: string | null
+  opinion_changed?: boolean
+  created_at: string
+}
 
 function dupeCount(q: PlayerQuestion) {
   return q.dupes?.length ?? 0
@@ -175,6 +184,11 @@ export default function AdminQuestionsPage() {
   const [remixNotice, setRemixNotice] = useState<RemixNotice | null>(null)
   const [similarAnswered, setSimilarAnswered] = useState<SimilarAnswered[]>([])
   const [similarLoading, setSimilarLoading] = useState(false)
+  const [answerVersions, setAnswerVersions] = useState<AnswerVersion[]>([])
+  const [versionsLoading, setVersionsLoading] = useState(false)
+  const [revisionNote, setRevisionNote] = useState('')
+  const [opinionChanged, setOpinionChanged] = useState(false)
+  const [notifyPlayer, setNotifyPlayer] = useState(false)
 
   const load = useCallback(async (status: string) => {
     setLoading(true)
@@ -204,6 +218,10 @@ export default function AdminQuestionsPage() {
     setRemixNotes('')
     setMakeGold(false)
     setRemixNotice(null)
+    setRevisionNote('')
+    setOpinionChanged(false)
+    setNotifyPlayer(false)
+    setAnswerVersions([])
   }, [filter, load])
 
   const researchItems = items.filter((q) => q.item_type === 'pain_point')
@@ -276,7 +294,16 @@ export default function AdminQuestionsPage() {
         const res = await fetch('/api/admin/approve-question', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ questionId, finalAnswer: draft, sources, adminNotes: remixNotes, makeGold }),
+          body: JSON.stringify({
+            questionId,
+            finalAnswer: draft,
+            sources,
+            adminNotes: remixNotes,
+            makeGold,
+            revisionNote,
+            opinionChanged,
+            notifyPlayer: group?.status === 'approved' ? notifyPlayer : true,
+          }),
         })
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
@@ -290,6 +317,9 @@ export default function AdminQuestionsPage() {
       setDraft(nextItem?.answer || '')
       setLastGeneratedDraft(nextItem?.answer || '')
       setRemixNotes('')
+      setRevisionNote('')
+      setOpinionChanged(false)
+      setNotifyPlayer(false)
       setMakeGold(false)
       setSources(getInitialSources(nextItem))
       setRemixNotice(null)
@@ -408,6 +438,30 @@ export default function AdminQuestionsPage() {
     return () => { cancelled = true }
   }, [openItem?.id, openItem?.item_type, openItem?.question])
 
+  useEffect(() => {
+    if (!openItem || openItem.item_type === 'pain_point' || openItem.status !== 'approved') {
+      setAnswerVersions([])
+      setVersionsLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setVersionsLoading(true)
+    fetch(`/api/admin/questions/${openItem.id}/versions`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setAnswerVersions(Array.isArray(data.versions) ? data.versions : [])
+      })
+      .catch(() => {
+        if (!cancelled) setAnswerVersions([])
+      })
+      .finally(() => {
+        if (!cancelled) setVersionsLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [openItem?.id, openItem?.item_type, openItem?.status])
+
   const prioritizedItems = [...items].sort((a, b) => queueScore(b) - queueScore(a))
   const focusItems = filter === 'pending' ? prioritizedItems.slice(0, 5) : []
   const focusIds = new Set(focusItems.map((q) => q.id))
@@ -434,7 +488,7 @@ export default function AdminQuestionsPage() {
     return (
       <div style={{ maxWidth: 1120, margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
         <button
-          onClick={() => { setOpenId(null); setDraft(''); setLastGeneratedDraft(''); setRemixNotes(''); setMakeGold(false); setError(null); setSources([]); setRemixNotice(null) }}
+          onClick={() => { setOpenId(null); setDraft(''); setLastGeneratedDraft(''); setRemixNotes(''); setRevisionNote(''); setOpinionChanged(false); setNotifyPlayer(false); setMakeGold(false); setError(null); setSources([]); setRemixNotice(null); setAnswerVersions([]) }}
           style={{
             background: 'none', border: '1px solid #333', borderRadius: 6,
             color: '#888', fontSize: 13, padding: '8px 16px', cursor: 'pointer',
@@ -469,7 +523,7 @@ export default function AdminQuestionsPage() {
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 8 }}>
                 <p style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
-                  {openItem.status === 'approved' ? 'Answer (editable — update & re-send)' : 'Your answer (editable)'}
+                  {openItem.status === 'approved' ? 'Answer (editable — saves a new version)' : 'Your answer (editable)'}
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {remixNotice && (
@@ -563,6 +617,53 @@ export default function AdminQuestionsPage() {
                 These notes guide Remix only. They will not be sent to the player.
               </p>
             </div>
+
+            {openItem.status === 'approved' && (
+              <div style={{
+                background: '#050505',
+                border: opinionChanged ? '1px solid #4a3512' : '1px solid #1f1f1f',
+                borderRadius: 12,
+                marginBottom: 16,
+                padding: 14,
+              }}>
+                <p style={{ color: '#fbbf24', fontSize: 11, fontWeight: 900, letterSpacing: '0.12em', margin: '0 0 8px', textTransform: 'uppercase' }}>
+                  Updating an approved answer
+                </p>
+                <textarea
+                  value={revisionNote}
+                  onChange={(e) => setRevisionNote(e.target.value)}
+                  rows={3}
+                  placeholder="What changed? Example: My opinion changed. I now want players to focus on task cues instead of trying to force confidence."
+                  style={{
+                    width: '100%',
+                    background: '#090909',
+                    border: '1px solid #262626',
+                    borderRadius: 10,
+                    boxSizing: 'border-box',
+                    color: '#fff',
+                    fontFamily: '-apple-system, sans-serif',
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    outline: 'none',
+                    padding: 12,
+                    resize: 'vertical',
+                  }}
+                />
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 10 }}>
+                  <label style={{ color: '#aaa', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 800 }}>
+                    <input type="checkbox" checked={opinionChanged} onChange={(e) => setOpinionChanged(e.target.checked)} />
+                    My opinion changed
+                  </label>
+                  <label style={{ color: '#aaa', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 800 }}>
+                    <input type="checkbox" checked={notifyPlayer} onChange={(e) => setNotifyPlayer(e.target.checked)} />
+                    Email the player the updated answer
+                  </label>
+                </div>
+                <p style={{ color: '#666', fontSize: 12, lineHeight: 1.45, margin: '8px 0 0' }}>
+                  Saving creates a version history entry, updates Pinecone, and makes this the new source of truth.
+                </p>
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
               {([
@@ -686,7 +787,7 @@ export default function AdminQuestionsPage() {
                   fontFamily: '-apple-system, sans-serif',
                 }}
               >
-                {approving ? <LoadingDots label="Sending" /> : openItem.status === 'approved' ? 'Update & re-send' : 'Approve'}
+                {approving ? <LoadingDots label={openItem.status === 'approved' && !notifyPlayer ? 'Updating' : 'Sending'} /> : openItem.status === 'approved' ? (notifyPlayer ? 'Update & email' : 'Update answer') : 'Approve'}
               </button>
               <button
                 onClick={() => handleRemix()}
@@ -738,6 +839,9 @@ export default function AdminQuestionsPage() {
             />
             <AnswerBriefCard brief={brief} />
             <QualityChecklist checks={checks} wordCount={wordCount} />
+            {openItem.status === 'approved' && (
+              <VersionHistoryCard versions={answerVersions} loading={versionsLoading} />
+            )}
 
             {openItem.source_url && (
               <InfoCard title="Source">
@@ -892,6 +996,9 @@ export default function AdminQuestionsPage() {
                         setDraft(nextFocus.answer || '')
                         setLastGeneratedDraft(nextFocus.answer || '')
                         setRemixNotes('')
+                        setRevisionNote('')
+                        setOpinionChanged(false)
+                        setNotifyPlayer(false)
                         setMakeGold(false)
                         setError(null)
                         setSources(getInitialSources(nextFocus))
@@ -926,6 +1033,9 @@ export default function AdminQuestionsPage() {
                         setDraft(q.answer || '')
                         setLastGeneratedDraft(q.answer || '')
                         setRemixNotes('')
+                        setRevisionNote('')
+                        setOpinionChanged(false)
+                        setNotifyPlayer(false)
                         setMakeGold(false)
                         setError(null)
                         setSources(getInitialSources(q))
@@ -964,6 +1074,9 @@ export default function AdminQuestionsPage() {
                           setDraft(q.answer || '')
                           setLastGeneratedDraft(q.answer || '')
                           setRemixNotes('')
+                          setRevisionNote('')
+                          setOpinionChanged(false)
+                          setNotifyPlayer(false)
                           setMakeGold(false)
                           setError(null)
                           setSources(getInitialSources(q))
@@ -996,6 +1109,9 @@ export default function AdminQuestionsPage() {
                       setDraft(q.answer || '')
                       setLastGeneratedDraft(q.answer || '')
                       setRemixNotes('')
+                      setRevisionNote('')
+                      setOpinionChanged(false)
+                      setNotifyPlayer(false)
                       setMakeGold(false)
                       setError(null)
                       setSources(getInitialSources(q))
@@ -1155,6 +1271,54 @@ function QualityChecklist({
           </p>
         )}
       </div>
+    </InfoCard>
+  )
+}
+
+function VersionHistoryCard({
+  versions,
+  loading,
+}: {
+  versions: AnswerVersion[]
+  loading: boolean
+}) {
+  if (loading) {
+    return (
+      <InfoCard title="Answer versions">
+        <div style={{ color: '#666', fontSize: 13 }}>
+          <LoadingDots label="Loading versions" />
+        </div>
+      </InfoCard>
+    )
+  }
+
+  return (
+    <InfoCard title="Answer versions">
+      {versions.length === 0 ? (
+        <p style={{ color: '#666', fontSize: 13, lineHeight: 1.45, margin: 0 }}>
+          No older versions yet. The next update will save the current answer here.
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {versions.map((version) => (
+            <details key={version.id} style={{ border: '1px solid #242424', borderRadius: 10, padding: 10, background: '#050505' }}>
+              <summary style={{ cursor: 'pointer', color: '#ddd', fontSize: 12, fontWeight: 800 }}>
+                v{version.version_number}
+                {version.opinion_changed ? <span style={{ color: '#fbbf24' }}> · opinion changed</span> : null}
+                <span style={{ color: '#555' }}> · {new Date(version.created_at).toLocaleDateString()}</span>
+              </summary>
+              {version.change_note && (
+                <p style={{ color: '#fbbf24', fontSize: 12, lineHeight: 1.45, margin: '10px 0 8px' }}>
+                  {version.change_note}
+                </p>
+              )}
+              <p style={{ color: '#aaa', fontSize: 12, lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: '10px 0 0' }}>
+                {version.answer}
+              </p>
+            </details>
+          ))}
+        </div>
+      )}
     </InfoCard>
   )
 }

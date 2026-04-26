@@ -98,6 +98,9 @@ export async function approveAnswer(args: {
   sources?: AnswerSource[] | null
   adminNotes?: string | null
   makeGold?: boolean
+  revisionNote?: string | null
+  opinionChanged?: boolean
+  notifyPlayer?: boolean
 }): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   const { questionId, finalAnswer } = args
   const actionSteps = args.actionSteps ?? null
@@ -132,6 +135,8 @@ export async function approveAnswer(args: {
   const firstName = profile?.first_name || null
 
   const draftChanged = (record.ai_draft || record.answer || '').trim() !== finalAnswer.trim()
+  const isRevision = ['approved', 'answered'].includes(String(record.status || '')) && Boolean(record.answer?.trim())
+  const liveAnswerChanged = (record.answer || '').trim() !== finalAnswer.trim()
   const approvedSources = Array.isArray(args.sources) && args.sources.length > 0
     ? args.sources
         .filter((s) => typeof s?.url === 'string' && s.url.trim())
@@ -180,6 +185,28 @@ export async function approveAnswer(args: {
     baseUpdate.gold_reason = args.makeGold ? 'Marked gold by admin' : 'Auto-marked from high quality score with sources'
   }
 
+  if (isRevision && liveAnswerChanged) {
+    try {
+      const { count } = await supabase
+        .from('answer_versions')
+        .select('id', { count: 'exact', head: true })
+        .eq('question_id', questionId)
+
+      const { error: versionError } = await supabase.from('answer_versions').insert({
+        question_id: questionId,
+        version_number: (count || 0) + 1,
+        answer: record.answer,
+        sources: Array.isArray(record.sources) ? record.sources : [],
+        change_note: args.revisionNote?.trim() || args.adminNotes?.trim() || null,
+        opinion_changed: args.opinionChanged === true,
+      })
+
+      if (versionError) await logError('approve:answer-version', versionError, { questionId })
+    } catch (err) {
+      await logError('approve:answer-version', err, { questionId })
+    }
+  }
+
   let updateError = (await supabase
     .from('questions')
     .update(baseUpdate)
@@ -216,15 +243,16 @@ export async function approveAnswer(args: {
 
   // Send email to user. Defensive .trim() on env vars since they've had
   // trailing newlines historically.
-  try {
+  if (args.notifyPlayer !== false) try {
     const resend = new Resend(process.env.RESEND_API_KEY)
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro').trim()
     if (!email) throw new Error('Question has no email recipient')
+    const isUpdateEmail = isRevision && liveAnswerChanged
     await resend.emails.send({
       from: 'Elijah Bryant <elijah@elijahbryant.pro>',
       replyTo: 'ebb95@mac.com',
       to: email,
-      subject: 'Elijah wrote back.',
+      subject: isUpdateEmail ? 'Elijah updated an answer for you.' : 'Elijah wrote back.',
       html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -240,14 +268,14 @@ export async function approveAnswer(args: {
       <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr><td bgcolor="#000000" style="padding:48px 32px 32px;background-color:#000000;">
           <p style="text-align:center;margin:0 0 48px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:inline-block;border:0;width:52px;height:8px;" /></p>
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Elijah reviewed it.</p>
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Here's his answer.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">${isUpdateEmail ? 'Elijah updated it.' : 'Elijah reviewed it.'}</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">${isUpdateEmail ? 'Read the newer answer.' : "Here's his answer."}</p>
           ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${escapeHtml(firstName)}.</p>` : ''}
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
             <p style="font-size:12px;color:#ffffff !important;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">You asked</p>
             <p style="font-size:16px;font-weight:600;margin:0;color:#ffffff !important;line-height:1.5;font-family:-apple-system,sans-serif;">${record.question}</p>
           </div>
-          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 8px;font-family:-apple-system,sans-serif;">He read it, shaped it, and this is what he wants you to know.</p>
+          <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 8px;font-family:-apple-system,sans-serif;">${isUpdateEmail ? 'His thinking changed, so he cleaned this up. Use this newer version.' : 'He read it, shaped it, and this is what he wants you to know.'}</p>
           <div style="font-size:16px;line-height:1.8;color:#ffffff !important;white-space:pre-wrap;margin-bottom:32px;font-family:-apple-system,sans-serif;">${finalAnswer.split(' ').slice(0, 40).join(' ')}...</div>
           <p style="font-size:13px;margin:0 0 32px;font-family:-apple-system,sans-serif;">
             <a href="${siteUrl}/history" style="color:#555555;text-decoration:none;">Read his full answer →</a>

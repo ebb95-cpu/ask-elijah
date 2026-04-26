@@ -39,6 +39,12 @@ const TABLES: BackupTable[] = [
     limit: 10000,
   },
   {
+    name: 'answer_versions',
+    select: '*',
+    order: 'created_at',
+    limit: 10000,
+  },
+  {
     name: 'kb_sources',
     select: '*',
     order: 'created_at',
