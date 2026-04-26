@@ -13,6 +13,7 @@ type QuestionRow = {
   id: string
   question: string
   answer: string | null
+  action_steps: string | null
   status: 'pending' | 'approved' | 'skipped' | null
   created_at: string
   approved_at: string | null
@@ -30,6 +31,26 @@ function formatDate(iso: string): string {
   if (diffH < 24) return `${diffH}h ago`
   if (diffH < 48) return 'Yesterday'
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function previewText(text: string | null, max = 220): string {
+  if (!text) return ''
+  const clean = text.replace(/\s+/g, ' ').trim()
+  if (clean.length <= max) return clean
+  return `${clean.slice(0, max).trim()}...`
+}
+
+function firstActionStep(q: QuestionRow | null): string | null {
+  if (!q) return null
+  const raw = q.action_steps || q.answer || ''
+  const lines = raw
+    .split(/\n+/)
+    .map((line) => line.replace(/^[-*•\d.)\s]+/, '').trim())
+    .filter(Boolean)
+  const actionLine = lines.find((line) =>
+    /^(today|before|next|write|try|do|practice|text|ask|watch|pick|choose|focus|set|tell)\b/i.test(line),
+  )
+  return previewText(actionLine || lines[lines.length - 1] || null, 180)
 }
 
 function Logo() {
@@ -197,7 +218,7 @@ async function SignedInState({ email }: { email: string }) {
   const [{ data: myData }, popular, profile] = await Promise.all([
     supabase
       .from('questions')
-      .select('id, question, answer, status, created_at, approved_at')
+      .select('id, question, answer, action_steps, status, created_at, approved_at')
       .eq('email', email)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -229,6 +250,7 @@ async function SignedInState({ email }: { email: string }) {
   const initial = (profile.firstName || email)[0].toUpperCase()
   const profileLine = [prettyLevel(profile.level), profile.position].filter(Boolean).join(' · ')
   const profileComplete = Boolean(profile.firstName && profile.level && profile.position && profile.challenge)
+  const nextRep = firstActionStep(freshAnswer)
 
   if (questions.length === 0) {
     return (
@@ -248,10 +270,10 @@ async function SignedInState({ email }: { email: string }) {
   return (
     <div className="flex-1 px-6 pt-8 max-w-xl mx-auto w-full pb-32">
 
-      {/* ── Identity block ───────────────────────────────────────────────
-          No card box. Let the content breathe. Stats sit below the
-          greeting as a clean row — no borders wrapping everything. */}
-      <div className="mb-12">
+      {/* ── Dashboard header ─────────────────────────────────────────────
+          Returning players need orientation first: what changed, where they
+          stand, and what to do next. The full answer lives below the reward. */}
+      <div className="mb-10">
         <div className="flex items-start justify-between mb-1">
           <h1 className="text-4xl font-bold tracking-tight leading-tight">{greeting}.</h1>
           <Link
@@ -274,7 +296,7 @@ async function SignedInState({ email }: { email: string }) {
           <p className="text-sm text-gray-600 mt-1 italic">Working on: {profile.challenge}</p>
         )}
 
-        <div className="flex items-center gap-10 mt-8">
+        <div className="flex items-center gap-10 mt-7">
           <Stat value={questions.length} label="Asked" />
           <Stat value={approved.length} label="Answered" />
           {joinedLabel && <Stat value={joinedLabel} label="Since" />}
@@ -295,24 +317,66 @@ async function SignedInState({ email }: { email: string }) {
       <ProfileSyncer />
       <LockerRoomWelcomeBanner struggle={profile.challenge} />
 
-      {/* ── Expectation line ─────────────────────────────────────────── */}
-      <p className="text-xs text-gray-600 leading-relaxed mb-12">
+      {/* ── Fresh answer reward ────────────────────────────────────────── */}
+      {freshAnswer && (
+        <section className="mb-10">
+          <div className="rounded-[28px] border border-white/15 bg-white text-black p-6 shadow-[0_24px_80px_rgba(255,255,255,0.08)]">
+            <div className="flex items-center justify-between gap-4 mb-5">
+              <p className="text-[10px] text-black/50 uppercase tracking-[0.22em] font-bold">
+                New answer
+              </p>
+              {freshAnswer.approved_at && (
+                <span className="text-[10px] text-black/40">{formatDate(freshAnswer.approved_at)}</span>
+              )}
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight leading-tight mb-4">
+              Elijah answered this.
+            </h2>
+            <p className="text-sm text-black/55 italic leading-relaxed mb-5">
+              &ldquo;{freshAnswer.question}&rdquo;
+            </p>
+            {freshAnswer.answer && (
+              <p className="text-sm text-black/75 leading-relaxed">
+                {previewText(freshAnswer.answer)}
+              </p>
+            )}
+            <a
+              href="#latest-answer"
+              className="inline-flex items-center gap-2 mt-6 text-sm font-bold text-black hover:opacity-60 transition-opacity"
+            >
+              Read answer <span>→</span>
+            </a>
+          </div>
+
+          {nextRep && (
+            <div className="mt-4 rounded-[24px] border border-emerald-500/20 bg-emerald-500/10 p-5">
+              <p className="text-[10px] text-emerald-300 uppercase tracking-[0.22em] font-bold mb-3">
+                Your next rep
+              </p>
+              <p className="text-base text-white leading-relaxed">{nextRep}</p>
+              <p className="text-xs text-emerald-200/60 mt-4">
+                Try this first. Then come back and tell Elijah what happened.
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── Ask composer — Hooked loop: reward fires, then immediately
+          surfaces the next trigger ───────────────────────────────────── */}
+      <div className="mb-12">
+        <InlineAskComposer />
+      </div>
+
+      <p className="text-xs text-gray-600 leading-relaxed mb-10">
         I answer every one personally. Queue runs 24 to 48 hours. You&apos;ll get it in your inbox.
       </p>
 
-      {/* ── Fresh answer ─────────────────────────────────────────────────
-          White left bar distinguishes the newest answer. No glow, no
-          green — the content is the reward, not the notification chrome. */}
       {freshAnswer && (
-        <div className="border-l-2 border-white pl-6 mb-14">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-[10px] text-white uppercase tracking-widest font-semibold">
-              New
-            </p>
-            {freshAnswer.approved_at && (
-              <span className="text-[10px] text-gray-600">{formatDate(freshAnswer.approved_at)}</span>
-            )}
-          </div>
+        <div id="latest-answer" className="border-l-2 border-white pl-6 mb-14 scroll-mt-8">
+          <p className="text-[10px] text-white uppercase tracking-widest font-semibold mb-4">
+            Latest answer
+          </p>
           <p className="text-sm text-gray-400 italic leading-relaxed mb-5">
             &ldquo;{freshAnswer.question}&rdquo;
           </p>
@@ -327,10 +391,6 @@ async function SignedInState({ email }: { email: string }) {
           </div>
         </div>
       )}
-
-      {/* ── Ask composer — Hooked loop: reward fires, then immediately
-          surfaces the next trigger ───────────────────────────────────── */}
-      <InlineAskComposer />
 
       {/* ── Pending questions ────────────────────────────────────────────
           Gray left bar signals "in progress" without a status label.
