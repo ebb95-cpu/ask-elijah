@@ -4,18 +4,17 @@ import { useEffect, useRef, useState } from 'react'
 
 /**
  * The "ADMIN" label in the top-left of every admin page is an interactive
- * dropdown. Click it to jump between the three surfaces that matter:
- * Question Queue, Knowledge Base, and the Student Simulator.
+ * dropdown. Click it to jump between the core admin surfaces.
  */
 
 const ITEMS: Array<{ href: string; label: string }> = [
   { href: '/admin/questions', label: 'Question Queue' },
   { href: '/admin/access', label: 'Access List' },
-  { href: '/admin/brain', label: 'Elijah Brain' },
-  { href: '/admin/launch', label: 'Launch Readiness' },
   { href: '/admin/feedback', label: 'Feedback' },
   { href: '/admin/kb-sources', label: 'Knowledge Base' },
+  { href: '/admin/brain', label: 'Elijah Brain' },
   { href: '/admin/pain-research', label: 'Pain Research' },
+  { href: '/admin/launch', label: 'Launch Readiness' },
   { href: '/admin/simulate', label: 'Student Simulator' },
 ]
 
