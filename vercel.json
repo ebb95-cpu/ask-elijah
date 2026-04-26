@@ -50,7 +50,7 @@
     },
     {
       "path": "/api/cron/watchdog",
-      "schedule": "0 * * * *"
+      "schedule": "0 6 * * *"
     }
   ]
 }
