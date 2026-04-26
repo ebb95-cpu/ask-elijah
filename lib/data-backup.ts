@@ -62,6 +62,12 @@ const TABLES: BackupTable[] = [
     order: 'created_at',
     limit: 5000,
   },
+  {
+    name: 'admin_alert_settings',
+    select: '*',
+    order: 'updated_at',
+    limit: 100,
+  },
 ]
 
 export type DataBackupResult = {
