@@ -568,15 +568,16 @@ export async function GET(req: NextRequest) {
   if (!verifyBearer(authHeader, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  const skipPdfs = req.nextUrl.searchParams.get('skipPdfs') === '1'
 
   console.log('Knowledge ingest started')
 
   const newsletters = await ingestNewsletters().catch(e => { console.error(e); return 0 })
   const products = await ingestLeadMagnets().catch(e => { console.error(e); return 0 })
   const videos = await ingestYouTube().catch(e => { console.error(e); return 0 })
-  const pdfs = await ingestGoogleDrivePdfs().catch(e => { console.error(e); return 0 })
+  const pdfs = skipPdfs ? 0 : await ingestGoogleDrivePdfs().catch(e => { console.error(e); return 0 })
 
-  console.log(`Knowledge ingest complete — newsletters: ${newsletters}, products: ${products}, videos: ${videos}, pdfs: ${pdfs}`)
+  console.log(`Knowledge ingest complete — newsletters: ${newsletters}, products: ${products}, videos: ${videos}, pdfs: ${pdfs}${skipPdfs ? ' (PDFs skipped)' : ''}`)
 
-  return NextResponse.json({ newsletters, products, videos, pdfs })
+  return NextResponse.json({ newsletters, products, videos, pdfs, skippedPdfs: skipPdfs })
 }

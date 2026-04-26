@@ -17,6 +17,10 @@
       "schedule": "0 16 * * *"
     },
     {
+      "path": "/api/cron/ingest-latest-knowledge",
+      "schedule": "0 3 * * *"
+    },
+    {
       "path": "/api/cron/ingest-knowledge",
       "schedule": "0 3 * * 1"
     },

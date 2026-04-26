@@ -69,6 +69,7 @@ export default function AdminKbSourcesPage() {
   const [search, setSearch] = useState('')
   const [toast, setToast] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [syncingLatest, setSyncingLatest] = useState(false)
   const fetchedThumbsRef = useRef<Set<string>>(new Set())
   const autoHealedRef = useRef(false)
 
@@ -240,6 +241,26 @@ export default function AdminKbSourcesPage() {
     }
   }
 
+  async function syncLatest() {
+    if (syncingLatest) return
+    setSyncingLatest(true)
+    setToast('Syncing latest newsletters and YouTube videos. This can take a few minutes.')
+    try {
+      const res = await fetch('/api/admin/kb-sources/sync-latest', { method: 'POST' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || `Sync failed (${res.status})`)
+      setToast(
+        `Latest sync complete: ${json.newsletters || 0} newsletter${json.newsletters === 1 ? '' : 's'}, ${json.videos || 0} video${json.videos === 1 ? '' : 's'}.`,
+      )
+      await load()
+    } catch (e) {
+      setToast(`Latest sync failed: ${e instanceof Error ? e.message : 'unknown error'}`)
+    } finally {
+      setSyncingLatest(false)
+      setTimeout(() => setToast(null), 8000)
+    }
+  }
+
   async function runTestQuery() {
     if (testRunning || !testQuery.trim()) return
     setTestRunning(true)
@@ -286,6 +307,22 @@ export default function AdminKbSourcesPage() {
           ← Queue
         </Link>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
+          <button
+            onClick={syncLatest}
+            disabled={syncingLatest}
+            style={{
+              fontSize: '12px',
+              padding: '6px 12px',
+              background: '#ffffff',
+              color: '#000000',
+              border: '1px solid #ffffff',
+              borderRadius: '4px',
+              cursor: syncingLatest ? 'wait' : 'pointer',
+              opacity: syncingLatest ? 0.7 : 1,
+            }}
+          >
+            {syncingLatest ? <LoadingDots label="Syncing latest" /> : 'Sync latest'}
+          </button>
           <button
             onClick={() => setTestOpen((v) => !v)}
             style={{
