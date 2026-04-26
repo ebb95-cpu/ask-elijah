@@ -16,6 +16,10 @@ type PineconeMatch = {
   metadata?: Record<string, string>
 }
 
+function contentBlocks(message: Anthropic.Messages.Message | null | undefined): Anthropic.Messages.ContentBlock[] {
+  return Array.isArray(message?.content) ? message.content : []
+}
+
 async function embedText(text: string): Promise<number[] | null> {
   if (!process.env.VOYAGE_API_KEY) return null
   const res = await fetch('https://api.voyageai.com/v1/embeddings', {
@@ -84,7 +88,8 @@ async function searchKnowledgeBase(query: string): Promise<{ context: string; so
  * consulted via web_search or web_fetch so the admin can verify quotes/links
  * before approving the answer.
  */
-function extractSources(content: Anthropic.Messages.ContentBlock[]): Source[] {
+function extractSources(content: Anthropic.Messages.ContentBlock[] | unknown): Source[] {
+  if (!Array.isArray(content)) return []
   const seen = new Map<string, Source>()
   for (const block of content) {
     // web_search result blocks have the shape { type: 'web_search_tool_result',
@@ -254,7 +259,8 @@ Write the full answer from scratch now:`
 
   // The final text block is the answer. Earlier blocks may be tool calls and
   // tool results that we harvest for sources.
-  const textBlocks = res.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
+  const initialContent = contentBlocks(res)
+  const textBlocks = initialContent.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
   let newDraft = sanitizeAnswerText(textBlocks.map((b) => b.text).join('\n\n'))
   if (isTooSimilar(currentAnswerDraft, newDraft)) {
     try {
@@ -286,7 +292,7 @@ Current answer draft that must be transformed:
 ${currentAnswerDraft}`,
         }],
       })
-      const forcedText = forced.content
+      const forcedText = contentBlocks(forced)
         .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
         .map((b) => b.text)
         .join('\n\n')
@@ -307,7 +313,7 @@ ${currentAnswerDraft}`,
           content: `Compress this answer to 140-180 words. This is a hard limit. Keep Elijah's meaning, direct voice, one science-grounded mechanism sentence, and one concrete action step. Remove extra explanation, extra sources, and repeated ideas. Return only the final answer.\n\nQuestion: "${question}"\n\nAnswer to compress:\n${newDraft}`,
         }],
       })
-      const compressedText = compressed.content
+      const compressedText = contentBlocks(compressed)
         .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
         .map((b) => b.text)
         .join('\n\n')
@@ -318,7 +324,7 @@ ${currentAnswerDraft}`,
     }
   }
   const sources = Array.from(
-    [...kb.sources, ...extractSources(res.content)]
+    [...(Array.isArray(kb.sources) ? kb.sources : []), ...extractSources(initialContent)]
       .reduce((seen, source) => {
         if (source.url && !seen.has(source.url)) seen.set(source.url, source)
         return seen
