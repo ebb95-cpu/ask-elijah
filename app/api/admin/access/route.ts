@@ -11,6 +11,8 @@ type WaitlistRow = {
   confirmed: boolean
   approved: boolean
   notified: boolean
+  invite_sent_at?: string | null
+  access_expires_at?: string | null
   created_at: string
 }
 
@@ -53,6 +55,35 @@ type AdminNoteRow = {
 
 function cleanEmail(input: unknown): string {
   return typeof input === 'string' ? input.trim().toLowerCase() : ''
+}
+
+const INVITE_EXPIRES_DAYS = 7
+
+function inviteWindow() {
+  const sentAt = new Date()
+  const expiresAt = new Date(sentAt)
+  expiresAt.setDate(expiresAt.getDate() + INVITE_EXPIRES_DAYS)
+  return {
+    invite_sent_at: sentAt.toISOString(),
+    access_expires_at: expiresAt.toISOString(),
+  }
+}
+
+async function fetchWaitlistRows(supabase: ReturnType<typeof getSupabase>) {
+  const withExpiry = await supabase
+    .from('waitlist')
+    .select('id, email, name, challenge, confirmed, approved, notified, created_at')
+    .order('created_at', { ascending: false })
+    .limit(500)
+
+  if (!withExpiry.error) return withExpiry
+
+  // Backward-compatible fallback until the invite-expiry migration is run.
+  return supabase
+    .from('waitlist')
+    .select('id, email, name, challenge, confirmed, approved, notified, created_at')
+    .order('created_at', { ascending: false })
+    .limit(500)
 }
 
 function escapeHtml(value: string): string {
@@ -99,6 +130,10 @@ async function sendAccessInviteEmail(args: { email: string; name?: string | null
             Ask the question you've been sitting on. I'll send back one answer you can actually use.
           </p>
 
+          <p style="font-size:14px;color:#bbbbbb !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
+            Your invite is open for 7 days. If you don't ask a question by then, I'll give the spot to another player who's ready to work.
+          </p>
+
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
             <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0;font-family:-apple-system,sans-serif;">
               Ask. Elijah answers. Apply it.
@@ -135,11 +170,7 @@ export async function GET() {
     reflectionsResult,
     adminNotesResult,
   ] = await Promise.all([
-    supabase
-    .from('waitlist')
-    .select('id, email, name, challenge, confirmed, approved, notified, created_at')
-    .order('created_at', { ascending: false })
-      .limit(500),
+    fetchWaitlistRows(supabase),
     supabase
       .from('profiles')
       .select('id, email, first_name, name, position, level, challenge, created_at')
@@ -181,6 +212,10 @@ export async function GET() {
     confirmed: boolean
     approved: boolean
     notified: boolean
+    invite_sent_at: string | null
+    access_expires_at: string | null
+    access_expired: boolean
+    asked_during_invite_window: boolean
     created_at: string
     profile_created_at: string | null
     position: string | null
@@ -216,6 +251,10 @@ export async function GET() {
         confirmed: false,
         approved: false,
         notified: false,
+        invite_sent_at: null,
+        access_expires_at: null,
+        access_expired: false,
+        asked_during_invite_window: false,
         created_at: new Date().toISOString(),
         profile_created_at: null,
         position: null,
@@ -251,6 +290,8 @@ export async function GET() {
     entry.confirmed = row.confirmed
     entry.approved = row.approved
     entry.notified = row.notified
+    entry.invite_sent_at = row.invite_sent_at || null
+    entry.access_expires_at = row.access_expires_at || null
     entry.created_at = row.created_at
   }
 
@@ -275,6 +316,14 @@ export async function GET() {
     else entry.pending_count += 1
     if (row.created_at && (!entry.last_question_at || row.created_at > entry.last_question_at)) {
       entry.last_question_at = row.created_at
+    }
+    if (
+      row.created_at
+      && entry.access_expires_at
+      && row.created_at <= entry.access_expires_at
+      && (!entry.invite_sent_at || row.created_at >= entry.invite_sent_at)
+    ) {
+      entry.asked_during_invite_window = true
     }
     if (row.approved_at && (!entry.last_answered_at || row.approved_at > entry.last_answered_at)) {
       entry.last_answered_at = row.approved_at
@@ -311,6 +360,12 @@ export async function GET() {
       entry.high_value = row.high_value
       entry.admin_note_updated_at = row.updated_at
     }
+  }
+
+  for (const entry of Array.from(byEmail.values())) {
+    entry.access_expired = !!entry.access_expires_at
+      && new Date(entry.access_expires_at) < new Date()
+      && !entry.asked_during_invite_window
   }
 
   const entries = Array.from(byEmail.values()).sort((a, b) => {
@@ -358,12 +413,24 @@ export async function POST(req: NextRequest) {
   }
 
   let notified = data.notified
+  let inviteSentAt: string | null = null
+  let accessExpiresAt: string | null = null
   let inviteError: string | null = null
   if (shouldSendInvite) {
     try {
       await sendAccessInviteEmail({ email, name: name || data.name })
       notified = true
-      await supabase.from('waitlist').update({ notified: true }).eq('id', data.id)
+      const window = inviteWindow()
+      const expiryUpdate = await supabase
+        .from('waitlist')
+        .update({ notified: true, ...window })
+        .eq('id', data.id)
+      if (expiryUpdate.error) {
+        await supabase.from('waitlist').update({ notified: true }).eq('id', data.id)
+      } else {
+        inviteSentAt = window.invite_sent_at
+        accessExpiresAt = window.access_expires_at
+      }
     } catch {
       inviteError = 'Approved, but the invite email failed to send.'
     }
@@ -373,6 +440,10 @@ export async function POST(req: NextRequest) {
     entry: {
       ...data,
       notified,
+      invite_sent_at: inviteSentAt,
+      access_expires_at: accessExpiresAt,
+      access_expired: false,
+      asked_during_invite_window: false,
       waitlist_id: data.id,
       profile_created_at: null,
       position: null,
@@ -460,12 +531,24 @@ export async function PATCH(req: NextRequest) {
   }
 
   let notified = data.notified
+  let inviteSentAt: string | null = null
+  let accessExpiresAt: string | null = null
   let inviteError: string | null = null
   if (shouldSendInvite) {
     try {
       await sendAccessInviteEmail({ email: data.email, name: data.name })
       notified = true
-      await supabase.from('waitlist').update({ notified: true }).eq('id', data.id)
+      const window = inviteWindow()
+      const expiryUpdate = await supabase
+        .from('waitlist')
+        .update({ notified: true, ...window })
+        .eq('id', data.id)
+      if (expiryUpdate.error) {
+        await supabase.from('waitlist').update({ notified: true }).eq('id', data.id)
+      } else {
+        inviteSentAt = window.invite_sent_at
+        accessExpiresAt = window.access_expires_at
+      }
     } catch {
       inviteError = 'Access updated, but the invite email failed to send.'
     }
@@ -475,6 +558,10 @@ export async function PATCH(req: NextRequest) {
     entry: {
       ...data,
       notified,
+      invite_sent_at: inviteSentAt,
+      access_expires_at: accessExpiresAt,
+      access_expired: !!accessExpiresAt && new Date(accessExpiresAt) < new Date(),
+      asked_during_invite_window: false,
       waitlist_id: data.id,
       profile_created_at: null,
       position: null,

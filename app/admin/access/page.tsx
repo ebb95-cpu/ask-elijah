@@ -12,6 +12,9 @@ type AccessEntry = {
   confirmed: boolean
   approved: boolean
   notified: boolean
+  invite_sent_at: string | null
+  access_expires_at: string | null
+  access_expired: boolean
   created_at: string
   profile_created_at: string | null
   position: string | null
@@ -132,6 +135,7 @@ export default function AdminAccessPage() {
   function actionLabel(entry: AccessEntry) {
     if (sendingInviteEmail === entry.email) return 'Sending...'
     if (entry.has_profile && !entry.waitlist_id) return 'Existing'
+    if (entry.access_expired) return 'Re-invite'
     if (!entry.approved) return 'Approve & invite'
     if (!entry.notified) return 'Send invite'
     return 'Remove'
@@ -139,6 +143,10 @@ export default function AdminAccessPage() {
 
   async function handleAction(entry: AccessEntry) {
     if (entry.has_profile && !entry.waitlist_id) return
+    if (entry.access_expired) {
+      await setApproved(entry, true, true)
+      return
+    }
     if (!entry.approved) {
       await setApproved(entry, true, true)
       return
@@ -361,11 +369,22 @@ export default function AdminAccessPage() {
                   </p>
                 </div>
                 <div className="hidden sm:block">
-                  <p className={`text-sm font-semibold ${entry.approved ? 'text-green-400' : 'text-yellow-400'}`}>
-                    {entry.approved ? 'Approved' : 'Waiting'}
+                  <p className={`text-sm font-semibold ${
+                    entry.access_expired ? 'text-red-300' : entry.approved ? 'text-green-400' : 'text-yellow-400'
+                  }`}>
+                    {entry.access_expired ? 'Expired' : entry.approved ? 'Approved' : 'Waiting'}
                   </p>
                   <p className="mt-1 text-xs text-gray-700">
                     {entry.has_profile ? 'Has profile' : entry.confirmed ? 'Confirmed' : 'No profile yet'}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-700">
+                    {entry.access_expired
+                      ? 'No question in 7 days'
+                      : entry.access_expires_at
+                        ? `Invite expires ${formatDate(entry.access_expires_at)}`
+                        : entry.notified
+                          ? 'Invite sent'
+                          : 'Not invited yet'}
                   </p>
                   <button
                     onClick={() => updatePlayerNote(entry, { high_value: !entry.high_value })}
@@ -384,7 +403,7 @@ export default function AdminAccessPage() {
                   className={`rounded-full border px-4 py-2 text-xs font-bold transition-colors ${
                     entry.has_profile && !entry.waitlist_id
                       ? 'cursor-not-allowed border-gray-900 text-gray-700'
-                      : !entry.approved || !entry.notified
+                      : !entry.approved || !entry.notified || entry.access_expired
                       ? 'border-white bg-white text-black hover:opacity-80'
                       : entry.approved
                       ? 'border-gray-800 text-gray-400 hover:border-red-900 hover:text-red-300'
