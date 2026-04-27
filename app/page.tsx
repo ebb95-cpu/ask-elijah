@@ -563,7 +563,7 @@ export default function HomePage() {
           <Logo dark />
           <div className="flex items-center gap-6">
             <Link href="/sign-in" className="text-sm text-gray-400 hover:text-white transition-colors">Sign in</Link>
-            <Link href="/history" className="text-sm text-gray-500 hover:text-white transition-colors">My questions</Link>
+            <Link href="/track" className="text-sm text-gray-500 hover:text-white transition-colors">Locker room</Link>
           </div>
         </nav>
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-8">
@@ -847,7 +847,7 @@ export default function HomePage() {
         <div className="flex items-center gap-6">
           <Link href="/browse" className="text-sm text-gray-500 hover:text-white transition-colors">Browse</Link>
           {userEmailRef.current ? (
-            <Link href="/history" className="text-sm text-white font-semibold hover:opacity-70 transition-opacity">My questions →</Link>
+            <Link href="/track" className="text-sm text-white font-semibold hover:opacity-70 transition-opacity">Locker room →</Link>
           ) : (
             <Link href="/sign-in" className="text-sm text-gray-400 hover:text-white transition-colors">Sign in</Link>
           )}

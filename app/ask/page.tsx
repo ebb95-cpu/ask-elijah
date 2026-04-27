@@ -495,95 +495,12 @@ function AskPageInner() {
     return () => { cancelled = true }
   }, [])
 
-  // Hooked-style routing for returning users. Priority order (Nir Eyal's
-  // "deliver the reward before asking for more investment"):
-  //   1. Unread approved answer  → unread_hero     (deliver the reward)
-  //   2. Pending question        → pending_wait    (set expectation)
-  //   3. History + nothing new   → dashboard       (variable reward + invest)
-  //   4. needsReflection only    → returning       (legacy reflection prompt)
-  //   5. None of the above       → input           (cold-start chip picker)
+  // Keep /ask focused on one job: asking a question. The locker room (/track)
+  // is the single hub for pending questions, answers, profile, and next reps.
   useEffect(() => {
     const storedEmail = getLocal('ask_elijah_email')
     if (!storedEmail) return
-    // Don't pre-empt someone who came in with a deep-linked pending question.
-    if (getSession('pending_question')) return
-
-    fetch(`/api/my-questions?email=${encodeURIComponent(storedEmail)}`)
-      .then(r => r.json())
-      .then(d => {
-        const all: Array<{
-          id: string
-          question: string
-          answer: string | null
-          status: 'pending' | 'approved'
-          action_steps: string | null
-          asked_at: string
-          answered_at: string | null
-          has_reflection: boolean
-        }> = d.questions || []
-        if (all.length === 0) {
-          // Second visit but they never asked anything — acknowledge them
-          // instead of showing the same cold-start chips as visit 1.
-          setEmail(storedEmail)
-          setMode('welcome_back')
-          return
-        }
-
-        // Viewed-set is localStorage-tracked by ReturningDashboard. Anything
-        // approved not in that set is "unread" from the student's POV.
-        let viewed: Set<string> = new Set()
-        try {
-          const raw = getLocal('ask_elijah_viewed_question_ids')
-          if (raw) viewed = new Set(JSON.parse(raw))
-        } catch {
-          /* ignore */
-        }
-
-        const approved = all.filter(q => q.status === 'approved')
-        const pending = all.filter(q => q.status === 'pending')
-        const unreadApproved = approved.find(q => !viewed.has(q.id) && q.answer)
-
-        setEmail(storedEmail)
-        if (approved[0]) {
-          // Shape the newest approved entry into JournalEntry for legacy
-          // UI (reflection prompt, welcome card pointers, etc.).
-          setLastEntry({
-            id: approved[0].id,
-            question: approved[0].question,
-            answer: approved[0].answer || '',
-            action_steps: approved[0].action_steps,
-            answered_at: approved[0].answered_at || approved[0].asked_at,
-            reflection: approved[0].has_reflection
-              ? { text: '', created_at: approved[0].answered_at || approved[0].asked_at }
-              : null,
-          })
-        }
-
-        if (unreadApproved) {
-          setReturnEntry({
-            id: unreadApproved.id,
-            question: unreadApproved.question,
-            answer: unreadApproved.answer || '',
-            action_steps: unreadApproved.action_steps,
-            answered_at: unreadApproved.answered_at || unreadApproved.asked_at,
-            reflection: null,
-          })
-          setMode('unread_hero')
-        } else if (pending.length > 0) {
-          setReturnEntry({
-            id: pending[0].id,
-            question: pending[0].question,
-            answer: '',
-            action_steps: null,
-            answered_at: pending[0].asked_at,
-            reflection: null,
-          })
-          setMode('pending_wait')
-        } else if (approved.length > 0) {
-          setMode('dashboard')
-        }
-      })
-      .catch(() => {})
+    setEmail(storedEmail)
   }, [])
 
   // Track funnel step changes
@@ -715,7 +632,7 @@ function AskPageInner() {
         setOnboardStep(0)
         setMode('onboarding')
       } else {
-        setMode('submitted')
+        router.push('/track')
       }
     } catch {
       setEmailError('Something went wrong. Try again.')
@@ -749,7 +666,7 @@ function AskPageInner() {
         if (res.ok) removeLocal('ae_pending_profile')
       }).catch(() => { /* ProfileSyncer retries after /track loads */ })
     }
-    setMode('submitted')
+    router.push('/track')
   }
 
   const handleEmailKey = (e: React.KeyboardEvent) => {
@@ -1270,7 +1187,7 @@ function AskPageInner() {
             }}
             className="text-gray-500 hover:text-white transition-colors text-sm"
           >
-            My questions →
+            Locker room →
           </button>
           <Logo dark />
           <div className="w-20" />
@@ -1364,7 +1281,7 @@ function AskPageInner() {
             onClick={() => setMode('dashboard')}
             className="text-gray-500 hover:text-white transition-colors text-sm"
           >
-            My questions →
+            Locker room →
           </button>
           <Logo dark />
           <div className="w-20" />
@@ -1429,8 +1346,8 @@ function AskPageInner() {
             ← Locker room
           </Link>
           <Logo dark />
-          <Link href="/history" className="text-xs text-gray-500 hover:text-white transition-colors">
-            My questions
+          <Link href="/track" className="text-xs text-gray-500 hover:text-white transition-colors">
+            Locker room
           </Link>
         </nav>
         <div className="flex-1 overflow-y-auto">
@@ -1646,7 +1563,7 @@ function AskPageInner() {
           </button>
           <Logo dark />
           {isLoggedIn ? (
-            <Link href="/history" className="text-xs text-gray-500 hover:text-white transition-colors">My questions</Link>
+            <Link href="/track" className="text-xs text-gray-500 hover:text-white transition-colors">Locker room</Link>
           ) : (
             <Link href="/sign-in" className="text-xs text-gray-500 hover:text-white transition-colors">Sign in</Link>
           )}
@@ -2095,8 +2012,8 @@ function AskPageInner() {
               Ask another question
             </button>
             {isLoggedIn && (
-              <Link href="/history" className="text-xs text-gray-600 hover:text-white transition-colors">
-                View all my questions →
+              <Link href="/track" className="text-xs text-gray-600 hover:text-white transition-colors">
+                View locker room →
               </Link>
             )}
           </div>

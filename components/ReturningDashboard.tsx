@@ -176,7 +176,7 @@ export default function ReturningDashboard({
             Your questions {questions.length > 0 && <span className="text-gray-700">· {questions.length}</span>}
           </h2>
           {questions.length > 0 && (
-            <Link href="/history" className="text-[10px] text-gray-600 hover:text-white transition-colors uppercase tracking-widest">
+            <Link href="/track" className="text-[10px] text-gray-600 hover:text-white transition-colors uppercase tracking-widest">
               See all →
             </Link>
           )}
@@ -258,7 +258,7 @@ export default function ReturningDashboard({
                         </button>
                         {!q.has_reflection && q.action_steps && (
                           <Link
-                            href="/history"
+                            href="/track"
                             className="text-xs text-gray-400 hover:text-white transition-colors"
                           >
                             Reflect on this

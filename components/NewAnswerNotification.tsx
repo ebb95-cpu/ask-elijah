@@ -50,7 +50,7 @@ export default function NewAnswerNotification() {
   return (
     <div className="fixed bottom-20 right-4 z-50 animate-in slide-in-from-bottom-4 duration-300">
       <Link
-        href="/history"
+        href="/track"
         onClick={() => {
           setShow(false)
           setLocal('ask_elijah_seen_count', String(knownCountRef.current ?? 0))

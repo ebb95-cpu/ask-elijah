@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
             I've answered it. Other players are reading it and saying it hit exactly what they needed. Go see it on the site.
           </p>
 
-          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;"><a href="${siteUrl}/history" style="color:#ffffff !important;text-decoration:none;font-weight:700;font-size:18px;">See your answer →</a></p>
+          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;"><a href="${siteUrl}/track" style="color:#ffffff !important;text-decoration:none;font-weight:700;font-size:18px;">Open locker room →</a></p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
           <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>
@@ -183,7 +183,7 @@ export async function GET(req: NextRequest) {
             Read the answer if you haven't. Then go ask your version.
           </p>
 
-          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;"><a href="${siteUrl}/history" style="color:#ffffff !important;text-decoration:none;font-weight:700;font-size:18px;">See your answer →</a></p>
+          <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;"><a href="${siteUrl}/track" style="color:#ffffff !important;text-decoration:none;font-weight:700;font-size:18px;">Open locker room →</a></p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
           <p style="font-size:11px;color:#444444;margin:0;letter-spacing:0.08em;text-transform:uppercase;font-family:-apple-system,sans-serif;">Your body is trained. Your mind isn't.</p>

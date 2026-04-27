@@ -33,7 +33,7 @@ function buildEmail(
     <div style="margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid #1a1a1a;">
       <p style="font-size:16px;color:#ffffff !important;margin:0 0 16px;font-style:italic;font-family:-apple-system,sans-serif;">"${q.question}"</p>
       <p style="font-size:16px;color:#ffffff !important;line-height:1.7;margin:0 0 20px;font-family:-apple-system,sans-serif;">${q.answer.split(' ').slice(0, 40).join(' ')}...</p>
-      <p style="font-size:13px;margin:0;font-family:-apple-system,sans-serif;"><a href="https://elijahbryant.pro/history" style="color:#555555;text-decoration:none;">See full answer →</a></p>
+      <p style="font-size:13px;margin:0;font-family:-apple-system,sans-serif;"><a href="https://elijahbryant.pro/track" style="color:#555555;text-decoration:none;">Open locker room →</a></p>
     </div>
   `
     )

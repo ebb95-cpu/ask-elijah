@@ -693,7 +693,7 @@ async function sendConfirmation(question: string, userEmail: string, newsletterO
           </div>
 
           <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
-            <a href="${siteUrl}/history" style="color:#555555;text-decoration:none;">View your first take →</a>
+            <a href="${siteUrl}/track" style="color:#555555;text-decoration:none;">Open locker room →</a>
           </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
