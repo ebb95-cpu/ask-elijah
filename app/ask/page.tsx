@@ -1409,16 +1409,6 @@ function AskPageInner() {
 
     const activePlaceholder = entryMode ? modePlaceholders[entryMode] : 'Ask anything.'
 
-    const levelOptions: { id: NonNullable<Level>; label: string }[] = [
-      { id: 'middle_school', label: 'Middle school' },
-      { id: 'jv', label: 'JV' },
-      { id: 'varsity', label: 'Varsity' },
-      { id: 'aau', label: 'AAU' },
-      { id: 'college', label: 'College' },
-      { id: 'pro', label: 'Pro' },
-      { id: 'rec', label: 'Rec / adult' },
-    ]
-
     const entryChooser = (
       <div className="w-full mb-4">
         <div className="flex flex-wrap gap-2">
@@ -1447,29 +1437,6 @@ function AskPageInner() {
           <p className="text-xs text-gray-600 mt-3 leading-relaxed">
             {entryOptions.find((o) => o.id === entryMode)?.hint}
           </p>
-        )}
-
-        {!askerLevel && (
-          <div className="mt-4">
-            <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-2">
-              Add your level if this answer needs it
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {levelOptions.map((opt) => (
-                <button
-                  key={opt.id}
-                  onClick={() => {
-                    setAskerLevel(opt.id)
-                    setLocal('asker_level', opt.id)
-                    posthog?.capture('asker_level_selected', { level: opt.id })
-                  }}
-                  className="text-[11px] px-3 py-1.5 rounded-full border border-white/10 text-gray-600 hover:border-white/25 hover:text-gray-400 transition-colors"
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
         )}
       </div>
     )
@@ -1516,32 +1483,6 @@ function AskPageInner() {
           <p className="mt-4 text-xs text-gray-600 leading-relaxed">
             Be specific. The better the situation, the better the answer.
           </p>
-        </div>
-      </div>
-    )
-
-    const communityPanel = topQuestions.length > 0 && (
-      <div className="w-full">
-        <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-5 px-1">What others are asking</p>
-        <div className="grid gap-3">
-          {topQuestions.map((q) => (
-            <button
-              key={q.id}
-              onClick={() => {
-                setQuestion(q.question)
-                setShowSuggestions(false)
-                textareaRef.current?.focus()
-              }}
-              className="w-full text-left rounded-[18px] border border-white/10 bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04] transition-colors p-4 group flex items-start gap-3"
-            >
-              <span className="text-xs text-gray-700 group-hover:text-gray-500 transition-colors mt-0.5 shrink-0 tabular-nums">
-                ↑ {q.upvote_count}
-              </span>
-              <span className="text-gray-500 text-sm group-hover:text-gray-300 transition-colors leading-snug">
-                {q.question}
-              </span>
-            </button>
-          ))}
         </div>
       </div>
     )
@@ -1620,24 +1561,6 @@ function AskPageInner() {
               )
             })}
           </div>
-
-          {!askerLevel && (
-            <div className="chip-row flex gap-1.5 px-5 pb-3 shrink-0">
-              {levelOptions.map((opt) => (
-                <button
-                  key={opt.id}
-                  onClick={() => {
-                    setAskerLevel(opt.id)
-                    setLocal('asker_level', opt.id)
-                    posthog?.capture('asker_level_selected', { level: opt.id })
-                  }}
-                  className="shrink-0 text-xs px-3 py-1.5 rounded-full border border-gray-900 text-gray-600 whitespace-nowrap transition-colors"
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* Textarea fills remaining space */}
           <div className="flex-1 min-h-0 px-5 pt-2 pb-3 flex">
@@ -1726,12 +1649,9 @@ function AskPageInner() {
           )}
         </div>
 
-        {/* ────────── Desktop layout (unchanged) ────────── */}
-        <div className="hidden md:flex flex-1 flex-row">
-          <div className="md:w-2/5 md:border-r border-gray-900 md:overflow-y-auto md:flex md:flex-col md:justify-center px-6 py-10">
-            {communityPanel}
-          </div>
-          <div className="md:w-3/5 flex flex-col items-center justify-center px-10 py-10">
+        {/* ────────── Desktop layout ────────── */}
+        <div className="hidden md:flex flex-1 items-center justify-center px-10 py-10">
+          <div className="w-full max-w-5xl">
             {askPanel}
           </div>
         </div>
