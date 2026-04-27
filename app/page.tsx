@@ -274,6 +274,7 @@ export default function HomePage() {
   const [askError, setAskError] = useState('')
   const [welcomeBackName, setWelcomeBackName] = useState<string | null>(null)
   const [showCommitment, setShowCommitment] = useState(false)
+  const [showThinkFirst, setShowThinkFirst] = useState(false)
   const [hasCommitted, setHasCommitted] = useState(false)
   const fullAnswerRef = useRef('')
   const prevQuestionRef = useRef('')
@@ -829,10 +830,48 @@ export default function HomePage() {
                 I&apos;ll do the work →
               </button>
               <button
-                onClick={() => setShowCommitment(false)}
+                onClick={() => {
+                  setShowCommitment(false)
+                  setShowThinkFirst(true)
+                }}
                 className="w-full px-5 py-3 text-sm font-semibold text-gray-600 hover:text-white transition-colors"
               >
                 Let me think first
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showThinkFirst && (
+        <div className="fixed inset-0 z-[60] bg-black/90 px-5 flex items-center justify-center">
+          <div className="w-full max-w-lg rounded-[2rem] border border-white/15 bg-[#070707] p-7 text-left shadow-[0_0_80px_rgba(255,255,255,0.08)]">
+            <p className="mb-5 text-[10px] font-bold uppercase tracking-[0.28em] text-gray-500">
+              Take your time
+            </p>
+            <h3 className="mb-5 text-4xl font-bold leading-[0.98] tracking-tight text-white sm:text-5xl">
+              I&apos;ll be here when you&apos;re ready.
+            </h3>
+            <p className="mb-8 max-w-md text-base leading-relaxed text-gray-400">
+              Don&apos;t ask just to ask. Bring the question you&apos;re actually willing to work on.
+            </p>
+            <div className="flex flex-col gap-3 sm:max-w-sm">
+              <button
+                onClick={() => {
+                  setShowThinkFirst(false)
+                  window.requestAnimationFrame(() => {
+                    ;(document.querySelector('textarea') as HTMLTextAreaElement | null)?.focus()
+                  })
+                }}
+                className="w-full rounded-full bg-white px-5 py-4 text-sm font-bold text-black hover:opacity-80 transition-opacity"
+              >
+                I&apos;m ready →
+              </button>
+              <button
+                onClick={() => setShowThinkFirst(false)}
+                className="w-full px-5 py-3 text-sm font-semibold text-gray-600 hover:text-white transition-colors"
+              >
+                Not yet
               </button>
             </div>
           </div>
