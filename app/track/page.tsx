@@ -475,7 +475,8 @@ async function SignedInState({ email }: { email: string }) {
       )}
 
       {/* ── Community feed ───────────────────────────────────────────────
-          Clean list — no bordered cards. Tap pre-fills the ask input. */}
+          These are already answered questions, so tapping should read the
+          answer first. The answer page offers "ask your version" after. */}
       {feed.length > 0 && (
         <div className="mb-16">
           <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-6">
@@ -485,7 +486,7 @@ async function SignedInState({ email }: { email: string }) {
             {feed.map((p) => (
               <Link
                 key={p.id}
-                href={`/ask?q=${encodeURIComponent(p.question)}`}
+                href={`/browse/${p.id}`}
                 className="group rounded-[18px] border border-white/10 bg-white/[0.02] p-4 transition-colors hover:border-white/25"
               >
                 <div className="flex items-start justify-between gap-4">
@@ -493,7 +494,7 @@ async function SignedInState({ email }: { email: string }) {
                     &ldquo;{p.question}&rdquo;
                   </p>
                   <span className="shrink-0 text-[10px] text-gray-700 group-hover:text-white transition-colors whitespace-nowrap mt-0.5">
-                    Ask →
+                    Read →
                   </span>
                 </div>
               </Link>
