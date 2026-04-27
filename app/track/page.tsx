@@ -97,9 +97,13 @@ export default async function TrackPage() {
   return (
     <div className="min-h-[100dvh] bg-black text-white flex flex-col">
       <nav className="flex items-center justify-between px-5 py-4">
-        <Link href={email ? '/track' : '/'} className="text-gray-500 hover:text-white transition-colors text-sm">
-          {email ? '← Locker room' : '← Home'}
-        </Link>
+        {email ? (
+          <div className="w-24" aria-hidden="true" />
+        ) : (
+          <Link href="/" className="text-gray-500 hover:text-white transition-colors text-sm">
+            ← Home
+          </Link>
+        )}
         <Logo />
         <div className="flex items-center gap-3">
           {email && (
