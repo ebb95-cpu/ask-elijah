@@ -106,7 +106,7 @@ export default function ProfilePage() {
       setTimeout(() => setSavePhase('reveal'), 2000)
     } else {
       setSavePhase('idle')
-      setIsEditing(false)
+      router.push('/track')
     }
   }
 
