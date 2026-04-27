@@ -370,7 +370,7 @@ function AskPageInner() {
 
   // Level on the asker — drives level-filtered RAG retrieval. Persisted to
   // profile on submit so it's remembered for next time.
-  type Level = 'middle_school' | 'jv' | 'varsity' | 'aau' | 'college' | 'pro' | 'rec' | null
+  type Level = string | null
   const [askerLevel, setAskerLevel] = useState<Level>(null)
 
   // Hydrate level from localStorage so returning users don't have to re-pick
@@ -378,6 +378,21 @@ function AskPageInner() {
     const stored = getLocal('asker_level')
     if (stored) setAskerLevel(stored as Level)
   }, [])
+
+  const normalizeLevel = (raw?: string | null): Level => {
+    if (!raw) return null
+    const clean = raw.toLowerCase().trim().replace(/\s+/g, '_')
+    const aliases: Record<string, string> = {
+      youth: 'middle_school',
+      under_18: 'middle_school',
+      high_school: 'varsity',
+      hs: 'varsity',
+      recreational: 'rec',
+      rec_adult: 'rec',
+      'rec_/_adult': 'rec',
+    }
+    return aliases[clean] || clean
+  }
 
   // Mobile bottom-sheet state for "what others are asking"
   const [communitySheetOpen, setCommunitySheetOpen] = useState(false)
@@ -488,8 +503,13 @@ function AskPageInner() {
     let cancelled = false
     fetch(`/api/profile?email=${encodeURIComponent(storedEmail)}`)
       .then((r) => r.json())
-      .then((d: { first_name?: string | null }) => {
+      .then((d: { first_name?: string | null; level?: string | null }) => {
         if (!cancelled && d?.first_name) setProfileFirstName(d.first_name)
+        const profileLevel = normalizeLevel(d?.level)
+        if (!cancelled && profileLevel) {
+          setAskerLevel(profileLevel)
+          setLocal('asker_level', profileLevel)
+        }
       })
       .catch(() => { /* ignore */ })
     return () => { cancelled = true }
@@ -1429,36 +1449,28 @@ function AskPageInner() {
           </p>
         )}
 
-        {/* Level row — feeds level-filtered RAG so a JV answer doesn't match a pro's context */}
-        <div className="mt-4">
-          <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-2">
-            {askerLevel ? 'Your level' : 'Pick your level (helps Elijah tune the answer)'}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {levelOptions.map((opt) => {
-              const active = askerLevel === opt.id
-              return (
+        {!askerLevel && (
+          <div className="mt-4">
+            <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-2">
+              Add your level if this answer needs it
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {levelOptions.map((opt) => (
                 <button
                   key={opt.id}
                   onClick={() => {
-                    const next = active ? null : opt.id
-                    setAskerLevel(next)
-                    if (next) setLocal('asker_level', next)
-                    else removeLocal('asker_level')
-                    posthog?.capture('asker_level_selected', { level: next })
+                    setAskerLevel(opt.id)
+                    setLocal('asker_level', opt.id)
+                    posthog?.capture('asker_level_selected', { level: opt.id })
                   }}
-                  className={`text-[11px] px-3 py-1.5 rounded-full border transition-colors ${
-                    active
-                      ? 'border-white/80 text-white bg-white/10'
-                      : 'border-white/10 text-gray-600 hover:border-white/25 hover:text-gray-400'
-                  }`}
+                  className="text-[11px] px-3 py-1.5 rounded-full border border-white/10 text-gray-600 hover:border-white/25 hover:text-gray-400 transition-colors"
                 >
                   {opt.label}
                 </button>
-              )
-            })}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     )
 
@@ -1609,29 +1621,23 @@ function AskPageInner() {
             })}
           </div>
 
-          {/* Optional level row — collapsed by default when unset */}
-          <div className="chip-row flex gap-1.5 px-5 pb-3 shrink-0">
-            {levelOptions.map((opt) => {
-              const active = askerLevel === opt.id
-              return (
+          {!askerLevel && (
+            <div className="chip-row flex gap-1.5 px-5 pb-3 shrink-0">
+              {levelOptions.map((opt) => (
                 <button
                   key={opt.id}
                   onClick={() => {
-                    const next = active ? null : opt.id
-                    setAskerLevel(next)
-                    if (next) setLocal('asker_level', next)
-                    else removeLocal('asker_level')
-                    posthog?.capture('asker_level_selected', { level: next })
+                    setAskerLevel(opt.id)
+                    setLocal('asker_level', opt.id)
+                    posthog?.capture('asker_level_selected', { level: opt.id })
                   }}
-                  className={`shrink-0 text-xs px-3 py-1.5 rounded-full border whitespace-nowrap transition-colors ${
-                    active ? 'border-white text-white bg-white/10' : 'border-gray-900 text-gray-600'
-                  }`}
+                  className="shrink-0 text-xs px-3 py-1.5 rounded-full border border-gray-900 text-gray-600 whitespace-nowrap transition-colors"
                 >
                   {opt.label}
                 </button>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Textarea fills remaining space */}
           <div className="flex-1 min-h-0 px-5 pt-2 pb-3 flex">
