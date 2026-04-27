@@ -537,10 +537,18 @@ function AskPageInner() {
   const hasCompletedProfile = () =>
     !!getLocal('profile_done')
 
-  // Step 1: question submitted → go to email gate
-  const handleQuestionSubmit = () => {
+  // Step 1: question submitted. Returning locker-room players already have a
+  // verified email in this browser, so do not send them through the email gate
+  // again. New visitors still need the email + age confirmation step.
+  const handleQuestionSubmit = async () => {
     if (!question.trim()) return
     posthog?.capture('question_drafted', { question_length: question.trim().length })
+    const knownEmail = (email || getLocal('ask_elijah_email') || getSession('user_email') || '').trim().toLowerCase()
+    if (knownEmail) {
+      setEmail(knownEmail)
+      await continueQuestionSubmit(knownEmail)
+      return
+    }
     setMode('email_gate')
     setTimeout(() => emailRef.current?.focus(), 100)
   }
@@ -553,9 +561,13 @@ function AskPageInner() {
   const handleEmailSubmit = async () => {
     if (!email.trim()) { setEmailError('Email is required to get your answer.'); return }
     if (!ageConfirmed) { setEmailError('Please confirm you are 13 or older.'); return }
+    await continueQuestionSubmit(email.trim().toLowerCase())
+  }
+
+  const continueQuestionSubmit = async (userEmail: string) => {
     setEmailError('')
-    posthog?.capture('email_submitted', { email: email.trim().toLowerCase() })
-    posthog?.identify(email.trim().toLowerCase(), { email: email.trim().toLowerCase() })
+    posthog?.capture('email_submitted', { email: userEmail })
+    posthog?.identify(userEmail, { email: userEmail })
 
     // Check if we need clarification before submitting.
     // If clarify API fails, we proceed without it — but track the event so we
@@ -588,8 +600,9 @@ function AskPageInner() {
 
     setMode('loading')
     incrementQuestionCount()
-    setSession('user_email', email.trim().toLowerCase())
-    await submitToApi(question, email.trim().toLowerCase(), [])
+    setSession('user_email', userEmail)
+    setLocal('ask_elijah_email', userEmail)
+    await submitToApi(question, userEmail, [])
   }
 
   const submitToApi = async (
