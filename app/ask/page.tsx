@@ -578,7 +578,13 @@ function AskPageInner() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question, conversation: [], mode: entryMode }),
+          body: JSON.stringify({
+            question,
+            conversation: [],
+            mode: entryMode,
+            email: userEmail,
+            firstName: profileFirstName,
+          }),
         },
         // Simulator skips clarification and goes straight to submit.
         { done: true }
@@ -772,7 +778,13 @@ function AskPageInner() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question, conversation: updatedConversation, mode: entryMode }),
+          body: JSON.stringify({
+            question,
+            conversation: updatedConversation,
+            mode: entryMode,
+            email,
+            firstName: profileFirstName,
+          }),
         },
         // Follow-up clarify in simulator: mark done so it proceeds to submit.
         { done: true }

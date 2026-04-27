@@ -295,19 +295,20 @@ async function getPlayerContext(email: string): Promise<string> {
   const now = new Date().toISOString()
 
   const [profileRes, memoriesRes, historyRes] = await Promise.all([
-    supabase.from('profiles').select('age, position, level, country, challenge').eq('email', clean).single(),
+    supabase.from('profiles').select('first_name, name, age, position, level, country, challenge').eq('email', clean).single(),
     supabase.from('player_memories').select('fact_type, fact_text').eq('email', clean).or(`expires_at.is.null,expires_at.gt.${now}`).order('created_at', { ascending: false }).limit(10),
     supabase.from('questions').select('question, answer').eq('email', clean).eq('status', 'approved').order('updated_at', { ascending: false }).limit(3),
   ])
 
   const lines: string[] = []
 
-  const p = profileRes.data as { age?: string; position?: string; level?: string; country?: string; challenge?: string } | null
+  const p = profileRes.data as { first_name?: string; name?: string; age?: string; position?: string; level?: string; country?: string; challenge?: string } | null
   if (p) {
     // Age first — it's the single most context-shaping detail (you'd
     // write to a 14-year-old very differently than a 22-year-old), so it
     // leads the player-context line Elijah sees when reviewing drafts.
     const parts = [
+      p.first_name || p.name ? `first name ${p.first_name || p.name}` : null,
       p.age ? `age ${p.age}` : null,
       p.position,
       p.level,
@@ -923,7 +924,7 @@ export async function POST(req: NextRequest) {
     const preferenceContext = await getElijahPreferenceContext()
     const preamble = modePreamble(mode, askerType)
     const voiceAnchors = await getVoiceAnchors(topic)
-    const userMessage = `${preamble}${voiceAnchors}${playerContextBlock}${ragContext}${preferenceContext}Now answer this question using the above context where relevant:\n\n${question}${freshnessInstruction}\n\nEvery answer must follow this standard: name what the player is feeling, explain why it happens in simple psychology/body language, connect it to Elijah's credible pro perspective, and end with a clear action plan they can do today. Keep the science simple enough for a young kid to understand but credible enough that it is clearly grounded.\n\nReturn only the words Elijah would say to the player. No preamble, no research-process narration, no "let me weave this together," no "here's the answer," no ChatGPT/LLM language. Start directly with the answer.`
+    const userMessage = `${preamble}${voiceAnchors}${playerContextBlock}${ragContext}${preferenceContext}Now answer this question using the above context where relevant:\n\n${question}${freshnessInstruction}\n\nEvery answer must follow this standard: name what the player is feeling, explain why it happens in simple psychology/body language, connect it to Elijah's credible pro perspective, and end with a clear action plan they can do today. Keep the science simple enough for a young kid to understand but credible enough that it is clearly grounded.\n\nIf the player context includes their first name, use it naturally in the first sentence.\n\nReturn only the words Elijah would say to the player. No preamble, no research-process narration, no "let me weave this together," no "here's the answer," no ChatGPT/LLM language. Start directly with the answer. Never use dash punctuation. No em dashes, no en dashes, and no spaced hyphens.` 
 
     // Use preview answer if already generated on the frontend, otherwise generate fresh
     let draft = ''
@@ -1035,7 +1036,7 @@ export async function POST(req: NextRequest) {
       await logError('ask:supabase-insert', insertError, { email: cleanEmailEarly })
       const { data: fallback } = await supabase
         .from('questions')
-        .insert({ question, answer: draft, ai_draft: draft, sources, ip, email: cleanEmailEarly })
+        .insert({ question, answer: cleanDraft, ai_draft: cleanDraft, sources, ip, email: cleanEmailEarly })
         .select('id')
         .single()
 
