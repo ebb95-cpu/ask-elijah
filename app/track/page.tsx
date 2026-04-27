@@ -114,7 +114,7 @@ export default async function TrackPage() {
           )}
           <Link
             href="/ask"
-            className="bg-white text-black px-4 py-2 text-xs font-bold rounded-full hover:opacity-80 transition-opacity whitespace-nowrap"
+            className="hidden sm:inline-flex bg-white text-black px-4 py-2 text-xs font-bold rounded-full hover:opacity-80 transition-opacity whitespace-nowrap"
           >
             Ask →
           </Link>
@@ -269,15 +269,13 @@ async function SignedInState({ email }: { email: string }) {
 
   if (questions.length === 0) {
     return (
-      <div className="flex-1 flex flex-col justify-center px-6 pb-20 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col justify-center px-6 pb-32 max-w-sm mx-auto w-full">
         <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-8">Your locker room</p>
         <h1 className="text-4xl font-bold tracking-tight leading-tight mb-5">No questions yet.</h1>
         <p className="text-gray-500 text-sm leading-relaxed mb-12">
           Ask me something and I&apos;ll set up your locker room.
         </p>
-        <Link href="/" className="text-sm font-semibold text-white hover:opacity-60 transition-opacity">
-          Ask me something →
-        </Link>
+        <InlineAskComposer />
       </div>
     )
   }

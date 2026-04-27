@@ -24,13 +24,15 @@ export default function InlineAskComposer() {
   const [question, setQuestion] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const desktopTextareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const mobileTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const router = useRouter()
 
   const resetTextareaHeight = () => {
-    const el = textareaRef.current
-    if (!el) return
-    el.style.height = 'auto'
+    for (const el of [desktopTextareaRef.current, mobileTextareaRef.current]) {
+      if (!el) continue
+      el.style.height = 'auto'
+    }
   }
 
   const handleSubmit = async () => {
@@ -115,42 +117,87 @@ export default function InlineAskComposer() {
   }
 
   return (
-    <div className="rounded-2xl border border-gray-800 bg-[#0a0a0a] p-4 mb-8">
-      <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">Ask me something else</p>
-      <div className="flex items-end gap-3">
-        <div className="relative flex-1">
+    <>
+      <div className="hidden md:block rounded-2xl border border-gray-800 bg-[#0a0a0a] p-4 mb-8">
+        <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-3">Ask me something else</p>
+        <div className="flex items-end gap-3">
+          <div className="relative flex-1">
+            <textarea
+              ref={desktopTextareaRef}
+              value={question}
+              onChange={(e) => {
+                setQuestion(e.target.value)
+                if (error) setError('')
+                // Auto-grow
+                const el = e.target
+                el.style.height = 'auto'
+                el.style.height = `${el.scrollHeight}px`
+              }}
+              onKeyDown={handleKey}
+              placeholder={loading ? "Elijah's thinking..." : "Type your question..."}
+              rows={1}
+              maxLength={500}
+              disabled={loading}
+              className="w-full text-white placeholder-gray-600 text-base leading-relaxed resize-none outline-none bg-transparent disabled:opacity-50"
+              style={{ minHeight: '28px' }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!question.trim() || loading}
+            className="shrink-0 text-sm font-bold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all"
+          >
+            {loading ? <LoadingDots label="" size={2} /> : 'Ask →'}
+          </button>
+        </div>
+        {error && (
+          <p className="text-red-400 text-xs mt-3">{error}</p>
+        )}
+      </div>
+
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 px-4 pb-safe-plus-16 pt-3 bg-gradient-to-t from-black via-black to-black/0">
+        {error && (
+          <p className="mx-auto mb-2 max-w-md rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-xs text-red-200">
+            {error}
+          </p>
+        )}
+        <div className="mx-auto flex max-w-md items-end gap-2 rounded-[28px] border border-white/10 bg-[#1f1f1d]/95 px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur">
+          <button
+            type="button"
+            onClick={() => mobileTextareaRef.current?.focus()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-2xl leading-none text-white/45 transition-colors hover:text-white"
+            aria-label="Focus question box"
+          >
+            +
+          </button>
           <textarea
-            ref={textareaRef}
+            ref={mobileTextareaRef}
             value={question}
             onChange={(e) => {
               setQuestion(e.target.value)
               if (error) setError('')
-              // Auto-grow
               const el = e.target
               el.style.height = 'auto'
-              el.style.height = `${el.scrollHeight}px`
+              el.style.height = `${Math.min(el.scrollHeight, 112)}px`
             }}
             onKeyDown={handleKey}
-            placeholder={loading ? "Elijah's thinking..." : "Type your question..."}
+            placeholder={loading ? "Elijah's thinking..." : 'Ask Elijah...'}
             rows={1}
             maxLength={500}
             disabled={loading}
-            className="w-full text-white placeholder-gray-600 text-base leading-relaxed resize-none outline-none bg-transparent disabled:opacity-50"
-            style={{ minHeight: '28px' }}
+            className="max-h-28 min-h-10 flex-1 resize-none bg-transparent py-2 text-base leading-snug text-white outline-none placeholder:text-white/35 disabled:opacity-50"
           />
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!question.trim() || loading}
+            className="flex h-11 shrink-0 items-center justify-center rounded-full bg-white px-4 text-sm font-bold text-black transition-opacity disabled:opacity-25 disabled:cursor-not-allowed"
+          >
+            {loading ? <LoadingDots label="" size={2} color="#000" /> : 'Ask →'}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!question.trim() || loading}
-          className="shrink-0 text-sm font-bold text-white disabled:text-gray-700 disabled:cursor-not-allowed hover:opacity-70 transition-all"
-        >
-          {loading ? <LoadingDots label="" size={2} /> : 'Ask →'}
-        </button>
       </div>
-      {error && (
-        <p className="text-red-400 text-xs mt-3">{error}</p>
-      )}
-    </div>
+    </>
   )
 }
