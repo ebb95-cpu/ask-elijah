@@ -1422,11 +1422,11 @@ function AskPageInner() {
                   posthog?.capture('entry_mode_selected', { mode: active ? null : opt.id })
                   setTimeout(() => textareaRef.current?.focus(), 50)
                 }}
-                className={`text-xs px-4 py-2 rounded-full border transition-colors ${
-                  active
-                    ? 'border-white/80 text-white bg-white/10'
-                    : 'border-white/10 text-gray-500 hover:border-white/25 hover:text-gray-300'
-                }`}
+	                className={`text-xs px-4 py-2 rounded-full border transition-colors ${
+	                  active
+	                    ? 'border-black text-white bg-black'
+	                    : 'border-black/10 text-black/50 hover:border-black/25 hover:text-black'
+	                }`}
               >
                 {opt.label}
               </button>
@@ -1434,21 +1434,21 @@ function AskPageInner() {
           })}
         </div>
         {entryMode && (
-          <p className="text-xs text-gray-600 mt-3 leading-relaxed">
-            {entryOptions.find((o) => o.id === entryMode)?.hint}
-          </p>
+	          <p className="text-xs text-black/45 mt-3 leading-relaxed">
+	            {entryOptions.find((o) => o.id === entryMode)?.hint}
+	          </p>
         )}
       </div>
     )
 
     const askPanel = (
       <div className="w-full">
-        <div className="rounded-[30px] border border-white/10 bg-white/[0.03] p-6 shadow-[0_24px_80px_rgba(255,255,255,0.04)]">
-          <p className="text-[10px] text-gray-600 uppercase tracking-[0.22em] font-bold mb-5">
-            Ask Elijah
-          </p>
-          {entryChooser}
-          <div className="rounded-[24px] border border-white/15 bg-black/40 focus-within:border-white/50 transition-colors overflow-hidden">
+	        <div className="rounded-[28px] border border-white/15 bg-white text-black p-6 shadow-[0_24px_80px_rgba(255,255,255,0.08)]">
+	          <p className="text-[10px] text-black/50 uppercase tracking-[0.22em] font-bold mb-5">
+	            Ask Elijah
+	          </p>
+	          {entryChooser}
+	          <div className="rounded-[24px] border border-black/10 bg-black/[0.03] focus-within:border-black/35 transition-colors overflow-hidden">
             <textarea
               ref={textareaRef}
               value={question}
@@ -1460,29 +1460,29 @@ function AskPageInner() {
               onKeyDown={handleKey}
               placeholder={activePlaceholder}
               rows={3}
-              className="w-full px-6 pt-6 pb-3 text-white placeholder-gray-600 text-2xl leading-relaxed resize-none outline-none bg-transparent"
+	              className="w-full px-6 pt-6 pb-3 text-black placeholder-black/35 text-2xl leading-relaxed resize-none outline-none bg-transparent"
               style={{ minHeight: '170px' }}
             />
             <div className="flex items-center justify-between px-6 pb-5">
               <div className="flex items-center gap-3">
                 {question.length >= 140 && (
-                  <span className="text-xs text-gray-600">{question.length}</span>
+	                  <span className="text-xs text-black/35">{question.length}</span>
                 )}
               </div>
               <div className="ml-auto">
                 <button
                   onClick={handleQuestionSubmit}
                   disabled={!question.trim()}
-                  className="rounded-full bg-white text-black px-6 py-3 text-sm font-bold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
+	                  className="rounded-full bg-black text-white px-6 py-3 text-sm font-bold tracking-tight disabled:opacity-25 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
                 >
                   Ask Elijah →
                 </button>
               </div>
             </div>
           </div>
-          <p className="mt-4 text-xs text-gray-600 leading-relaxed">
-            Be specific. The better the situation, the better the answer.
-          </p>
+	          <p className="mt-4 text-xs text-black/45 leading-relaxed">
+	            Be specific. The better the situation, the better the answer.
+	          </p>
         </div>
       </div>
     )
