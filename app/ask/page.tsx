@@ -833,7 +833,7 @@ function AskPageInner() {
       <div className="min-h-screen bg-black text-white flex flex-col">
         <nav className="flex items-center justify-between px-6 py-5">
           <button
-            onClick={() => setMode('email_gate')}
+            onClick={() => setMode('input')}
             className="text-gray-500 hover:text-white transition-colors text-sm"
           >
             ← Back
@@ -843,7 +843,7 @@ function AskPageInner() {
         </nav>
 
         <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20">
-          <div className="w-full max-w-sm">
+          <div className="w-full max-w-xl">
 
             {/* Progress dots */}
             <div className="flex gap-2 justify-center mb-10">
@@ -857,9 +857,9 @@ function AskPageInner() {
               ))}
             </div>
 
-            {/* Their original question — small, above */}
-            <div className="border-l-2 border-gray-800 pl-4 mb-8">
-              <p className="text-gray-600 text-xs italic leading-relaxed">&ldquo;{question}&rdquo;</p>
+            {/* Their original question — small, above the card */}
+            <div className="border-l-2 border-white/15 pl-4 mb-5">
+              <p className="text-gray-500 text-sm italic leading-relaxed">&ldquo;{question}&rdquo;</p>
             </div>
 
             {/* Previous answers shown above current question */}
@@ -874,45 +874,52 @@ function AskPageInner() {
               </div>
             )}
 
-            {/* Elijah's follow-up */}
-            <p className="text-xs text-gray-600 uppercase tracking-widest mb-4">Elijah wants to know</p>
-            <h2 className="text-2xl font-bold mb-8 leading-tight">{clarifyQuestion}</h2>
+            <div className="rounded-[28px] border border-white/15 bg-white text-black p-6 shadow-[0_24px_80px_rgba(255,255,255,0.08)]">
+              {/* Elijah's follow-up */}
+              <p className="text-[10px] text-black/50 uppercase tracking-[0.22em] font-bold mb-5">Elijah wants to know</p>
+              <h2 className="text-2xl sm:text-3xl font-bold mb-6 leading-tight tracking-tight">{clarifyQuestion}</h2>
 
-            <textarea
-              ref={clarifyInputRef}
-              value={clarifyAnswer}
-              onChange={(e) => setClarifyAnswer(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey && clarifyAnswer.trim()) {
-                  e.preventDefault()
-                  handleClarifySubmit()
-                }
-              }}
-              placeholder="Be honest. The more specific, the better the answer."
-              rows={3}
-              className="w-full bg-transparent border border-gray-700 focus:border-white transition-colors px-4 py-3 text-white placeholder-gray-700 text-base leading-relaxed resize-none outline-none mb-4"
-            />
-
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleClarifySubmit}
-                disabled={!clarifyAnswer.trim() || clarifyLoading}
-                className="w-full bg-white text-black py-4 text-base font-bold rounded-full disabled:opacity-30 hover:opacity-80 transition-opacity min-h-[48px]"
-              >
-                {clarifyLoading ? <LoadingDots label="Got it" /> : 'Answer →'}
-              </button>
-              <button
-                onClick={async () => {
-                  setMode('loading')
-                  incrementQuestionCount()
-                  setSession('user_email', email.trim().toLowerCase())
-                  await submitToApi(question, email.trim().toLowerCase(), clarifyConversation)
-                }}
-                className="text-sm text-gray-600 hover:text-white transition-colors py-2 min-h-[44px]"
-              >
-                Skip and just send it →
-              </button>
+              <div className="rounded-[24px] border border-black/10 bg-black/[0.03] focus-within:border-black/35 transition-colors overflow-hidden">
+                <textarea
+                  ref={clarifyInputRef}
+                  value={clarifyAnswer}
+                  onChange={(e) => setClarifyAnswer(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && clarifyAnswer.trim()) {
+                      e.preventDefault()
+                      handleClarifySubmit()
+                    }
+                  }}
+                  placeholder="Tell Elijah what you meant."
+                  rows={3}
+                  className="w-full bg-transparent px-5 pt-5 pb-2 text-black placeholder-black/35 text-lg leading-relaxed resize-none outline-none"
+                />
+                <div className="flex justify-end px-5 pb-5">
+                  <button
+                    onClick={handleClarifySubmit}
+                    disabled={!clarifyAnswer.trim() || clarifyLoading}
+                    className="rounded-full bg-black text-white px-6 py-3 text-sm font-bold tracking-tight disabled:opacity-25 disabled:cursor-not-allowed hover:opacity-80 transition-opacity min-h-[48px]"
+                  >
+                    {clarifyLoading ? <LoadingDots label="Got it" /> : 'Answer →'}
+                  </button>
+                </div>
+              </div>
+              <p className="mt-4 text-xs text-black/45 leading-relaxed">
+                Be specific. The better the situation, the better the answer.
+              </p>
             </div>
+
+            <button
+              onClick={async () => {
+                setMode('loading')
+                incrementQuestionCount()
+                setSession('user_email', email.trim().toLowerCase())
+                await submitToApi(question, email.trim().toLowerCase(), clarifyConversation)
+              }}
+              className="mt-5 w-full text-sm text-gray-600 hover:text-white transition-colors py-2 min-h-[44px]"
+            >
+              Skip and just send it →
+            </button>
 
           </div>
         </div>
