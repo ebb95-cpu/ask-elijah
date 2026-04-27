@@ -1412,10 +1412,10 @@ function AskPageInner() {
                   posthog?.capture('entry_mode_selected', { mode: active ? null : opt.id })
                   setTimeout(() => textareaRef.current?.focus(), 50)
                 }}
-                className={`text-xs px-3 py-2 border transition-colors ${
+                className={`text-xs px-4 py-2 rounded-full border transition-colors ${
                   active
-                    ? 'border-white text-white bg-white/5'
-                    : 'border-gray-800 text-gray-500 hover:border-gray-600 hover:text-gray-300'
+                    ? 'border-white/80 text-white bg-white/10'
+                    : 'border-white/10 text-gray-500 hover:border-white/25 hover:text-gray-300'
                 }`}
               >
                 {opt.label}
@@ -1447,10 +1447,10 @@ function AskPageInner() {
                     else removeLocal('asker_level')
                     posthog?.capture('asker_level_selected', { level: next })
                   }}
-                  className={`text-[11px] px-2.5 py-1 border transition-colors ${
+                  className={`text-[11px] px-3 py-1.5 rounded-full border transition-colors ${
                     active
-                      ? 'border-white text-white bg-white/5'
-                      : 'border-gray-900 text-gray-600 hover:border-gray-700 hover:text-gray-400'
+                      ? 'border-white/80 text-white bg-white/10'
+                      : 'border-white/10 text-gray-600 hover:border-white/25 hover:text-gray-400'
                   }`}
                 >
                   {opt.label}
@@ -1464,46 +1464,54 @@ function AskPageInner() {
 
     const askPanel = (
       <div className="w-full">
-        {entryChooser}
-        <div className="border border-gray-700 focus-within:border-white transition-colors">
-          <textarea
-            ref={textareaRef}
-            value={question}
-            onChange={(e) => {
-              setQuestion(e.target.value)
-              e.target.style.height = 'auto'
-              e.target.style.height = e.target.scrollHeight + 'px'
-            }}
-            onKeyDown={handleKey}
-            placeholder={activePlaceholder}
-            rows={3}
-            className="w-full px-4 pt-4 pb-2 text-white placeholder-gray-600 text-xl leading-relaxed resize-none outline-none bg-transparent"
-            style={{ minHeight: '80px' }}
-          />
-          <div className="flex items-center justify-between px-4 pb-3">
-            <div className="flex items-center gap-3">
-              {question.length >= 140 && (
-                <span className="text-xs text-gray-600">{question.length}</span>
-              )}
-            </div>
-            <div className="ml-auto">
-              <button
-                onClick={handleQuestionSubmit}
-                disabled={!question.trim()}
-                className="bg-white text-black px-6 py-2 text-sm font-semibold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
-              >
-                Ask Elijah →
-              </button>
+        <div className="rounded-[30px] border border-white/10 bg-white/[0.03] p-6 shadow-[0_24px_80px_rgba(255,255,255,0.04)]">
+          <p className="text-[10px] text-gray-600 uppercase tracking-[0.22em] font-bold mb-5">
+            Ask Elijah
+          </p>
+          {entryChooser}
+          <div className="rounded-[24px] border border-white/15 bg-black/40 focus-within:border-white/50 transition-colors overflow-hidden">
+            <textarea
+              ref={textareaRef}
+              value={question}
+              onChange={(e) => {
+                setQuestion(e.target.value)
+                e.target.style.height = 'auto'
+                e.target.style.height = e.target.scrollHeight + 'px'
+              }}
+              onKeyDown={handleKey}
+              placeholder={activePlaceholder}
+              rows={3}
+              className="w-full px-6 pt-6 pb-3 text-white placeholder-gray-600 text-2xl leading-relaxed resize-none outline-none bg-transparent"
+              style={{ minHeight: '170px' }}
+            />
+            <div className="flex items-center justify-between px-6 pb-5">
+              <div className="flex items-center gap-3">
+                {question.length >= 140 && (
+                  <span className="text-xs text-gray-600">{question.length}</span>
+                )}
+              </div>
+              <div className="ml-auto">
+                <button
+                  onClick={handleQuestionSubmit}
+                  disabled={!question.trim()}
+                  className="rounded-full bg-white text-black px-6 py-3 text-sm font-bold tracking-tight disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition-opacity"
+                >
+                  Ask Elijah →
+                </button>
+              </div>
             </div>
           </div>
+          <p className="mt-4 text-xs text-gray-600 leading-relaxed">
+            Be specific. The better the situation, the better the answer.
+          </p>
         </div>
       </div>
     )
 
     const communityPanel = topQuestions.length > 0 && (
       <div className="w-full">
-        <p className="text-xs text-gray-700 uppercase tracking-widest mb-3 px-1">What others are asking</p>
-        <div>
+        <p className="text-[10px] text-gray-700 uppercase tracking-widest mb-5 px-1">What others are asking</p>
+        <div className="grid gap-3">
           {topQuestions.map((q) => (
             <button
               key={q.id}
@@ -1512,7 +1520,7 @@ function AskPageInner() {
                 setShowSuggestions(false)
                 textareaRef.current?.focus()
               }}
-              className="w-full text-left py-4 border-b border-gray-900 hover:bg-gray-950 transition-colors px-1 group flex items-start gap-3"
+              className="w-full text-left rounded-[18px] border border-white/10 bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04] transition-colors p-4 group flex items-start gap-3"
             >
               <span className="text-xs text-gray-700 group-hover:text-gray-500 transition-colors mt-0.5 shrink-0 tabular-nums">
                 ↑ {q.upvote_count}
