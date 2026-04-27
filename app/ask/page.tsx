@@ -1393,53 +1393,7 @@ function AskPageInner() {
 
   // Input mode
   if (mode === 'input') {
-    const entryOptions: { id: EntryMode; label: string; hint: string }[] = [
-      { id: 'bad_game', label: 'I just played bad', hint: "Tell Elijah what happened tonight. He gets it — he's been there." },
-      { id: 'coach', label: 'Coach situation', hint: 'Playing time, benching, conflict, favoritism — what\'s going on?' },
-      { id: 'playing_time', label: 'Not getting minutes', hint: 'Lay out the rotation and where you fit. Elijah will give you a play.' },
-      { id: 'parent', label: "I'm a parent", hint: 'Asking on behalf of your kid. Give Elijah the situation.' },
-    ]
-
-    const modePlaceholders: Record<string, string> = {
-      bad_game: "What happened? How'd you play? How are you feeling right now?",
-      coach: 'Walk Elijah through your coach situation.',
-      playing_time: 'Who\'s ahead of you? What has the coach said? What have you tried?',
-      parent: 'How old is your kid, what level, and what are you seeing?',
-    }
-
-    const activePlaceholder = entryMode ? modePlaceholders[entryMode] : 'Ask anything.'
-
-    const entryChooser = (
-      <div className="w-full mb-4">
-        <div className="flex flex-wrap gap-2">
-          {entryOptions.map((opt) => {
-            const active = entryMode === opt.id
-            return (
-              <button
-                key={opt.id}
-                onClick={() => {
-                  setEntryMode(active ? null : opt.id)
-                  posthog?.capture('entry_mode_selected', { mode: active ? null : opt.id })
-                  setTimeout(() => textareaRef.current?.focus(), 50)
-                }}
-	                className={`text-xs px-4 py-2 rounded-full border transition-colors ${
-	                  active
-	                    ? 'border-black text-white bg-black'
-	                    : 'border-black/10 text-black/50 hover:border-black/25 hover:text-black'
-	                }`}
-              >
-                {opt.label}
-              </button>
-            )
-          })}
-        </div>
-        {entryMode && (
-	          <p className="text-xs text-black/45 mt-3 leading-relaxed">
-	            {entryOptions.find((o) => o.id === entryMode)?.hint}
-	          </p>
-        )}
-      </div>
-    )
+    const activePlaceholder = 'Ask anything.'
 
     const askPanel = (
       <div className="w-full">
@@ -1447,7 +1401,6 @@ function AskPageInner() {
 	          <p className="text-[10px] text-black/50 uppercase tracking-[0.22em] font-bold mb-5">
 	            Ask Elijah
 	          </p>
-	          {entryChooser}
 	          <div className="rounded-[24px] border border-black/10 bg-black/[0.03] focus-within:border-black/35 transition-colors overflow-hidden">
             <textarea
               ref={textareaRef}
@@ -1540,28 +1493,6 @@ function AskPageInner() {
 
         {/* ────────── Mobile layout ────────── */}
         <div className="flex md:hidden flex-col flex-1 min-h-0">
-          {/* Entry mode chips — horizontal scroll row */}
-          <div className="chip-row flex gap-2 px-5 pt-2 pb-3 shrink-0">
-            {entryOptions.map((opt) => {
-              const active = entryMode === opt.id
-              return (
-                <button
-                  key={opt.id}
-                  onClick={() => {
-                    setEntryMode(active ? null : opt.id)
-                    posthog?.capture('entry_mode_selected', { mode: active ? null : opt.id })
-                    setTimeout(() => textareaRef.current?.focus(), 50)
-                  }}
-                  className={`shrink-0 text-sm px-4 py-2 rounded-full border whitespace-nowrap transition-colors ${
-                    active ? 'border-white text-white bg-white/10' : 'border-gray-800 text-gray-400'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              )
-            })}
-          </div>
-
           {/* Textarea fills remaining space */}
           <div className="flex-1 min-h-0 px-5 pt-2 pb-3 flex">
             <textarea
@@ -1573,12 +1504,6 @@ function AskPageInner() {
               className="w-full h-full bg-transparent text-white placeholder-gray-600 text-xl leading-relaxed resize-none outline-none"
             />
           </div>
-
-          {entryMode && (
-            <p className="text-xs text-gray-600 px-5 pb-2 shrink-0">
-              {entryOptions.find((o) => o.id === entryMode)?.hint}
-            </p>
-          )}
 
           {/* Sticky bottom action row — thumb zone, above home indicator */}
           <div
