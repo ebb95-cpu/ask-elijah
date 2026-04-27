@@ -946,7 +946,7 @@ export default function HomePage() {
       </section>
 
       {/* Grand Slam Offer stack — what you actually get, framed by Hormozi's
-          value equation (reduce time delay, stack outcomes, anchor price).
+          value equation (reduce time delay, stack outcomes, raise perceived likelihood).
           Kept in Elijah's voice: short sentences, no fluff, first-person. */}
       <section className="bg-black px-5 py-16 border-t border-gray-900">
         <div className="max-w-xl mx-auto">
@@ -986,10 +986,10 @@ export default function HomePage() {
             </div>
 
             <div className="flex items-start gap-5">
-              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0">$0</span>
+              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0">Beta</span>
               <div>
                 <p className="text-white text-lg font-semibold leading-tight mb-1">Free while I&apos;m building this.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">A mental-performance coach charges $100+/hour. This costs you an email.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">If you get in, use it. Ask real questions. Try the answer. Come back better.</p>
               </div>
             </div>
           </div>
