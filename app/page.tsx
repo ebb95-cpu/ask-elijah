@@ -627,14 +627,14 @@ export default function HomePage() {
     const isDone = streamedText.length > 0
 
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col">
-        <nav className="flex items-center justify-between px-6 py-5">
+      <div className="min-h-[100dvh] bg-black text-white flex flex-col">
+        <nav className="flex items-center justify-between px-5 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] sm:px-6 sm:py-5">
           <button onClick={reset} className="text-gray-500 hover:text-white text-sm transition-colors">← Back</button>
           <Logo dark />
           <div className="w-16" />
         </nav>
 
-        <div className="flex-1 flex flex-col items-center px-5 py-8 max-w-xl mx-auto w-full">
+        <div className="flex-1 flex flex-col items-center px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-5 sm:py-8 max-w-xl mx-auto w-full">
           {/* Question */}
           <div className="w-full mb-8">
             <p className="text-gray-600 text-xs uppercase tracking-widest mb-2">Your question</p>
@@ -647,13 +647,13 @@ export default function HomePage() {
 
             {revealed ? (
               // Full answer, unblurred. Shown after email verification succeeds.
-              <div className="text-white text-base leading-relaxed mb-6 whitespace-pre-wrap">
+              <div className="text-white text-[17px] leading-8 sm:text-base sm:leading-relaxed mb-6 whitespace-pre-wrap">
                 {streamedText}
               </div>
             ) : (
               <>
                 {/* Visible part */}
-                <div className="text-white text-base leading-relaxed mb-2">
+                <div className="text-white text-[17px] leading-8 sm:text-base sm:leading-relaxed mb-2">
                   {visibleText}
                   {!isDone && <span className="inline-block w-1 h-4 bg-white ml-1 animate-pulse" />}
                 </div>
@@ -661,7 +661,7 @@ export default function HomePage() {
                 {/* Blurred fade — no overlay, just visual hint there's more */}
                 {hiddenText && (
                   <div
-                    className="text-white text-base leading-relaxed select-none pointer-events-none mb-6"
+                    className="text-white text-[17px] leading-8 sm:text-base sm:leading-relaxed select-none pointer-events-none mb-6"
                     style={{
                       maskImage: 'linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, transparent 80%)',
                       WebkitMaskImage: 'linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, transparent 80%)',
