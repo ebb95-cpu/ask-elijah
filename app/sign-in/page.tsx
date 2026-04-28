@@ -345,9 +345,9 @@ function SignInInner() {
                 <button
                   onClick={handleForgotPassword}
                   disabled={loading}
-                  className="w-full text-xs text-gray-500 hover:text-white transition-colors mt-6 text-center"
+                  className="w-full text-xs text-gray-500 hover:text-white transition-colors mt-6 text-center disabled:opacity-40"
                 >
-                  Forgot password?
+                  Can&apos;t find your password? Send reset link →
                 </button>
               )}
 
@@ -362,12 +362,20 @@ function SignInInner() {
 
           {step === 'reset-sent' && (
             <div className="text-center">
-              <h1 className="text-3xl font-bold mb-4">Reset link is on the way.</h1>
+              <h1 className="text-3xl font-bold mb-4">Check your inbox.</h1>
               <p className="text-gray-500 text-sm leading-relaxed mb-2">We sent it to</p>
               <p className="text-white font-semibold mb-6">{email}</p>
               <p className="text-gray-600 text-sm leading-relaxed mb-10">
-                Click the link in the email to set a new password.
+                Click the link in the email to set a new password. It expires in one hour.
               </p>
+              {error && <p className="text-red-400 text-xs text-center mb-4">{error}</p>}
+              <button
+                onClick={handleForgotPassword}
+                disabled={loading}
+                className="w-full rounded-full bg-white py-3 text-sm font-semibold text-black hover:opacity-80 disabled:opacity-40 transition-opacity mb-5"
+              >
+                {loading ? <LoadingDots label="Sending" /> : 'Send it again →'}
+              </button>
               <button
                 onClick={() => { setStep('email'); setError(''); setPassword('') }}
                 className="text-xs text-gray-600 hover:text-white transition-colors"
