@@ -31,6 +31,28 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const verifySession = async () => {
       const supabase = getSupabaseClient()
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+      const query = new URLSearchParams(window.location.search)
+      const accessToken = hash.get('access_token')
+      const refreshToken = hash.get('refresh_token')
+      const code = query.get('code')
+      const linkError = hash.get('error_description') || query.get('error_description')
+
+      if (linkError) {
+        setError(linkError)
+      }
+
+      if (accessToken && refreshToken) {
+        await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+        window.history.replaceState(null, '', '/reset-password')
+      } else if (code) {
+        await supabase.auth.exchangeCodeForSession(code)
+        window.history.replaceState(null, '', '/reset-password')
+      }
+
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         setAuthorized(true)
@@ -56,7 +78,7 @@ export default function ResetPasswordPage() {
       const supabase = getSupabaseClient()
       const { error: updateError } = await supabase.auth.updateUser({ password })
       if (updateError) throw updateError
-      router.push('/home')
+      router.push('/track')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not update password.')
       setLoading(false)
