@@ -8,8 +8,9 @@ function getStripe() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, priceId, isFoundingMember } = await req.json()
+    const { email, priceId, isFoundingMember, tier, mode: rawMode } = await req.json()
     const stripe = getStripe()
+    const mode: 'subscription' | 'payment' = rawMode === 'payment' ? 'payment' : 'subscription'
 
     if (!email || !priceId) {
       return NextResponse.json({ error: 'Email and priceId required' }, { status: 400 })
@@ -38,20 +39,22 @@ export async function POST(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
-      mode: 'subscription',
+      mode,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${siteUrl}/ask?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/ask`,
+      success_url: `${siteUrl}/track?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/pricing`,
       metadata: {
         email,
+        tier: tier || (mode === 'payment' ? 'priority' : 'locker_room'),
         is_founding_member: isFoundingMember ? 'true' : 'false',
       },
-      subscription_data: {
+      subscription_data: mode === 'subscription' ? {
         metadata: {
           email,
+          tier: tier || 'locker_room',
           is_founding_member: isFoundingMember ? 'true' : 'false',
         },
-      },
+      } : undefined,
     })
 
     return NextResponse.json({ url: session.url })

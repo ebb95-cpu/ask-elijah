@@ -28,9 +28,10 @@ export async function POST(req: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
         const email = session.metadata?.email?.toLowerCase()
+        const tier = session.metadata?.tier || (session.mode === 'payment' ? 'priority' : 'locker_room')
         const isFoundingMember = session.metadata?.is_founding_member === 'true'
         const customerId = session.customer as string
-        const subscriptionId = session.subscription as string
+        const subscriptionId = typeof session.subscription === 'string' ? session.subscription : null
 
         if (!email) break
 
@@ -40,7 +41,9 @@ export async function POST(req: NextRequest) {
             email,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
-            subscription_status: 'active',
+            subscription_status: session.mode === 'payment' ? 'priority_paid' : 'active',
+            subscription_tier: tier,
+            priority_credits: session.mode === 'payment' ? 1 : 0,
             is_founding_member: isFoundingMember,
             subscription_started_at: new Date().toISOString(),
           }, { onConflict: 'email' })

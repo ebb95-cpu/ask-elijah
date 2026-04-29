@@ -21,10 +21,33 @@ async function sbFetch(path: string) {
 export async function GET(req: NextRequest) {
   const email = req.nextUrl.searchParams.get('email') || ''
 
-  // Fetch approved questions via direct REST
-  const questions: { id: string; question: string; answer: string; topic: string | null; created_at: string; reviewed_by_elijah: boolean | null; sources?: { title: string; url: string; type?: string | null }[] | null }[] | null = await sbFetch(
-    '/rest/v1/questions?status=eq.approved&deleted_at=is.null&select=id,question,answer,topic,created_at,reviewed_by_elijah,sources&order=created_at.desc&limit=100'
+  type BrowseQuestion = {
+    id: string
+    question: string
+    answer: string
+    topic: string | null
+    created_at: string
+    reviewed_by_elijah: boolean | null
+    asker_label?: string | null
+    player_age?: number | null
+    themes?: string[] | null
+    parent_relevant?: boolean | null
+    public?: boolean | null
+    age_band?: string | null
+    sources?: { title: string; url: string; type?: string | null }[] | null
+  }
+
+  // Prefer explicit CMS-public answers. If the migration has not been run yet,
+  // fall back to the legacy approved feed so /browse never goes empty.
+  let questions: BrowseQuestion[] | null = await sbFetch(
+    '/rest/v1/questions?status=eq.approved&public=eq.true&deleted_at=is.null&select=id,question,answer,topic,created_at,reviewed_by_elijah,asker_label,player_age,themes,parent_relevant,public,age_band,sources&order=created_at.desc&limit=100'
   )
+
+  if (questions === null) {
+    questions = await sbFetch(
+      '/rest/v1/questions?status=eq.approved&deleted_at=is.null&select=id,question,answer,topic,created_at,reviewed_by_elijah,sources&order=created_at.desc&limit=100'
+    )
+  }
 
   if (!questions?.length) return NextResponse.json({ questions: [] })
 
@@ -60,6 +83,12 @@ export async function GET(req: NextRequest) {
     answer: q.answer,
     topic: q.topic,
     created_at: q.created_at,
+    asker_label: q.asker_label || null,
+    player_age: q.player_age || null,
+    themes: Array.isArray(q.themes) ? q.themes : [],
+    parent_relevant: q.parent_relevant === true,
+    public: q.public === true,
+    age_band: q.age_band || null,
     upvote_count: countMap[q.id] || 0,
     user_upvoted: userSet.has(q.id),
     reviewed_by_elijah: q.reviewed_by_elijah === true,

@@ -19,19 +19,22 @@ export async function GET(req: NextRequest) {
 
   const subscribed = profile?.subscription_status === 'active' || profile?.subscription_status === 'past_due'
 
-  // Count questions in the last 7 days
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  // Paid locker-room limit is monthly. This endpoint is advisory for the UI;
+  // the server ask route remains the source of truth.
+  const monthStart = new Date()
+  monthStart.setDate(1)
+  monthStart.setHours(0, 0, 0, 0)
   const { count } = await supabase
     .from('questions')
     .select('id', { count: 'exact', head: true })
     .eq('email', clean)
-    .gte('created_at', weekAgo)
+    .gte('created_at', monthStart.toISOString())
 
   return NextResponse.json({
     subscribed,
     isFoundingMember: profile?.is_founding_member ?? false,
-    questionsThisWeek: count ?? 0,
-    freeLimit: 1,
-    canAsk: subscribed || (count ?? 0) < 1,
+    questionsThisMonth: count ?? 0,
+    monthlyLimit: 5,
+    canAsk: subscribed ? (count ?? 0) < 5 : false,
   })
 }

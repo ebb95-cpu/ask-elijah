@@ -20,24 +20,42 @@ type Question = {
   answer: string
   topic: string | null
   created_at: string
+  asker_label?: string | null
+  player_age?: number | null
+  themes?: string[]
+  age_band?: string | null
   upvote_count: number
   user_upvoted: boolean
   reviewed_by_elijah: boolean
   sources?: AnswerSource[]
 }
 
-const CATEGORIES = ['All', 'Confidence', 'Pressure', 'Coach', 'Slumps', 'Mindset']
+const CATEGORIES = ['All', 'Confidence', 'Pressure', 'Coach', 'Slumps', 'Mindset', 'Recruiting', 'Parents']
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   Confidence: ['confidence', 'believe', 'belief', 'scared', 'fear', 'doubt', 'nervous', 'teammates'],
   Pressure: ['pressure', 'big game', 'finals', 'sleep', 'nerves', 'freeze', 'shot', 'clutch'],
   Coach: ['coach', 'bench', 'benching', 'starting', 'minutes', 'playing time'],
   Slumps: ['slump', 'streak', 'bad', 'not working', 'passion', 'love', 'lost', 'harder'],
   Mindset: ['mindset', 'mental', 'head', 'think', 'motivation', 'focus', 'position'],
+  Recruiting: ['recruiting', 'college', 'nil', 'd1', 'offer', 'coach coming'],
+  Parents: ['parent', 'dad', 'mom', 'family'],
 }
 
-function matchesCategory(question: string, category: string): boolean {
+const CATEGORY_THEMES: Record<string, string[]> = {
+  Confidence: ['confidence', 'identity'],
+  Pressure: ['pressure'],
+  Coach: ['coach', 'role'],
+  Slumps: ['slumps', 'burnout'],
+  Mindset: ['mindset', 'faith'],
+  Recruiting: ['recruiting'],
+  Parents: ['parent'],
+}
+
+function matchesCategory(q: Question, category: string): boolean {
   if (category === 'All') return true
-  return (CATEGORY_KEYWORDS[category] || []).some((k) => question.toLowerCase().includes(k))
+  const themes = q.themes || []
+  if ((CATEGORY_THEMES[category] || []).some((theme) => themes.includes(theme))) return true
+  return (CATEGORY_KEYWORDS[category] || []).some((k) => q.question.toLowerCase().includes(k))
 }
 
 export default function BrowsePage() {
@@ -84,7 +102,7 @@ export default function BrowsePage() {
     )
   }
 
-  const filtered = questions.filter((q) => matchesCategory(q.question, activeCategory))
+  const filtered = questions.filter((q) => matchesCategory(q, activeCategory))
   const openQuestion = openId ? questions.find((q) => q.id === openId) : null
 
   return (
@@ -130,7 +148,7 @@ export default function BrowsePage() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-gray-600 text-sm mb-6">
-              {activeCategory === 'All' ? 'No questions yet. Be the first.' : `No ${activeCategory.toLowerCase()} questions yet.`}
+              {activeCategory === 'All' ? 'No answers loaded yet.' : `No ${activeCategory.toLowerCase()} answers yet.`}
             </p>
             <Link href="/ask" className="inline-block bg-white text-black px-6 py-3 text-sm font-bold rounded-full">
               Ask Elijah →
@@ -170,7 +188,7 @@ export default function BrowsePage() {
                 </div>
                 <div className="flex items-center justify-between mt-2 gap-2">
                   <p className="text-[10px] text-gray-700">
-                    {q.topic || 'General'}
+                    {q.asker_label || q.topic || 'Player question'}
                   </p>
                   {q.reviewed_by_elijah && (
                     <span
@@ -236,8 +254,12 @@ export default function BrowsePage() {
             </div>
 
             {/* Topic */}
-            {openQuestion.topic && (
-              <p className="text-xs text-gray-600 mb-8">Topic: {openQuestion.topic}</p>
+            {(openQuestion.asker_label || openQuestion.topic || openQuestion.themes?.length) && (
+              <p className="text-xs text-gray-600 mb-8">
+                {[openQuestion.asker_label, openQuestion.topic, ...(openQuestion.themes || []).slice(0, 2)]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </p>
             )}
 
             {/* Sources */}

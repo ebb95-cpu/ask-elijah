@@ -885,6 +885,7 @@ export default function HomePage() {
         </div>
         <div className="flex items-center gap-6">
           <Link href="/browse" className="text-sm text-gray-500 hover:text-white transition-colors">Browse</Link>
+          <Link href="/pricing" className="hidden text-sm text-gray-500 hover:text-white transition-colors sm:block">Pricing</Link>
           {userEmailRef.current ? (
             <Link href="/track" className="text-sm text-white font-semibold hover:opacity-70 transition-opacity">Locker room →</Link>
           ) : (
@@ -1025,20 +1026,22 @@ export default function HomePage() {
             </div>
 
             <div className="flex items-start gap-5">
-              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0">Beta</span>
+              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0">Access</span>
               <div>
-                <p className="text-white text-lg font-semibold leading-tight mb-1">Free while I&apos;m building this.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">If you get in, use it. Ask real questions. Try the answer. Come back better.</p>
+                <p className="text-white text-lg font-semibold leading-tight mb-1">Free to read. Paid to ask.</p>
+                <p className="text-gray-500 text-sm leading-relaxed">Browse public answers. Join the locker room when you want Elijah to answer your situation.</p>
               </div>
             </div>
           </div>
 
-          <button
-            onClick={() => (document.querySelector('textarea') as HTMLTextAreaElement | null)?.focus()}
-            className="mt-12 text-xs text-gray-500 hover:text-white transition-colors uppercase tracking-widest"
-          >
-            Ask me something →
-          </button>
+          <div className="mt-12 flex flex-col gap-4">
+            <Link href="/pricing" className="text-xs text-gray-500 hover:text-white transition-colors uppercase tracking-widest">
+              Join the locker room →
+            </Link>
+            <Link href="/parents" className="text-xs text-gray-700 hover:text-gray-300 transition-colors">
+              Are you a parent and want to put this in your son&apos;s hands? Read this.
+            </Link>
+          </div>
         </div>
       </section>
 
