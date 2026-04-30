@@ -27,7 +27,6 @@ function basePayload(seed: (typeof PUBLIC_ANSWER_SEEDS)[number], index: number) 
     topic: seed.themes[0] || 'mindset',
     created_at: createdAt,
     approved_at: createdAt,
-    answered_at: createdAt,
     reviewed_by_elijah: true,
   }
 }

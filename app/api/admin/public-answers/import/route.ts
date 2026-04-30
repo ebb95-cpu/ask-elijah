@@ -92,7 +92,6 @@ export async function POST(req: NextRequest) {
       topic: item.themes[0] || 'mindset',
       created_at: createdAt,
       approved_at: createdAt,
-      answered_at: createdAt,
       reviewed_by_elijah: true,
       asker_label: item.asker_label || null,
       player_age: item.player_age || null,
