@@ -95,12 +95,19 @@ export async function POST(req: NextRequest) {
       customer: customerId,
       payment_method_types: ['card'],
       mode,
+      automatic_tax: { enabled: true },
+      billing_address_collection: 'auto',
+      customer_update: {
+        address: 'auto',
+        name: 'auto',
+      },
       line_items: [{
         ...(plan
           ? {
               price_data: {
                 currency: 'usd',
                 unit_amount: plan.amount,
+                tax_behavior: 'exclusive',
                 recurring: 'recurring' in plan ? plan.recurring : undefined,
                 product_data: {
                   name: plan.name,

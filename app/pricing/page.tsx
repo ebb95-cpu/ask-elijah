@@ -86,6 +86,7 @@ export default function PricingPage() {
         <div className="rounded-[2rem] border border-white bg-[#F7F5F0] p-7 text-black shadow-[0_0_80px_rgba(255,255,255,0.12)]">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-gray-500">Locker Room</p>
           <p className="mt-5 text-4xl font-black">$14.99<span className="text-base text-gray-500">/mo</span></p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-gray-500">plus applicable tax</p>
           <p className="mt-3 text-sm leading-relaxed text-gray-600">Ask up to 5 questions a month. Full archive. Every answer Elijah-reviewed.</p>
           <button
             onClick={() => checkout('locker_monthly')}
@@ -106,6 +107,7 @@ export default function PricingPage() {
         <div className="rounded-[2rem] border border-gray-900 bg-[#050505] p-7">
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-gray-600">Priority</p>
           <p className="mt-5 text-4xl font-black">$29</p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-gray-700">plus applicable tax</p>
           <p className="mt-3 text-sm leading-relaxed text-gray-500">Need the answer fast. Skip the line and get a 24 hour turnaround.</p>
           <button
             onClick={() => checkout('priority')}
