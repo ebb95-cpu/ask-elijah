@@ -5,10 +5,6 @@ import Link from 'next/link'
 import { getLocal } from '@/lib/safe-storage'
 import LoadingDots from '@/components/ui/LoadingDots'
 
-const LOCKER_MONTHLY_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_LOCKER_MONTHLY_PRICE_ID || ''
-const LOCKER_ANNUAL_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_LOCKER_ANNUAL_PRICE_ID || ''
-const PRIORITY_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRIORITY_PRICE_ID || ''
-
 function Logo() {
   return (
     <svg width="52" height="8" viewBox="0 0 52 8" fill="none">
@@ -25,23 +21,19 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState('')
 
-  const checkout = async (priceId: string, tier: string, mode: 'subscription' | 'payment') => {
+  const checkout = async (plan: string) => {
     const email = getLocal('ask_elijah_email') || ''
-    if (!priceId) {
-      setError('This plan is not wired to Stripe yet. Add the Stripe price ID in Vercel first.')
-      return
-    }
     if (!email) {
       window.location.href = `/sign-in?next=${encodeURIComponent('/pricing')}`
       return
     }
 
-    setLoading(tier)
+    setLoading(plan)
     setError('')
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, priceId, tier, mode }),
+      body: JSON.stringify({ email, plan }),
     })
     const data = await res.json().catch(() => null)
     if (data?.url) window.location.href = data.url
@@ -96,18 +88,18 @@ export default function PricingPage() {
           <p className="mt-5 text-4xl font-black">$14.99<span className="text-base text-gray-500">/mo</span></p>
           <p className="mt-3 text-sm leading-relaxed text-gray-600">Ask up to 5 questions a month. Full archive. Every answer Elijah-reviewed.</p>
           <button
-            onClick={() => checkout(LOCKER_MONTHLY_PRICE_ID, 'locker_room', 'subscription')}
+            onClick={() => checkout('locker_monthly')}
             disabled={loading !== null}
             className="mt-8 block w-full rounded-full bg-black px-5 py-4 text-center text-sm font-bold text-white hover:opacity-80 disabled:opacity-50"
           >
-            {loading === 'locker_room' ? <LoadingDots label="Opening checkout" /> : 'Join monthly'}
+            {loading === 'locker_monthly' ? <LoadingDots label="Opening checkout" /> : 'Join monthly'}
           </button>
           <button
-            onClick={() => checkout(LOCKER_ANNUAL_PRICE_ID, 'locker_room_annual', 'subscription')}
+            onClick={() => checkout('locker_annual')}
             disabled={loading !== null}
             className="mt-3 block w-full rounded-full border border-black/20 px-5 py-4 text-center text-sm font-bold text-black hover:border-black disabled:opacity-50"
           >
-            {loading === 'locker_room_annual' ? <LoadingDots label="Opening checkout" /> : 'Or $129/year'}
+            {loading === 'locker_annual' ? <LoadingDots label="Opening checkout" /> : 'Or $129/year'}
           </button>
         </div>
 
@@ -116,7 +108,7 @@ export default function PricingPage() {
           <p className="mt-5 text-4xl font-black">$29</p>
           <p className="mt-3 text-sm leading-relaxed text-gray-500">Need the answer fast. Skip the line and get a 24 hour turnaround.</p>
           <button
-            onClick={() => checkout(PRIORITY_PRICE_ID, 'priority', 'payment')}
+            onClick={() => checkout('priority')}
             disabled={loading !== null}
             className="mt-8 block w-full rounded-full border border-gray-800 px-5 py-4 text-center text-sm font-bold text-white hover:border-white disabled:opacity-50"
           >

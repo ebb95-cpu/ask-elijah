@@ -3,14 +3,52 @@ import Stripe from 'stripe'
 import { getSupabase } from '@/lib/supabase-server'
 
 function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-03-25.dahlia' })
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key) throw new Error('STRIPE_SECRET_KEY is not set')
+  return new Stripe(key, { apiVersion: '2026-03-25.dahlia' })
 }
 
 export const dynamic = 'force-dynamic'
 
+async function findProfileEmail(params: {
+  supabase: ReturnType<typeof getSupabase>
+  subscriptionId?: string | null
+  customerId?: string | null
+  metadataEmail?: string | null
+}) {
+  const metadataEmail = params.metadataEmail?.toLowerCase()
+  if (metadataEmail) return metadataEmail
+
+  if (params.subscriptionId) {
+    const { data } = await params.supabase
+      .from('profiles')
+      .select('email')
+      .eq('stripe_subscription_id', params.subscriptionId)
+      .maybeSingle()
+    if (data?.email) return data.email.toLowerCase()
+  }
+
+  if (params.customerId) {
+    const { data } = await params.supabase
+      .from('profiles')
+      .select('email')
+      .eq('stripe_customer_id', params.customerId)
+      .maybeSingle()
+    if (data?.email) return data.email.toLowerCase()
+  }
+
+  return null
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
-  const sig = req.headers.get('stripe-signature')!
+  const sig = req.headers.get('stripe-signature')
+  if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
+    return NextResponse.json({ error: 'Stripe webhook not configured' }, { status: 503 })
+  }
+  if (!sig) {
+    return NextResponse.json({ error: 'Missing Stripe signature' }, { status: 400 })
+  }
   const stripe = getStripe()
 
   let event: Stripe.Event
@@ -35,6 +73,12 @@ export async function POST(req: NextRequest) {
 
         if (!email) break
 
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('priority_credits')
+          .eq('email', email)
+          .maybeSingle()
+
         await supabase
           .from('profiles')
           .upsert({
@@ -43,7 +87,9 @@ export async function POST(req: NextRequest) {
             stripe_subscription_id: subscriptionId,
             subscription_status: session.mode === 'payment' ? 'priority_paid' : 'active',
             subscription_tier: tier,
-            priority_credits: session.mode === 'payment' ? 1 : 0,
+            priority_credits: session.mode === 'payment'
+              ? (Number(existingProfile?.priority_credits) || 0) + 1
+              : (Number(existingProfile?.priority_credits) || 0),
             is_founding_member: isFoundingMember,
             subscription_started_at: new Date().toISOString(),
           }, { onConflict: 'email' })
@@ -55,7 +101,13 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.deleted':
       case 'customer.subscription.paused': {
         const subscription = event.data.object as Stripe.Subscription
-        const email = subscription.metadata?.email?.toLowerCase()
+        const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
+        const email = await findProfileEmail({
+          supabase,
+          subscriptionId: subscription.id,
+          customerId,
+          metadataEmail: subscription.metadata?.email,
+        })
 
         if (!email) break
 
@@ -78,13 +130,23 @@ export async function POST(req: NextRequest) {
         if (!subscriptionId) break
 
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-        const email = subscription.metadata?.email?.toLowerCase()
+        const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
+        const email = await findProfileEmail({
+          supabase,
+          subscriptionId,
+          customerId,
+          metadataEmail: subscription.metadata?.email,
+        })
 
         if (!email) break
 
         await supabase
           .from('profiles')
-          .update({ subscription_status: 'active' })
+          .update({
+            subscription_status: 'active',
+            stripe_subscription_id: subscriptionId,
+            stripe_customer_id: customerId,
+          })
           .eq('email', email)
 
         break
@@ -96,7 +158,13 @@ export async function POST(req: NextRequest) {
         if (!subscriptionId) break
 
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-        const email = subscription.metadata?.email?.toLowerCase()
+        const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
+        const email = await findProfileEmail({
+          supabase,
+          subscriptionId,
+          customerId,
+          metadataEmail: subscription.metadata?.email,
+        })
         if (!email) break
 
         await supabase
