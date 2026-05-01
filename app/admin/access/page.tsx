@@ -35,6 +35,7 @@ type AccessEntry = {
   high_value: boolean
   admin_note_updated_at: string | null
   has_profile: boolean
+  is_founding_member: boolean
 }
 
 export default function AdminAccessPage() {
@@ -50,6 +51,8 @@ export default function AdminAccessPage() {
   const [notice, setNotice] = useState('')
 
   const approvedCount = useMemo(() => entries.filter((e) => e.approved).length, [entries])
+  const foundingCount = useMemo(() => entries.filter((e) => e.is_founding_member).length, [entries])
+  const foundingSeatsLeft = Math.max(0, 200 - foundingCount)
   const waitingCount = entries.length - approvedCount
   const totalQuestions = useMemo(() => entries.reduce((sum, entry) => sum + entry.question_count, 0), [entries])
   const pendingQuestions = useMemo(() => entries.reduce((sum, entry) => sum + entry.pending_count, 0), [entries])
@@ -219,11 +222,12 @@ export default function AdminAccessPage() {
             </p>
             <h1 className="text-4xl font-bold tracking-tight">Access List</h1>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-gray-500">
-              Approve the players who can create accounts and send questions while the launch stays controlled.
+              Approve up to 200 Founding players who can create accounts and send questions while the launch stays controlled.
             </p>
           </div>
           <div className="flex gap-3 text-sm">
-            <Stat label="Approved" value={approvedCount} />
+            <Stat label="Founders" value={foundingCount} />
+            <Stat label="Seats left" value={foundingSeatsLeft} />
             <Stat label="Waiting" value={waitingCount} />
             <Stat label="Held spots" value={heldSpots} />
             <Stat label="Questions" value={totalQuestions} />
@@ -302,6 +306,11 @@ export default function AdminAccessPage() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold text-white">{entry.name || entry.email}</p>
+                    {entry.is_founding_member && (
+                      <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-300">
+                        Founder
+                      </span>
+                    )}
                     {entry.high_value && (
                       <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-yellow-300">
                         High value

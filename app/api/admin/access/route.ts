@@ -32,6 +32,7 @@ type ProfileRow = {
   position: string | null
   level: string | null
   challenge: string | null
+  is_founding_member?: boolean | null
   created_at: string | null
 }
 
@@ -58,6 +59,7 @@ function cleanEmail(input: unknown): string {
 }
 
 const INVITE_EXPIRES_DAYS = 7
+const FOUNDING_SEAT_LIMIT = 200
 
 function inviteWindow() {
   const sentAt = new Date()
@@ -72,7 +74,7 @@ function inviteWindow() {
 async function fetchWaitlistRows(supabase: ReturnType<typeof getSupabase>) {
   const withExpiry = await supabase
     .from('waitlist')
-    .select('id, email, name, challenge, confirmed, approved, notified, created_at')
+    .select('id, email, name, challenge, confirmed, approved, notified, invite_sent_at, access_expires_at, created_at')
     .order('created_at', { ascending: false })
     .limit(500)
 
@@ -84,6 +86,30 @@ async function fetchWaitlistRows(supabase: ReturnType<typeof getSupabase>) {
     .select('id, email, name, challenge, confirmed, approved, notified, created_at')
     .order('created_at', { ascending: false })
     .limit(500)
+}
+
+async function canApproveFoundingSeat(supabase: ReturnType<typeof getSupabase>, currentWaitlistId?: string) {
+  const { data, error } = await supabase
+    .from('waitlist')
+    .select('id')
+    .eq('approved', true)
+    .limit(FOUNDING_SEAT_LIMIT + 1)
+
+  if (error) return { ok: false, error: 'Could not check Founding 200 seats.' }
+
+  const approvedRows = (data || []).filter((row: { id: string }) => row.id !== currentWaitlistId)
+  if (approvedRows.length >= FOUNDING_SEAT_LIMIT) {
+    return { ok: false, error: 'Founding 200 is full. Move someone to waiting before approving another player.' }
+  }
+
+  return { ok: true, error: null }
+}
+
+async function markProfileFoundingMember(supabase: ReturnType<typeof getSupabase>, email: string, isFoundingMember: boolean) {
+  await supabase
+    .from('profiles')
+    .update({ is_founding_member: isFoundingMember })
+    .eq('email', email)
 }
 
 function escapeHtml(value: string): string {
@@ -173,7 +199,7 @@ export async function GET() {
     fetchWaitlistRows(supabase),
     supabase
       .from('profiles')
-      .select('id, email, first_name, name, position, level, challenge, created_at')
+      .select('id, email, first_name, name, position, level, challenge, is_founding_member, created_at')
       .order('created_at', { ascending: false })
       .limit(500),
     supabase
@@ -236,6 +262,7 @@ export async function GET() {
     high_value: boolean
     admin_note_updated_at: string | null
     has_profile: boolean
+    is_founding_member: boolean
   }>()
 
   const ensureEntry = (email: string) => {
@@ -275,6 +302,7 @@ export async function GET() {
         high_value: false,
         admin_note_updated_at: null,
         has_profile: false,
+        is_founding_member: false,
       }
       byEmail.set(clean, entry)
     }
@@ -289,6 +317,7 @@ export async function GET() {
     entry.challenge = row.challenge || entry.challenge
     entry.confirmed = row.confirmed
     entry.approved = row.approved
+    if (row.approved) entry.is_founding_member = true
     entry.notified = row.notified
     entry.invite_sent_at = row.invite_sent_at || null
     entry.access_expires_at = row.access_expires_at || null
@@ -303,6 +332,7 @@ export async function GET() {
     entry.position = row.position
     entry.level = row.level
     entry.profile_created_at = row.created_at
+    entry.is_founding_member = entry.is_founding_member || row.is_founding_member === true
     entry.approved = true
     if (!entry.waitlist_id && row.created_at) entry.created_at = row.created_at
   }
@@ -393,6 +423,11 @@ export async function POST(req: NextRequest) {
   const shouldSendInvite = body.sendInvite === true
 
   const supabase = getSupabase()
+  const seatCheck = await canApproveFoundingSeat(supabase)
+  if (!seatCheck.ok) {
+    return NextResponse.json({ error: seatCheck.error }, { status: 409 })
+  }
+
   const { data, error } = await supabase
     .from('waitlist')
     .upsert(
@@ -411,6 +446,8 @@ export async function POST(req: NextRequest) {
   if (error || !data) {
     return NextResponse.json({ error: 'Failed to approve email' }, { status: 500 })
   }
+
+  await markProfileFoundingMember(supabase, email, true).catch(() => {})
 
   let notified = data.notified
   let inviteSentAt: string | null = null
@@ -464,6 +501,7 @@ export async function POST(req: NextRequest) {
       high_value: false,
       admin_note_updated_at: null,
       has_profile: false,
+      is_founding_member: true,
     },
     invite_sent: shouldSendInvite && !inviteError,
     invite_error: inviteError,
@@ -519,6 +557,13 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
   const supabase = getSupabase()
+  if (approved) {
+    const seatCheck = await canApproveFoundingSeat(supabase, id)
+    if (!seatCheck.ok) {
+      return NextResponse.json({ error: seatCheck.error }, { status: 409 })
+    }
+  }
+
   const { data, error } = await supabase
     .from('waitlist')
     .update({ approved })
@@ -528,6 +573,12 @@ export async function PATCH(req: NextRequest) {
 
   if (error || !data) {
     return NextResponse.json({ error: 'Failed to update access' }, { status: 500 })
+  }
+
+  if (approved) {
+    await markProfileFoundingMember(supabase, data.email, true).catch(() => {})
+  } else {
+    await markProfileFoundingMember(supabase, data.email, false).catch(() => {})
   }
 
   let notified = data.notified
@@ -582,6 +633,7 @@ export async function PATCH(req: NextRequest) {
       high_value: false,
       admin_note_updated_at: null,
       has_profile: false,
+      is_founding_member: approved,
     },
     invite_sent: shouldSendInvite && !inviteError,
     invite_error: inviteError,

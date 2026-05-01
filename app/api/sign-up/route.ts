@@ -40,6 +40,11 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = getSupabase()
+  const { data: accessRow } = await supabase
+    .from('waitlist')
+    .select('approved')
+    .eq('email', cleanEmail)
+    .maybeSingle()
 
   const { data, error } = await supabase.auth.admin.createUser({
     email: cleanEmail,
@@ -60,6 +65,7 @@ export async function POST(req: NextRequest) {
       id: data.user.id,
       first_name: cleanFirstName,
       email: cleanEmail,
+      is_founding_member: accessRow?.approved === true,
     }
     if (cleanChallenge) upsertRow.challenge = cleanChallenge
     if (cleanWeaknesses) upsertRow.weaknesses = cleanWeaknesses

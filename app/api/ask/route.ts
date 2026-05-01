@@ -903,8 +903,8 @@ export async function POST(req: NextRequest) {
             .catch((e) => logError('ask:memories-save', e, { questionId: record.id }))
         }
       }).catch((e) => logError('ask:extract-memories', e, { email: cleanEmailEarly }))
-      // Fire-and-forget founding-member check for new profiles
-      void maybeMarkFoundingMember(cleanEmailEarly)
+      // Founding member status comes from the controlled Founding 200 access list.
+      void syncFoundingMemberFromAccess(cleanEmailEarly)
       return NextResponse.json({ success: true, questionId: record?.id, draft: null })
     }
 
@@ -1068,8 +1068,8 @@ export async function POST(req: NextRequest) {
       }).catch((e) => logError('ask:extract-memories', e, { email: cleanEmailEarly }))
     }
 
-    // Auto-flag first 30 signups as founding members (fire-and-forget)
-    void maybeMarkFoundingMember(cleanEmailEarly)
+    // Founding member status comes from the controlled Founding 200 access list.
+    void syncFoundingMemberFromAccess(cleanEmailEarly)
 
     return NextResponse.json({ success: true, questionId, draft: cleanDraft })
   } catch (err) {
@@ -1079,24 +1079,18 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * If fewer than 30 profiles have `is_founding_member=true`, flag this email's
- * profile. Fire-and-forget, never throws.
+ * If this email has an approved Founding 200 access seat, mirror that badge to
+ * the profile. Fire-and-forget, never throws.
  */
-async function maybeMarkFoundingMember(email: string): Promise<void> {
+async function syncFoundingMemberFromAccess(email: string): Promise<void> {
   try {
     const supabase = getSupabase()
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_founding_member')
+    const { data: waitlist } = await supabase
+      .from('waitlist')
+      .select('approved')
       .eq('email', email)
-      .single()
-    if (!profile || profile.is_founding_member) return
-
-    const { count } = await supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_founding_member', true)
-    if ((count ?? 0) >= 30) return
+      .maybeSingle()
+    if (waitlist?.approved !== true) return
 
     await supabase
       .from('profiles')
