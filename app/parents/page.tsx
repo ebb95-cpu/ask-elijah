@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase-server'
+import { getPricingPhase } from '@/lib/pricing-phase'
 import ParentLeadForm from './ParentLeadForm'
 
 export const dynamic = 'force-dynamic'
@@ -52,13 +53,30 @@ async function getParentAnswers(): Promise<ParentAnswer[]> {
 
 export default async function ParentsPage() {
   const answers = await getParentAnswers()
+  const pricingPhase = getPricingPhase()
+  const isBeta = pricingPhase === 'beta'
+  const primaryCta = isBeta ? 'Apply for a Founding 200 seat' : 'Gift one year'
+  const primarySubcopy = isBeta
+    ? 'Founders Beta is free for 90 days. Accepted players can ask unlimited questions while we build and lock $9.99/mo for life after launch.'
+    : 'Give him one year of Locker Room as a giftable code. He gets the answers. You get billing and engagement signals, not his private questions.'
+  const whatHeGets = isBeta
+    ? [
+        ['A free beta seat.', 'If he is accepted, he can ask unlimited questions during the 90-day beta.'],
+        ['A reviewed answer.', 'Within 24 to 48 hours, a full reply he can come back to all season.'],
+        ['A founding rate.', 'After launch, he keeps $9.99/mo for life while public pricing moves higher.'],
+      ]
+    : [
+        ['A real first take.', "The first thing I would tell him if he asked me in person. On his screen, in 30 seconds."],
+        ['A reviewed answer.', 'Within 24 to 48 hours, a full reply he can come back to all season.'],
+        ['A locker room he owns.', 'Every answer saved. Every reflection logged. His. Not yours.'],
+      ]
 
   return (
     <main className="min-h-[100dvh] bg-black text-white">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
         <Link href="/" aria-label="Home"><Logo /></Link>
         <Link href="/pricing" className="rounded-full bg-white px-5 py-3 text-sm font-black text-black">
-          Give him the locker room
+          {primaryCta}
         </Link>
       </nav>
 
@@ -74,8 +92,11 @@ export default async function ParentsPage() {
           He will not tell you what is going on in his head. That is because you are his parent.
           He will tell someone who has been there.
         </p>
+        <p className="mt-5 max-w-2xl text-base leading-relaxed text-gray-500">
+          {primarySubcopy}
+        </p>
         <Link href="/pricing" className="mt-10 inline-block rounded-full bg-white px-7 py-4 text-sm font-black text-black">
-          Give him the locker room
+          {primaryCta}
         </Link>
       </section>
 
@@ -93,11 +114,7 @@ export default async function ParentsPage() {
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-px px-5 py-16 md:grid-cols-3">
-        {[
-          ['A real first take.', "The first thing I would tell him if he asked me in person. On his screen, in 30 seconds."],
-          ['A reviewed answer.', 'Within 24 to 48 hours, a full reply he can come back to all season.'],
-          ['A locker room he owns.', 'Every answer saved. Every reflection logged. His. Not yours.'],
-        ].map(([title, body]) => (
+        {whatHeGets.map(([title, body]) => (
           <div key={title} className="border border-gray-900 bg-[#050505] p-7">
             <p className="text-xl font-black">{title}</p>
             <p className="mt-3 text-sm leading-relaxed text-gray-500">{body}</p>
@@ -143,10 +160,12 @@ export default async function ParentsPage() {
       <section className="mx-auto max-w-4xl px-5 py-16 text-center">
         <h2 className="text-4xl font-black leading-tight tracking-tight">He does not need another trainer.</h2>
         <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-gray-500">
-          He needs the inside the arena conversation no AAU coach has time for.
+          {isBeta
+            ? 'If he gets one of the Founding 200 seats, he helps shape this before it opens to everyone.'
+            : 'He needs the inside the arena conversation no AAU coach has time for.'}
         </p>
         <Link href="/pricing" className="mt-9 inline-block rounded-full bg-white px-7 py-4 text-sm font-black text-black">
-          Give him the locker room
+          {primaryCta}
         </Link>
       </section>
     </main>
