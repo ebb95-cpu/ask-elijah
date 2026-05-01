@@ -39,9 +39,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Tell Elijah what is actually costing you. Minimum 30 characters.' }, { status: 400 })
   }
 
-  const payload: { email: string; confirmed: boolean; challenge?: string } = {
+  const payload: { email: string; confirmed: boolean; approved: boolean; challenge?: string } = {
     email,
     confirmed: true,
+    approved: false,
   }
 
   if (!isFull && !waitlistOnly) {
@@ -56,5 +57,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Could not save this application yet.' }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, full: isFull, seatsTaken: count || 0 })
+  return NextResponse.json({ ok: true, full: isFull, waitlisted: isFull || waitlistOnly, seatsTaken: count || 0 })
 }

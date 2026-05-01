@@ -424,9 +424,8 @@ export async function POST(req: NextRequest) {
 
   const supabase = getSupabase()
   const seatCheck = await canApproveFoundingSeat(supabase)
-  if (!seatCheck.ok) {
-    return NextResponse.json({ error: seatCheck.error }, { status: 409 })
-  }
+  const shouldApprove = seatCheck.ok
+  const shouldActuallySendInvite = shouldApprove && shouldSendInvite
 
   const { data, error } = await supabase
     .from('waitlist')
@@ -436,7 +435,7 @@ export async function POST(req: NextRequest) {
         name: name || null,
         challenge: challenge || null,
         confirmed: true,
-        approved: true,
+        approved: shouldApprove,
       },
       { onConflict: 'email' }
     )
@@ -447,13 +446,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to approve email' }, { status: 500 })
   }
 
-  await markProfileFoundingMember(supabase, email, true).catch(() => {})
+  await markProfileFoundingMember(supabase, email, shouldApprove).catch(() => {})
 
   let notified = data.notified
   let inviteSentAt: string | null = null
   let accessExpiresAt: string | null = null
   let inviteError: string | null = null
-  if (shouldSendInvite) {
+  if (shouldActuallySendInvite) {
     try {
       await sendAccessInviteEmail({ email, name: name || data.name })
       notified = true
@@ -501,10 +500,14 @@ export async function POST(req: NextRequest) {
       high_value: false,
       admin_note_updated_at: null,
       has_profile: false,
-      is_founding_member: true,
+      is_founding_member: shouldApprove,
     },
-    invite_sent: shouldSendInvite && !inviteError,
+    invite_sent: shouldActuallySendInvite && !inviteError,
     invite_error: inviteError,
+    waitlisted: !shouldApprove,
+    message: shouldApprove
+      ? undefined
+      : seatCheck.error || 'Founding 200 is full, so this player was added to the waiting list.',
   })
 }
 

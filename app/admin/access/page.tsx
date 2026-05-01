@@ -95,7 +95,7 @@ export default function AdminAccessPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to approve email')
       setEntries((prev) => [data.entry, ...prev.filter((entry) => entry.id !== data.entry.id)])
-      setNotice(data.invite_error || (data.invite_sent ? `Invite sent to ${data.entry.email}.` : `${data.entry.email} approved.`))
+      setNotice(data.invite_error || data.message || (data.invite_sent ? `Invite sent to ${data.entry.email}.` : `${data.entry.email} approved.`))
       setEmail('')
       setName('')
     } catch (e) {
