@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
+import { requireAuthorizedEmail } from '@/lib/session-email'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const email = req.nextUrl.searchParams.get('email')
-  if (!email) return NextResponse.json({ subscribed: false, questionsThisWeek: 0 })
+  const authorized = await requireAuthorizedEmail(req)
+  if (authorized instanceof NextResponse) return authorized
+
+  const requested = req.nextUrl.searchParams.get('email')?.trim().toLowerCase()
+  if (requested && requested !== authorized) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const supabase = getSupabase()
-  const clean = email.trim().toLowerCase()
+  const clean = authorized
 
   // Check subscription status
   const { data: profile } = await supabase
