@@ -4,7 +4,9 @@ import { getSupabase } from '@/lib/supabase-server'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const cap = parseInt(process.env.BETA_CAP || '200', 10)
+  // Founding beta is now a 200-seat launch gate. Do not read the legacy
+  // BETA_CAP env var here, because production still has the old 30-seat value.
+  const cap = parseInt(process.env.FOUNDING_SEAT_LIMIT || '200', 10)
 
   // 0 means no cap — open to everyone
   if (cap === 0) {
