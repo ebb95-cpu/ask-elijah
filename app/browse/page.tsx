@@ -58,6 +58,12 @@ function matchesCategory(q: Question, category: string): boolean {
   return (CATEGORY_KEYWORDS[category] || []).some((k) => q.question.toLowerCase().includes(k))
 }
 
+function previewAnswer(answer: string): string {
+  const cleaned = answer.replace(/\s+/g, ' ').trim()
+  if (cleaned.length <= 190) return cleaned
+  return `${cleaned.slice(0, 190).trim()}...`
+}
+
 export default function BrowsePage() {
   const router = useRouter()
   const [questions, setQuestions] = useState<Question[]>([])
@@ -155,27 +161,26 @@ export default function BrowsePage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {filtered.map((q) => (
               <button
                 key={q.id}
                 onClick={() => setOpenId(q.id)}
-                className="text-left rounded-xl p-4 flex flex-col justify-between transition-colors border border-gray-900 hover:border-gray-700"
-                style={{
-                  aspectRatio: '1',
-                  background: '#0a0a0a',
-                }}
+                className="group flex min-h-[320px] flex-col justify-between rounded-[2rem] border border-white/10 bg-[#F7F5F0] p-7 text-left text-black shadow-[0_24px_90px_rgba(255,255,255,0.05)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_28px_100px_rgba(255,255,255,0.12)]"
               >
                 <div>
-                  {/* Upvote count */}
-                  {q.upvote_count > 0 && (
-                    <div className="flex items-center gap-1 mb-2">
-                      <span className="text-[11px] text-gray-500">△ {q.upvote_count}</span>
-                    </div>
-                  )}
-                  {/* Question preview */}
+                  <div className="mb-6 flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-black/45">
+                      {q.reviewed_by_elijah ? 'Elijah reviewed' : 'Community'}
+                    </p>
+                    {q.upvote_count > 0 && (
+                      <span className="rounded-full bg-black/5 px-3 py-1 text-[11px] font-bold text-black/45">
+                        △ {q.upvote_count}
+                      </span>
+                    )}
+                  </div>
                   <p
-                    className="text-sm font-semibold leading-snug text-white"
+                    className="text-[1.35rem] font-black leading-[1.08] tracking-tight text-black"
                     style={{
                       display: '-webkit-box',
                       WebkitLineClamp: 4,
@@ -183,22 +188,21 @@ export default function BrowsePage() {
                       overflow: 'hidden',
                     }}
                   >
-                    {q.question}
+                    &ldquo;{q.question}&rdquo;
                   </p>
+                  {q.answer && (
+                    <p className="mt-5 text-sm leading-relaxed text-black/55">
+                      {previewAnswer(q.answer)}
+                    </p>
+                  )}
                 </div>
-                <div className="flex items-center justify-between mt-2 gap-2">
-                  <p className="text-[10px] text-gray-700">
+                <div className="mt-8 flex items-center justify-between gap-3 border-t border-black/10 pt-5">
+                  <p className="text-[10px] font-semibold text-black/45">
                     {q.asker_label || q.topic || 'Player question'}
                   </p>
-                  {q.reviewed_by_elijah && (
-                    <span
-                      className="text-[9px] text-white/80 flex items-center gap-1 shrink-0"
-                      title="Reviewed by Elijah"
-                    >
-                      <span aria-hidden="true">✓</span>
-                      <span className="uppercase tracking-wider">Elijah</span>
-                    </span>
-                  )}
+                  <span className="text-[10px] font-black uppercase tracking-[0.18em] text-black transition-transform group-hover:translate-x-1">
+                    Read →
+                  </span>
                 </div>
               </button>
             ))}
