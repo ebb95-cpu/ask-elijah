@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import LoadingDots from '@/components/ui/LoadingDots'
-import { getLocal } from '@/lib/safe-storage'
+import { getLocal, setLocal, setSession } from '@/lib/safe-storage'
 import { simFetch } from '@/lib/simulator'
 import { getSourceAction, getSourceIcon } from '@/lib/source-labels'
 
@@ -64,6 +64,14 @@ function previewAnswer(answer: string): string {
   return `${cleaned.slice(0, 190).trim()}...`
 }
 
+function getAnonymousId(): string {
+  const existing = getLocal('ask_elijah_anon_id')
+  if (existing) return existing
+  const next = `anon_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+  setLocal('ask_elijah_anon_id', next)
+  return next
+}
+
 export default function BrowsePage() {
   const router = useRouter()
   const [questions, setQuestions] = useState<Question[]>([])
@@ -71,6 +79,7 @@ export default function BrowsePage() {
   const [userEmail, setUserEmail] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
   const [openId, setOpenId] = useState<string | null>(null)
+  const [shareNotice, setShareNotice] = useState('')
 
   useEffect(() => {
     const stored = getLocal('ask_elijah_email') || ''
@@ -81,12 +90,48 @@ export default function BrowsePage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const logPublicAnswerEvent = (eventType: string, question: Question, email?: string) => {
+    fetch('/api/public-answer-event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_type: eventType,
+        question_id: question.id,
+        question_text: question.question,
+        themes: question.themes || [],
+        email: email || null,
+        anonymous_id: getAnonymousId(),
+        metadata: {
+          topic: question.topic || null,
+          asker_label: question.asker_label || null,
+          source: 'browse_detail',
+        },
+      }),
+    }).catch(() => {})
+  }
+
   const handleUpvote = async (questionId: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
-    if (!userEmail) { router.push('/sign-in'); return }
+    const question = questions.find((q) => q.id === questionId)
+    if (!question) return
+    if (!userEmail) {
+      logPublicAnswerEvent('me_too_click', question)
+      const context = {
+        questionId: question.id,
+        question: question.question,
+        themes: question.themes || [],
+        topic: question.topic || null,
+      }
+      setSession('ask_elijah_me_too_context', JSON.stringify(context))
+      const next = `/ask?q=${encodeURIComponent(question.question)}`
+      router.push(
+        `/sign-in?intent=me-too&questionId=${encodeURIComponent(question.id)}&q=${encodeURIComponent(question.question)}&next=${encodeURIComponent(next)}`
+      )
+      return
+    }
     // Predict the upvote response in simulator mode so the UI still toggles
     // visibly without hitting the real endpoint.
-    const currently = questions.find((q) => q.id === questionId)?.user_upvoted
+    const currently = question.user_upvoted
     const res = await simFetch(
       '/api/upvote',
       {
@@ -97,6 +142,7 @@ export default function BrowsePage() {
       { action: currently ? 'removed' : 'added' }
     )
     const data = await res.json()
+    logPublicAnswerEvent(data.action === 'added' ? 'me_too_added' : 'me_too_removed', question, userEmail)
     setQuestions((prev) =>
       prev.map((q) =>
         q.id !== questionId ? q : {
@@ -106,6 +152,33 @@ export default function BrowsePage() {
         }
       )
     )
+  }
+
+  const handleShare = async (question: Question) => {
+    const url = `${window.location.origin}/browse/${question.id}`
+    logPublicAnswerEvent('share_click', question, userEmail || undefined)
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: question.question,
+          text: `This Ask Elijah answer made me think of you: ${question.question}`,
+          url,
+        })
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      setShareNotice('Link copied. Send it to a teammate.')
+      window.setTimeout(() => setShareNotice(''), 2600)
+    } catch {
+      try {
+        await navigator.clipboard.writeText(url)
+        setShareNotice('Link copied. Send it to a teammate.')
+        window.setTimeout(() => setShareNotice(''), 2600)
+      } catch {
+        setShareNotice('Could not copy the link. Try again.')
+        window.setTimeout(() => setShareNotice(''), 2600)
+      }
+    }
   }
 
   const filtered = questions.filter((q) => matchesCategory(q, activeCategory))
@@ -294,12 +367,16 @@ export default function BrowsePage() {
               >
                 Ask your version of this →
               </Link>
-              <Link
-                href={`/browse/${openQuestion.id}`}
+              <button
+                type="button"
+                onClick={() => handleShare(openQuestion)}
                 className="block w-full text-center py-3 text-sm text-gray-500 border border-gray-800 rounded-full hover:border-gray-600 transition-colors"
               >
                 Share this answer
-              </Link>
+              </button>
+              {shareNotice && (
+                <p className="text-center text-xs text-emerald-300">{shareNotice}</p>
+              )}
             </div>
           </div>
         </div>

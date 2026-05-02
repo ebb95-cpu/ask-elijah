@@ -41,6 +41,12 @@ function SignInInner() {
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
+  const intent = searchParams?.get('intent') || ''
+  const painQuestion = searchParams?.get('q') || ''
+  const questionId = searchParams?.get('questionId') || ''
+  const rawNextUrl = searchParams?.get('next') || ''
+  const nextUrl = rawNextUrl.startsWith('/') && !rawNextUrl.startsWith('//') ? rawNextUrl : ''
+  const isMeTooIntent = intent === 'me-too' && !!painQuestion
   const [simulated, setSimulated] = useState<boolean>(
     () => searchParams?.get('simulated') === '1'
   )
@@ -85,7 +91,7 @@ function SignInInner() {
       } catch {
         /* localStorage blocked */
       }
-      router.push('/ask?simulated=1')
+      router.push(nextUrl || '/ask?simulated=1')
       return
     }
 
@@ -111,7 +117,14 @@ function SignInInner() {
       const { exists } = await checkRes.json()
 
       if (!exists) {
-        router.push(`/sign-up?email=${encodeURIComponent(email.trim().toLowerCase())}`)
+        const params = new URLSearchParams({ email: email.trim().toLowerCase() })
+        if (nextUrl) params.set('next', nextUrl)
+        if (isMeTooIntent) {
+          params.set('intent', 'me-too')
+          params.set('q', painQuestion)
+          if (questionId) params.set('questionId', questionId)
+        }
+        router.push(`/sign-up?${params.toString()}`)
         return
       }
 
@@ -135,7 +148,7 @@ function SignInInner() {
         password,
       })
       if (signInError) throw signInError
-      router.push('/home')
+      router.push(nextUrl || '/home')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Wrong password.')
       setLoading(false)
@@ -195,7 +208,7 @@ function SignInInner() {
       const { error: oauthErr } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/track`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextUrl || '/track')}`,
         },
       })
       if (oauthErr) {
@@ -239,11 +252,25 @@ function SignInInner() {
                   </p>
                 </div>
               )}
-              <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 text-center">Connect the dots</p>
-              <h1 className="text-3xl font-bold text-center mb-4 leading-tight">Something&apos;s been on your mind.</h1>
-              <p className="text-gray-500 text-sm text-center mb-10 leading-relaxed">
-                That&apos;s why you came back. Enter your email and Elijah will pick up where you left off.
+              <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 text-center">
+                {isMeTooIntent ? 'This one hit you' : 'Connect the dots'}
               </p>
+              <h1 className="text-3xl font-bold text-center mb-4 leading-tight">
+                {isMeTooIntent ? 'Do not just relate to it. Fix your version.' : "Something's been on your mind."}
+              </h1>
+              {isMeTooIntent ? (
+                <div className="mb-10 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-600 mb-3">You clicked Me too on</p>
+                  <p className="text-sm font-semibold leading-relaxed text-white mb-4">&ldquo;{painQuestion}&rdquo;</p>
+                  <p className="text-sm leading-relaxed text-gray-500">
+                    That usually means this is already costing you confidence, minutes, or peace. Get Elijah to answer your version so you know the next rep to take.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm text-center mb-10 leading-relaxed">
+                  That&apos;s why you came back. Enter your email and Elijah will pick up where you left off.
+                </p>
+              )}
 
               <input
                 type="email"

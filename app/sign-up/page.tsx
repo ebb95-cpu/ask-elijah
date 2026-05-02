@@ -30,6 +30,11 @@ export default function SignUpPage() {
 function SignUpInner() {
   const searchParams = useSearchParams()
   const prefillEmail = searchParams?.get('email') ?? ''
+  const intent = searchParams?.get('intent') || ''
+  const painQuestion = searchParams?.get('q') || ''
+  const rawNextUrl = searchParams?.get('next') || ''
+  const nextUrl = rawNextUrl.startsWith('/') && !rawNextUrl.startsWith('//') ? rawNextUrl : ''
+  const isMeTooIntent = intent === 'me-too' && !!painQuestion
   const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState(prefillEmail)
   const [password, setPassword] = useState('')
@@ -69,7 +74,7 @@ function SignUpInner() {
         return
       }
 
-      router.push('/home')
+      router.push(nextUrl || '/home')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Try again.')
       setLoading(false)
@@ -82,11 +87,28 @@ function SignUpInner() {
         <Logo />
       </Link>
 
-      <div className="w-full max-w-sm bg-white text-black p-10">
-        <h1 className="text-2xl font-bold tracking-tight mb-1">Save your answers.</h1>
-        <p className="text-gray-400 text-sm mb-8">
+      <div className="w-full max-w-sm rounded-[2rem] bg-[#F7F5F0] text-black p-10">
+        <p className="mb-4 text-[10px] font-black uppercase tracking-[0.24em] text-black/40">
+          {isMeTooIntent ? 'Your version matters' : 'Locker room'}
+        </p>
+        <h1 className="text-2xl font-bold tracking-tight mb-3">
+          {isMeTooIntent ? 'Get the answer for what you are actually dealing with.' : 'Save your answers.'}
+        </h1>
+        {isMeTooIntent && (
+          <div className="mb-6 rounded-[1.25rem] border border-black/10 bg-white/60 p-4">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-black/40">You related to</p>
+            <p className="text-sm font-semibold leading-relaxed text-black">&ldquo;{painQuestion}&rdquo;</p>
+            <p className="mt-3 text-xs leading-relaxed text-black/50">
+              Reading it is the signal. Asking your version is the move. Elijah can give you the next step for your situation.
+            </p>
+          </div>
+        )}
+        <p className="text-gray-500 text-sm mb-8">
           Already have an account?{' '}
-          <Link href="/sign-in" className="text-black underline underline-offset-2 hover:opacity-70">
+          <Link
+            href={`/sign-in${isMeTooIntent ? `?intent=me-too&q=${encodeURIComponent(painQuestion)}${nextUrl ? `&next=${encodeURIComponent(nextUrl)}` : ''}` : ''}`}
+            className="text-black underline underline-offset-2 hover:opacity-70"
+          >
             Sign in
           </Link>
         </p>
