@@ -958,6 +958,53 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Two doors, one promise. Players stay the hero; parents get a clear path
+          without turning the homepage into a forced chooser. */}
+      <section className="bg-black px-5 py-12 border-t border-gray-900">
+        <div className="mx-auto max-w-5xl">
+          <p className="mb-6 text-center text-[10px] font-black uppercase tracking-[0.26em] text-gray-600">
+            Choose your path
+          </p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Link
+              href="/ask"
+              className="group rounded-[2rem] border border-gray-900 bg-[#F7F5F0] p-7 text-black transition-transform hover:-translate-y-1"
+            >
+              <p className="mb-3 text-[10px] font-black uppercase tracking-[0.22em] text-gray-500">
+                I am a player
+              </p>
+              <h3 className="text-3xl font-black leading-none tracking-tight">
+                Ask the thing you do not want to say out loud.
+              </h3>
+              <p className="mt-5 max-w-md text-sm font-semibold leading-relaxed text-gray-600">
+                Get one clear answer from Elijah. Then try the rep.
+              </p>
+              <p className="mt-8 text-sm font-black">
+                Ask Elijah <span className="transition-transform group-hover:translate-x-1 inline-block">→</span>
+              </p>
+            </Link>
+
+            <Link
+              href="/parents"
+              className="group rounded-[2rem] border border-gray-900 bg-[#050505] p-7 text-white transition-transform hover:-translate-y-1"
+            >
+              <p className="mb-3 text-[10px] font-black uppercase tracking-[0.22em] text-gray-600">
+                I am a parent
+              </p>
+              <h3 className="text-3xl font-black leading-none tracking-tight">
+                You already pay for his body. Help the part you cannot see.
+              </h3>
+              <p className="mt-5 max-w-md text-sm font-semibold leading-relaxed text-gray-500">
+                Confidence, pressure, coaches, slumps, and the quiet ride home after a bad game.
+              </p>
+              <p className="mt-8 text-sm font-black">
+                Put this in his hands <span className="transition-transform group-hover:translate-x-1 inline-block">→</span>
+              </p>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Fixed live ticker — bottom left, smaller on mobile */}
       <div className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)]">
         <LiveTicker />
