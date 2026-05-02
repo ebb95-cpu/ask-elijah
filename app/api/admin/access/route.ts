@@ -252,7 +252,7 @@ export async function GET() {
       .limit(1000),
   ])
 
-  if (waitlistResult.error || profilesResult.error || questionsResult.error) {
+  if (waitlistResult.error) {
     return NextResponse.json({ error: 'Failed to load access list' }, { status: 500 })
   }
 
@@ -351,42 +351,46 @@ export async function GET() {
     entry.created_at = row.created_at
   }
 
-  for (const row of (profilesResult.data || []) as ProfileRow[]) {
-    const entry = ensureEntry(row.email)
-    entry.has_profile = true
-    entry.name = entry.name || row.first_name || row.name
-    entry.challenge = entry.challenge || row.challenge
-    entry.position = row.position
-    entry.level = row.level
-    entry.profile_created_at = row.created_at
-    entry.is_founding_member = entry.is_founding_member || row.is_founding_member === true
-    entry.approved = true
-    if (!entry.waitlist_id && row.created_at) entry.created_at = row.created_at
+  if (!profilesResult.error) {
+    for (const row of (profilesResult.data || []) as ProfileRow[]) {
+      const entry = ensureEntry(row.email)
+      entry.has_profile = true
+      entry.name = entry.name || row.first_name || row.name
+      entry.challenge = entry.challenge || row.challenge
+      entry.position = row.position
+      entry.level = row.level
+      entry.profile_created_at = row.created_at
+      entry.is_founding_member = entry.is_founding_member || row.is_founding_member === true
+      entry.approved = true
+      if (!entry.waitlist_id && row.created_at) entry.created_at = row.created_at
+    }
   }
 
-  for (const row of (questionsResult.data || []) as QuestionRow[]) {
-    if (!row.email) continue
-    const entry = ensureEntry(row.email)
-    entry.question_count += 1
-    if (row.status === 'approved' || row.status === 'answered') entry.approved_count += 1
-    else if (row.status === 'skipped') entry.skipped_count += 1
-    else entry.pending_count += 1
-    if (row.created_at && (!entry.last_question_at || row.created_at > entry.last_question_at)) {
-      entry.last_question_at = row.created_at
-    }
-    if (
-      row.created_at
-      && entry.access_expires_at
-      && row.created_at <= entry.access_expires_at
-      && (!entry.invite_sent_at || row.created_at >= entry.invite_sent_at)
-    ) {
-      entry.asked_during_invite_window = true
-    }
-    if (row.approved_at && (!entry.last_answered_at || row.approved_at > entry.last_answered_at)) {
-      entry.last_answered_at = row.approved_at
-    }
-    if (!entry.waitlist_id && row.created_at && (!entry.created_at || row.created_at < entry.created_at)) {
-      entry.created_at = row.created_at
+  if (!questionsResult.error) {
+    for (const row of (questionsResult.data || []) as QuestionRow[]) {
+      if (!row.email) continue
+      const entry = ensureEntry(row.email)
+      entry.question_count += 1
+      if (row.status === 'approved' || row.status === 'answered') entry.approved_count += 1
+      else if (row.status === 'skipped') entry.skipped_count += 1
+      else entry.pending_count += 1
+      if (row.created_at && (!entry.last_question_at || row.created_at > entry.last_question_at)) {
+        entry.last_question_at = row.created_at
+      }
+      if (
+        row.created_at
+        && entry.access_expires_at
+        && row.created_at <= entry.access_expires_at
+        && (!entry.invite_sent_at || row.created_at >= entry.invite_sent_at)
+      ) {
+        entry.asked_during_invite_window = true
+      }
+      if (row.approved_at && (!entry.last_answered_at || row.approved_at > entry.last_answered_at)) {
+        entry.last_answered_at = row.approved_at
+      }
+      if (!entry.waitlist_id && row.created_at && (!entry.created_at || row.created_at < entry.created_at)) {
+        entry.created_at = row.created_at
+      }
     }
   }
 
