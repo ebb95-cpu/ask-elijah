@@ -1058,7 +1058,7 @@ export default function HomePage() {
 
           <div className="bg-black text-white px-8 py-8">
             <p className="text-white text-base md:text-lg leading-relaxed mb-4">
-              Elijah has been in EuroLeague finals. NBA locker rooms. High-pressure moments most coaches have only watched on TV. Ask him what&apos;s going on in your head, and what to do about it.
+              Elijah has been in NBA locker rooms and won the EuroLeague. High-pressure moments most coaches have only watched on TV. Ask him what&apos;s going on in your head, and what to do about it.
             </p>
             <p className="text-gray-400 text-xs font-semibold tracking-widest uppercase">
               NBA · EuroLeague Champion · 3 continents
@@ -1080,7 +1080,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-px max-w-2xl mx-auto bg-gray-900">
             {[
             { title: "Reviewed before it reaches you.", sub: "AI helps organize the draft. Elijah's standard decides what goes out." },
-            { title: "NBA. EuroLeague finals. 3 continents.", sub: "Advice from inside the arena, not from the stands." },
+            { title: "NBA and EuroLeague champion. 3 continents.", sub: "Advice from inside the arena, not from the stands." },
           ].map(({ title, sub }) => (
             <div key={title} className="bg-black text-white p-8">
               <p className="font-bold text-base tracking-tight mb-2">{title}</p>
