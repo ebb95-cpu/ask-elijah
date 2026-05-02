@@ -88,6 +88,42 @@ async function fetchWaitlistRows(supabase: ReturnType<typeof getSupabase>) {
     .limit(500)
 }
 
+async function fetchProfileRows(supabase: ReturnType<typeof getSupabase>) {
+  const withFounderFlag = await supabase
+    .from('profiles')
+    .select('id, email, first_name, name, position, level, challenge, is_founding_member, created_at')
+    .order('created_at', { ascending: false })
+    .limit(500)
+
+  if (!withFounderFlag.error) return withFounderFlag
+
+  // Backward-compatible fallback until the subscription/founder migration is run.
+  return supabase
+    .from('profiles')
+    .select('id, email, first_name, name, position, level, challenge, created_at')
+    .order('created_at', { ascending: false })
+    .limit(500)
+}
+
+async function fetchQuestionRows(supabase: ReturnType<typeof getSupabase>) {
+  const withApprovedAt = await supabase
+    .from('questions')
+    .select('id, email, status, created_at, approved_at')
+    .not('email', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1000)
+
+  if (!withApprovedAt.error) return withApprovedAt
+
+  // Backward-compatible fallback until the approved_at migration is run.
+  return supabase
+    .from('questions')
+    .select('id, email, status, created_at')
+    .not('email', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1000)
+}
+
 async function canApproveFoundingSeat(supabase: ReturnType<typeof getSupabase>, currentWaitlistId?: string) {
   const { data, error } = await supabase
     .from('waitlist')
@@ -197,17 +233,8 @@ export async function GET() {
     adminNotesResult,
   ] = await Promise.all([
     fetchWaitlistRows(supabase),
-    supabase
-      .from('profiles')
-      .select('id, email, first_name, name, position, level, challenge, is_founding_member, created_at')
-      .order('created_at', { ascending: false })
-      .limit(500),
-    supabase
-      .from('questions')
-      .select('id, email, status, created_at, approved_at')
-      .not('email', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(1000),
+    fetchProfileRows(supabase),
+    fetchQuestionRows(supabase),
     supabase
       .from('answer_feedback')
       .select('email, rating')
