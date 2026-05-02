@@ -79,6 +79,57 @@ function DisplayCard({ label, price, body, cream = false }: { label: string; pri
   )
 }
 
+function ValueStack() {
+  const rows = [
+    {
+      label: 'Private basketball trainer',
+      cost: '$75-$200+ / session',
+      body: 'Great for skill work. Still does not answer what is happening in your head when the game speeds up.',
+    },
+    {
+      label: 'Sport psychologist',
+      cost: '$100-$250+ / session',
+      body: 'Helpful for mental skills. Usually not built around your exact basketball situation that week.',
+    },
+    {
+      label: 'Sports physio',
+      cost: '$100-$300 / visit',
+      body: 'Important when your body needs help. Ask Elijah is for the decisions, pressure, slumps, and confidence piece.',
+    },
+    {
+      label: 'Pro locker-room perspective',
+      cost: 'Usually not available',
+      body: 'NBA and EuroLeague champion context. Coach problems. Role problems. Confidence problems. The stuff players do not always say out loud.',
+    },
+  ]
+
+  return (
+    <section className="mx-auto max-w-6xl px-5 py-14">
+      <div className="rounded-[2rem] border border-gray-900 bg-[#050505] p-6 sm:p-8">
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-gray-600">
+          What families already pay for
+        </p>
+        <div className="mt-8 grid gap-3 lg:grid-cols-4">
+          {rows.map((row) => (
+            <div key={row.label} className="rounded-[1.5rem] border border-gray-900 bg-black p-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">{row.label}</p>
+              <p className="mt-4 text-2xl font-black text-[#F7F5F0]">{row.cost}</p>
+              <p className="mt-4 text-sm font-semibold leading-relaxed text-gray-500">{row.body}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 rounded-[1.5rem] bg-[#F7F5F0] p-5 text-black">
+          <p className="text-2xl font-black">Ask Elijah is the cheap part.</p>
+          <p className="mt-2 max-w-3xl text-sm font-semibold leading-relaxed text-black/60">
+            It does not replace a trainer, therapist, doctor, or physio. It fills the gap most players actually feel:
+            what to do when pressure, confidence, coaches, minutes, slumps, and identity start messing with their game.
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function PublicTierCard({
   label,
   price,
@@ -149,6 +200,7 @@ async function BetaPricing() {
         </div>
         <FoundersBetaForm closed={isClosed} />
       </section>
+      <ValueStack />
       <PreviewTiers />
     </>
   )
@@ -172,6 +224,8 @@ async function PublicPricing({ isPreview = false }: { isPreview?: boolean }) {
           Public answers stay free. Paid plans are for players who want Elijah to answer their situation.
         </p>
       </section>
+
+      <ValueStack />
 
       <section className="mx-auto grid max-w-6xl gap-4 px-5 lg:grid-cols-4">
         <PublicTierCard label="Free" price="$0" body="Browse public answers. 1 trial question per month.">
