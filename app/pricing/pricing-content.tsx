@@ -65,6 +65,24 @@ function SeatCounter({ count, limit, label }: { count: number | null; limit: num
   )
 }
 
+function FoundingSeatCounter({ count, limit }: { count: number | null; limit: number }) {
+  if (count === null) {
+    return (
+      <p className="mt-6 inline-flex rounded-full border border-gray-900 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-gray-500">
+        Only {limit} founding seats
+      </p>
+    )
+  }
+
+  const remaining = Math.max(limit - count, 0)
+
+  return (
+    <p className="mt-6 inline-flex rounded-full border border-gray-900 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#F7F5F0]">
+      {remaining} founding seats left
+    </p>
+  )
+}
+
 function DisplayCard({ label, price, body, cream = false }: { label: string; price: string; body: string; cream?: boolean }) {
   return (
     <div className={cream ? 'rounded-[2rem] bg-[#F7F5F0] p-6 text-black' : 'rounded-[2rem] border border-gray-900 bg-[#050505] p-6'}>
@@ -185,17 +203,17 @@ async function BetaPricing() {
             Founders beta
           </p>
           <h1 className="max-w-3xl text-5xl font-black leading-[0.95] tracking-tight sm:text-7xl">
-            Founding 200.
-            <span className="block text-gray-500">Free during beta.</span>
+            Only 200 players.
+            <span className="block text-gray-500">Free while it is being built.</span>
           </h1>
           <p className="mt-5 text-2xl font-black leading-tight text-[#F7F5F0]">
-            $9.99/mo for life after launch.
+            Get in now. Keep $9.99/mo for life after launch.
           </p>
-          <SeatCounter count={seatsTaken} limit={FOUNDING_SEAT_LIMIT} label="seats" />
+          <FoundingSeatCounter count={seatsTaken} limit={FOUNDING_SEAT_LIMIT} />
           <p className="mt-8 max-w-2xl text-base leading-relaxed text-gray-500">
-            This is a 90-day beta. Founding members can ask unlimited questions for free while we build.
-            Every Q&A goes to browse anonymized with first name, age, and city. If you are accepted,
-            you lock the founding rate of $9.99/mo for life when public pricing turns on.
+            This is the build phase. Founding members ask for free while Elijah shapes the brain.
+            When the 200 seats are gone, the next group waits and pays public pricing. If you are accepted now,
+            you keep the founding rate as long as your membership stays active.
           </p>
         </div>
         <FoundersBetaForm closed={isClosed} />

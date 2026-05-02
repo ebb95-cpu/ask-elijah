@@ -55,12 +55,12 @@ export default function FoundersBetaForm({ closed }: Props) {
           {closed ? 'Waitlist saved' : 'Application sent'}
         </p>
         <h2 className="mt-4 text-3xl font-black leading-tight">
-          {closed ? 'You are on the waitlist.' : 'You are in the stack.'}
+          {closed ? 'You are on the waitlist.' : 'Elijah has your application.'}
         </h2>
         <p className="mt-4 text-sm font-semibold leading-relaxed text-gray-600">
           {closed
             ? 'If a seat opens, this is where we will reach you.'
-            : 'Elijah will review the Founding 200 applications before seats open.'}
+            : 'If this is real and you are ready to use the answers, this is how you get one of the founding seats.'}
         </p>
       </div>
     )
@@ -69,10 +69,10 @@ export default function FoundersBetaForm({ closed }: Props) {
   return (
     <form onSubmit={submit} className="rounded-[2rem] bg-[#F7F5F0] p-7 text-black">
       <p className="text-xs font-black uppercase tracking-[0.22em] text-gray-500">
-        {closed ? 'Closed. Waitlist.' : 'Application'}
+        {closed ? 'Closed. Waitlist.' : 'Founding seat'}
       </p>
       <h2 className="mt-4 text-3xl font-black leading-tight">
-        {closed ? 'Founding 200 is full.' : 'Apply for a seat.'}
+        {closed ? 'Founding 200 is full.' : 'Tell Elijah what is costing you.'}
       </h2>
 
       <div className="mt-7 space-y-4">
@@ -90,13 +90,13 @@ export default function FoundersBetaForm({ closed }: Props) {
             <textarea
               value={basketballCost}
               onChange={(e) => setBasketballCost(e.target.value)}
-              placeholder="What's the one thing costing you in basketball right now?"
+              placeholder="What is the one thing costing you right now? Confidence, minutes, coach, pressure, a slump, recruiting, your role..."
               minLength={30}
               required
               className="min-h-40 w-full resize-none rounded-[2rem] border border-black/10 bg-white px-5 py-5 text-sm font-semibold leading-relaxed outline-none placeholder:text-gray-400 focus:border-black"
             />
             <p className="mt-2 text-xs font-semibold text-gray-500">
-              Minimum 30 characters. Be real. The better the situation, the better the answer.
+              Be specific. The more real the situation, the better Elijah can help.
             </p>
           </div>
         )}
@@ -106,7 +106,7 @@ export default function FoundersBetaForm({ closed }: Props) {
         disabled={!canSubmit}
         className="mt-7 w-full rounded-full bg-black px-6 py-4 text-sm font-black text-white disabled:opacity-40"
       >
-        {loading ? <LoadingDots label="Saving" /> : closed ? 'Join the waitlist' : 'Apply for a seat.'}
+        {loading ? <LoadingDots label="Saving" /> : closed ? 'Join the waitlist' : 'Apply for a founding seat'}
       </button>
       {error && <p className="mt-3 text-sm font-semibold text-red-700">{error}</p>}
     </form>
