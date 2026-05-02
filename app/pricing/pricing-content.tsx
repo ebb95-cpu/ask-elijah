@@ -84,17 +84,17 @@ function ValueStack() {
     {
       label: 'Private basketball trainer',
       cost: '$75-$200+ / session',
-      body: 'Great for skill work. Still does not answer what is happening in your head when the game speeds up.',
+      body: 'Great for skill work. But most trainers are not answering the confidence, role, pressure, and coach problems that follow you home.',
     },
     {
       label: 'Sport psychologist',
       cost: '$100-$250+ / session',
-      body: 'Helpful for mental skills. Usually not built around your exact basketball situation that week.',
+      body: 'Helpful for mental skills. Ask Elijah is different because the answer comes through someone who has lived the bench, the pressure, the slump, and the locker room.',
     },
     {
       label: 'Sports physio',
       cost: '$100-$300 / visit',
-      body: 'Important when your body needs help. Ask Elijah is for the decisions, pressure, slumps, and confidence piece.',
+      body: 'Important when your body needs help. This is for the part nobody can stretch out: fear, doubt, playing time, identity, and what to do next.',
     },
     {
       label: 'Pro locker-room perspective',
@@ -119,10 +119,10 @@ function ValueStack() {
           ))}
         </div>
         <div className="mt-6 rounded-[1.5rem] bg-[#F7F5F0] p-5 text-black">
-          <p className="text-2xl font-black">Ask Elijah is the cheap part.</p>
+          <p className="text-2xl font-black">Ask Elijah is the missing part.</p>
           <p className="mt-2 max-w-3xl text-sm font-semibold leading-relaxed text-black/60">
-            It does not replace a trainer, therapist, doctor, or physio. It fills the gap most players actually feel:
-            what to do when pressure, confidence, coaches, minutes, slumps, and identity start messing with their game.
+            It does not replace a trainer, therapist, doctor, or physio. It gives players the conversation they usually cannot get:
+            a pro who has been in the arena helping them understand what is happening and what rep to take next.
           </p>
         </div>
       </div>
