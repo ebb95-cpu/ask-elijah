@@ -14,10 +14,19 @@ export async function GET() {
   }
 
   // Founding seats are approved access rows, not random first-time visitors.
-  const { count, error } = await getSupabase()
+  const supabase = getSupabase()
+  const activeCount = await supabase
     .from('waitlist')
     .select('id', { count: 'exact', head: true })
     .eq('approved', true)
+    .is('archived_at', null)
+
+  const { count, error } = activeCount.error && /archived_at/.test(activeCount.error.message || '')
+    ? await supabase
+      .from('waitlist')
+      .select('id', { count: 'exact', head: true })
+      .eq('approved', true)
+    : activeCount
 
   if (error) {
     return NextResponse.json({ isCapped: false, spotsLeft: null, cap })

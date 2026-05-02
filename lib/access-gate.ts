@@ -20,7 +20,7 @@ export async function hasPlayerAccess(email: string): Promise<boolean> {
 
   const { data: waitlistEntry, error: waitlistError } = await supabase
     .from('waitlist')
-    .select('approved, invite_sent_at, access_expires_at')
+    .select('approved, invite_sent_at, access_expires_at, archived_at')
     .eq('email', cleanEmail)
     .maybeSingle()
 
@@ -37,6 +37,7 @@ export async function hasPlayerAccess(email: string): Promise<boolean> {
   }
 
   if (waitlistEntry) {
+    if (waitlistEntry.archived_at) return false
     if (waitlistEntry.approved !== true) return false
 
     if (waitlistEntry.access_expires_at && new Date(waitlistEntry.access_expires_at) < new Date()) {

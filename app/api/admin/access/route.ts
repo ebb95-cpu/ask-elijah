@@ -13,6 +13,7 @@ type WaitlistRow = {
   notified: boolean
   invite_sent_at?: string | null
   access_expires_at?: string | null
+  archived_at?: string | null
   created_at: string
 }
 
@@ -72,6 +73,14 @@ function inviteWindow() {
 }
 
 async function fetchWaitlistRows(supabase: ReturnType<typeof getSupabase>) {
+  const withArchive = await supabase
+    .from('waitlist')
+    .select('id, email, name, challenge, confirmed, approved, notified, invite_sent_at, access_expires_at, archived_at, created_at')
+    .order('created_at', { ascending: false })
+    .limit(500)
+
+  if (!withArchive.error) return withArchive
+
   const withExpiry = await supabase
     .from('waitlist')
     .select('id, email, name, challenge, confirmed, approved, notified, invite_sent_at, access_expires_at, created_at')
@@ -125,11 +134,20 @@ async function fetchQuestionRows(supabase: ReturnType<typeof getSupabase>) {
 }
 
 async function canApproveFoundingSeat(supabase: ReturnType<typeof getSupabase>, currentWaitlistId?: string) {
-  const { data, error } = await supabase
+  const withArchive = await supabase
     .from('waitlist')
     .select('id')
     .eq('approved', true)
+    .is('archived_at', null)
     .limit(FOUNDING_SEAT_LIMIT + 1)
+
+  const { data, error } = withArchive.error && /archived_at/.test(withArchive.error.message || '')
+    ? await supabase
+      .from('waitlist')
+      .select('id')
+      .eq('approved', true)
+      .limit(FOUNDING_SEAT_LIMIT + 1)
+    : withArchive
 
   if (error) return { ok: false, error: 'Could not check Founding 200 seats.' }
 
@@ -267,6 +285,8 @@ export async function GET() {
     notified: boolean
     invite_sent_at: string | null
     access_expires_at: string | null
+    archived_at: string | null
+    archived: boolean
     access_expired: boolean
     asked_during_invite_window: boolean
     created_at: string
@@ -307,6 +327,8 @@ export async function GET() {
         notified: false,
         invite_sent_at: null,
         access_expires_at: null,
+        archived_at: null,
+        archived: false,
         access_expired: false,
         asked_during_invite_window: false,
         created_at: new Date().toISOString(),
@@ -348,6 +370,8 @@ export async function GET() {
     entry.notified = row.notified
     entry.invite_sent_at = row.invite_sent_at || null
     entry.access_expires_at = row.access_expires_at || null
+    entry.archived_at = row.archived_at || null
+    entry.archived = !!row.archived_at
     entry.created_at = row.created_at
   }
 
@@ -458,7 +482,7 @@ export async function POST(req: NextRequest) {
   const shouldApprove = seatCheck.ok
   const shouldActuallySendInvite = shouldApprove && shouldSendInvite
 
-  const { data, error } = await supabase
+  let upsertResult = await supabase
     .from('waitlist')
     .upsert(
       {
@@ -467,11 +491,31 @@ export async function POST(req: NextRequest) {
         challenge: challenge || null,
         confirmed: true,
         approved: shouldApprove,
+        archived_at: null,
       },
       { onConflict: 'email' }
     )
     .select('id, email, name, challenge, confirmed, approved, notified, created_at')
     .single()
+
+  if (upsertResult.error && /archived_at/.test(upsertResult.error.message || '')) {
+    upsertResult = await supabase
+      .from('waitlist')
+      .upsert(
+        {
+          email,
+          name: name || null,
+          challenge: challenge || null,
+          confirmed: true,
+          approved: shouldApprove,
+        },
+        { onConflict: 'email' }
+      )
+      .select('id, email, name, challenge, confirmed, approved, notified, created_at')
+      .single()
+  }
+
+  const { data, error } = upsertResult
 
   if (error || !data) {
     return NextResponse.json({ error: 'Failed to approve email' }, { status: 500 })
@@ -509,6 +553,8 @@ export async function POST(req: NextRequest) {
       notified,
       invite_sent_at: inviteSentAt,
       access_expires_at: accessExpiresAt,
+      archived_at: null,
+      archived: false,
       access_expired: false,
       asked_during_invite_window: false,
       waitlist_id: data.id,
@@ -555,6 +601,7 @@ export async function PATCH(req: NextRequest) {
   const approved = body.approved === true
   const email = cleanEmail(body.email)
   const shouldSendInvite = body.sendInvite === true
+  const archive = body.archive === true
 
   if (email && (Object.prototype.hasOwnProperty.call(body, 'admin_note') || Object.prototype.hasOwnProperty.call(body, 'high_value'))) {
     const note = typeof body.admin_note === 'string' ? body.admin_note.trim() : null
@@ -591,6 +638,56 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
   const supabase = getSupabase()
+  if (archive) {
+    const { data, error } = await supabase
+      .from('waitlist')
+      .update({ approved: false, archived_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('id, email, name, challenge, confirmed, approved, notified, archived_at, created_at')
+      .single()
+
+    if (error || !data) {
+      if (error && /archived_at/.test(error.message || '')) {
+        return NextResponse.json({ error: 'Run the waitlist archive Supabase migration first.' }, { status: 409 })
+      }
+      return NextResponse.json({ error: 'Failed to archive access row' }, { status: 500 })
+    }
+
+    await markProfileFoundingMember(supabase, data.email, false).catch(() => {})
+
+    return NextResponse.json({
+      entry: {
+        ...data,
+        archived: true,
+        access_expired: false,
+        asked_during_invite_window: false,
+        waitlist_id: data.id,
+        invite_sent_at: null,
+        access_expires_at: null,
+        profile_created_at: null,
+        position: null,
+        level: null,
+        question_count: 0,
+        pending_count: 0,
+        approved_count: 0,
+        skipped_count: 0,
+        feedback_up_count: 0,
+        feedback_down_count: 0,
+        last_question_at: null,
+        last_answered_at: null,
+        reflection_count: 0,
+        positive_reflection_count: 0,
+        negative_reflection_count: 0,
+        last_reflection_at: null,
+        admin_note: null,
+        high_value: false,
+        admin_note_updated_at: null,
+        has_profile: false,
+        is_founding_member: false,
+      },
+    })
+  }
+
   if (approved) {
     const seatCheck = await canApproveFoundingSeat(supabase, id)
     if (!seatCheck.ok) {
@@ -600,12 +697,55 @@ export async function PATCH(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('waitlist')
-    .update({ approved })
+    .update({ approved, archived_at: null })
     .eq('id', id)
-    .select('id, email, name, challenge, confirmed, approved, notified, created_at')
+    .select('id, email, name, challenge, confirmed, approved, notified, archived_at, created_at')
     .single()
 
   if (error || !data) {
+    if (error && /archived_at/.test(error.message || '')) {
+      const fallback = await supabase
+        .from('waitlist')
+        .update({ approved })
+        .eq('id', id)
+        .select('id, email, name, challenge, confirmed, approved, notified, created_at')
+        .single()
+      if (!fallback.error && fallback.data) {
+        const fallbackData = fallback.data
+        return NextResponse.json({
+          entry: {
+            ...fallbackData,
+            archived_at: null,
+            archived: false,
+            access_expired: false,
+            asked_during_invite_window: false,
+            waitlist_id: fallbackData.id,
+            profile_created_at: null,
+            position: null,
+            level: null,
+            question_count: 0,
+            pending_count: 0,
+            approved_count: 0,
+            skipped_count: 0,
+            feedback_up_count: 0,
+            feedback_down_count: 0,
+            last_question_at: null,
+            last_answered_at: null,
+            reflection_count: 0,
+            positive_reflection_count: 0,
+            negative_reflection_count: 0,
+            last_reflection_at: null,
+            admin_note: null,
+            high_value: false,
+            admin_note_updated_at: null,
+            has_profile: false,
+            is_founding_member: approved,
+          },
+          invite_sent: false,
+          invite_error: 'Access updated. Run the archive migration before soft-delete is available.',
+        })
+      }
+    }
     return NextResponse.json({ error: 'Failed to update access' }, { status: 500 })
   }
 
@@ -645,6 +785,8 @@ export async function PATCH(req: NextRequest) {
       notified,
       invite_sent_at: inviteSentAt,
       access_expires_at: accessExpiresAt,
+      archived_at: data.archived_at || null,
+      archived: !!data.archived_at,
       access_expired: !!accessExpiresAt && new Date(accessExpiresAt) < new Date(),
       asked_during_invite_window: false,
       waitlist_id: data.id,

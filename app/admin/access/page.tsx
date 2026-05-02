@@ -14,6 +14,8 @@ type AccessEntry = {
   notified: boolean
   invite_sent_at: string | null
   access_expires_at: string | null
+  archived_at: string | null
+  archived: boolean
   access_expired: boolean
   created_at: string
   profile_created_at: string | null
@@ -40,6 +42,7 @@ type AccessEntry = {
 
 export default function AdminAccessPage() {
   const [entries, setEntries] = useState<AccessEntry[]>([])
+  const [filter, setFilter] = useState<'applied' | 'approved' | 'founders' | 'waiting' | 'expired' | 'archived'>('applied')
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [sendInviteOnAdd, setSendInviteOnAdd] = useState(true)
@@ -50,16 +53,27 @@ export default function AdminAccessPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
-  const approvedCount = useMemo(() => entries.filter((e) => e.approved).length, [entries])
-  const foundingCount = useMemo(() => entries.filter((e) => e.is_founding_member).length, [entries])
+  const activeEntries = useMemo(() => entries.filter((e) => !e.archived), [entries])
+  const archivedEntries = useMemo(() => entries.filter((e) => e.archived), [entries])
+  const approvedCount = useMemo(() => activeEntries.filter((e) => e.approved).length, [activeEntries])
+  const foundingCount = useMemo(() => activeEntries.filter((e) => e.is_founding_member).length, [activeEntries])
   const foundingSeatsLeft = Math.max(0, 200 - foundingCount)
-  const waitingCount = entries.length - approvedCount
-  const totalQuestions = useMemo(() => entries.reduce((sum, entry) => sum + entry.question_count, 0), [entries])
-  const pendingQuestions = useMemo(() => entries.reduce((sum, entry) => sum + entry.pending_count, 0), [entries])
+  const waitingCount = useMemo(() => activeEntries.filter((e) => !e.approved && !e.access_expired).length, [activeEntries])
+  const expiredCount = useMemo(() => activeEntries.filter((e) => e.access_expired).length, [activeEntries])
+  const totalQuestions = useMemo(() => activeEntries.reduce((sum, entry) => sum + entry.question_count, 0), [activeEntries])
+  const pendingQuestions = useMemo(() => activeEntries.reduce((sum, entry) => sum + entry.pending_count, 0), [activeEntries])
   const heldSpots = useMemo(
-    () => entries.filter((entry) => getInviteStatus(entry).tone === 'countdown').length,
-    [entries]
+    () => activeEntries.filter((entry) => getInviteStatus(entry).tone === 'countdown').length,
+    [activeEntries]
   )
+  const filteredEntries = useMemo(() => {
+    if (filter === 'archived') return archivedEntries
+    if (filter === 'approved') return activeEntries.filter((e) => e.approved && !e.access_expired)
+    if (filter === 'founders') return activeEntries.filter((e) => e.is_founding_member)
+    if (filter === 'waiting') return activeEntries.filter((e) => !e.approved && !e.access_expired)
+    if (filter === 'expired') return activeEntries.filter((e) => e.access_expired)
+    return activeEntries
+  }, [activeEntries, archivedEntries, filter])
 
   async function loadEntries() {
     setLoading(true)
@@ -106,7 +120,7 @@ export default function AdminAccessPage() {
   }
 
   async function setApproved(entry: AccessEntry, approved: boolean, sendInvite = false) {
-    setEntries((prev) => prev.map((item) => (item.id === entry.id ? { ...item, approved } : item)))
+    setEntries((prev) => prev.map((item) => (item.id === entry.id ? { ...item, approved, archived: false, archived_at: null } : item)))
     if (sendInvite) setSendingInviteEmail(entry.email)
     setNotice('')
     try {
@@ -123,7 +137,31 @@ export default function AdminAccessPage() {
           })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to update access')
-      setEntries((prev) => prev.map((item) => (item.id === entry.id ? { ...item, ...data.entry } : item)))
+      setEntries((prev) =>
+        prev.map((item) =>
+          item.id === entry.id
+            ? {
+                ...item,
+                ...data.entry,
+                question_count: item.question_count,
+                pending_count: item.pending_count,
+                approved_count: item.approved_count,
+                skipped_count: item.skipped_count,
+                feedback_up_count: item.feedback_up_count,
+                feedback_down_count: item.feedback_down_count,
+                last_question_at: item.last_question_at,
+                last_answered_at: item.last_answered_at,
+                reflection_count: item.reflection_count,
+                positive_reflection_count: item.positive_reflection_count,
+                negative_reflection_count: item.negative_reflection_count,
+                last_reflection_at: item.last_reflection_at,
+                admin_note: item.admin_note,
+                high_value: item.high_value,
+                admin_note_updated_at: item.admin_note_updated_at,
+              }
+            : item
+        )
+      )
       if (data.invite_error) setNotice(data.invite_error)
       else if (data.invite_sent) setNotice(`Invite sent to ${entry.email}.`)
     } catch (e) {
@@ -141,6 +179,7 @@ export default function AdminAccessPage() {
 
   function actionLabel(entry: AccessEntry) {
     if (sendingInviteEmail === entry.email) return 'Sending...'
+    if (entry.archived) return 'Restore'
     if (entry.has_profile && !entry.waitlist_id) return 'Existing'
     if (entry.access_expired) return 'Re-invite'
     if (!entry.approved) return 'Approve & invite'
@@ -149,6 +188,10 @@ export default function AdminAccessPage() {
   }
 
   async function handleAction(entry: AccessEntry) {
+    if (entry.archived) {
+      await setApproved(entry, false, false)
+      return
+    }
     if (entry.has_profile && !entry.waitlist_id) return
     if (entry.access_expired) {
       await setApproved(entry, true, true)
@@ -162,7 +205,52 @@ export default function AdminAccessPage() {
       await sendInvite(entry)
       return
     }
-    await setApproved(entry, false, false)
+    await archiveEntry(entry)
+  }
+
+  async function archiveEntry(entry: AccessEntry) {
+    if (!entry.waitlist_id) return
+    const previous = entry
+    setEntries((prev) => prev.map((item) => (item.id === entry.id ? { ...item, approved: false, archived: true, archived_at: new Date().toISOString() } : item)))
+    setNotice('')
+    try {
+      const res = await fetch('/api/admin/access', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ waitlist_id: entry.waitlist_id, archive: true }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to archive player')
+      setEntries((prev) =>
+        prev.map((item) =>
+          item.id === entry.id
+            ? {
+                ...item,
+                ...data.entry,
+                question_count: item.question_count,
+                pending_count: item.pending_count,
+                approved_count: item.approved_count,
+                skipped_count: item.skipped_count,
+                feedback_up_count: item.feedback_up_count,
+                feedback_down_count: item.feedback_down_count,
+                last_question_at: item.last_question_at,
+                last_answered_at: item.last_answered_at,
+                reflection_count: item.reflection_count,
+                positive_reflection_count: item.positive_reflection_count,
+                negative_reflection_count: item.negative_reflection_count,
+                last_reflection_at: item.last_reflection_at,
+                admin_note: item.admin_note,
+                high_value: item.high_value,
+                admin_note_updated_at: item.admin_note_updated_at,
+              }
+            : item
+        )
+      )
+      setNotice(`${entry.email} removed from active access. Their history is still saved.`)
+    } catch (e) {
+      setEntries((prev) => prev.map((item) => (item.id === previous.id ? previous : item)))
+      setError(e instanceof Error ? e.message : 'Failed to archive player')
+    }
   }
 
   async function updatePlayerNote(entry: AccessEntry, updates: { admin_note?: string; high_value?: boolean }) {
@@ -235,6 +323,15 @@ export default function AdminAccessPage() {
           </div>
         </div>
 
+        <div className="mb-6 flex flex-wrap gap-2">
+          <AccessFilter active={filter === 'applied'} label="Applied" count={activeEntries.length} onClick={() => setFilter('applied')} />
+          <AccessFilter active={filter === 'approved'} label="Approved" count={approvedCount} onClick={() => setFilter('approved')} />
+          <AccessFilter active={filter === 'founders'} label="Founders" count={foundingCount} onClick={() => setFilter('founders')} />
+          <AccessFilter active={filter === 'waiting'} label="Waiting" count={waitingCount} onClick={() => setFilter('waiting')} />
+          <AccessFilter active={filter === 'expired'} label="Expired" count={expiredCount} onClick={() => setFilter('expired')} />
+          <AccessFilter active={filter === 'archived'} label="Archived" count={archivedEntries.length} onClick={() => setFilter('archived')} />
+        </div>
+
         <form onSubmit={addEmail} className="mb-8 grid gap-3 rounded-2xl border border-gray-900 bg-[#070707] p-4 sm:grid-cols-[1fr_1fr_auto]">
           <input
             type="email"
@@ -293,15 +390,17 @@ export default function AdminAccessPage() {
             <div className="flex justify-center px-4 py-14 text-gray-500">
               <LoadingDots label="Loading access list" />
             </div>
-          ) : entries.length === 0 ? (
+          ) : filteredEntries.length === 0 ? (
             <p className="px-4 py-14 text-center text-sm text-gray-600">
-              No one is on the list yet. Add the first approved email above.
+              {filter === 'archived'
+                ? 'No archived players yet.'
+                : 'No players match this view yet.'}
             </p>
           ) : (
-            entries.map((entry) => (
+            filteredEntries.map((entry) => (
               <div
                 key={entry.id}
-                className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-gray-900 px-4 py-4 last:border-b-0 sm:grid-cols-[1.3fr_0.55fr_0.65fr_0.6fr_0.65fr_auto]"
+                className={`grid grid-cols-[1fr_auto] items-center gap-4 border-b border-gray-900 px-4 py-4 last:border-b-0 sm:grid-cols-[1.3fr_0.55fr_0.65fr_0.6fr_0.65fr_auto] ${entry.archived ? 'bg-red-950/5 opacity-70' : ''}`}
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -314,6 +413,11 @@ export default function AdminAccessPage() {
                     {entry.high_value && (
                       <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-yellow-300">
                         High value
+                      </span>
+                    )}
+                    {entry.archived && (
+                      <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-red-300">
+                        Archived
                       </span>
                     )}
                   </div>
@@ -401,9 +505,9 @@ export default function AdminAccessPage() {
                 </div>
                 <div className="hidden sm:block">
                   <p className={`text-sm font-semibold ${
-                    entry.access_expired ? 'text-red-300' : entry.approved ? 'text-green-400' : 'text-yellow-400'
+                    entry.archived ? 'text-red-300' : entry.access_expired ? 'text-red-300' : entry.approved ? 'text-green-400' : 'text-yellow-400'
                   }`}>
-                    {entry.access_expired ? 'Expired' : entry.approved ? 'Approved' : 'Waiting'}
+                    {entry.archived ? 'Archived' : entry.access_expired ? 'Expired' : entry.approved ? 'Approved' : 'Waiting'}
                   </p>
                   <p className="mt-1 text-xs text-gray-700">
                     {entry.has_profile ? 'Has profile' : entry.confirmed ? 'Confirmed' : 'No profile yet'}
@@ -411,6 +515,8 @@ export default function AdminAccessPage() {
                   <p className="mt-1 text-xs text-gray-700">
                     {entry.access_expired
                       ? 'No question in 7 days'
+                      : entry.archived
+                        ? `Removed ${formatDate(entry.archived_at)}`
                       : entry.access_expires_at
                         ? `Invite expires ${formatDate(entry.access_expires_at)}`
                         : entry.notified
@@ -434,6 +540,8 @@ export default function AdminAccessPage() {
                   className={`rounded-full border px-4 py-2 text-xs font-bold transition-colors ${
                     entry.has_profile && !entry.waitlist_id
                       ? 'cursor-not-allowed border-gray-900 text-gray-700'
+                      : entry.archived
+                      ? 'border-white bg-white text-black hover:opacity-80'
                       : !entry.approved || !entry.notified || entry.access_expired
                       ? 'border-white bg-white text-black hover:opacity-80'
                       : entry.approved
@@ -449,6 +557,32 @@ export default function AdminAccessPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+function AccessFilter({
+  active,
+  label,
+  count,
+  onClick,
+}: {
+  active: boolean
+  label: string
+  count: number
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-4 py-2 text-xs font-bold transition-colors ${
+        active
+          ? 'border-white bg-white text-black'
+          : 'border-gray-800 text-gray-500 hover:border-gray-600 hover:text-white'
+      }`}
+    >
+      {label} <span className={active ? 'text-black/60' : 'text-gray-700'}>{count}</span>
+    </button>
   )
 }
 
