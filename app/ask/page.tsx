@@ -954,7 +954,7 @@ function AskPageInner() {
             challenge: waitlistChallenge.trim(),
           }),
         })
-        posthog?.capture('waitlist_joined', { email: waitlistEmail.trim().toLowerCase() })
+        posthog?.capture('waitlist_joined')
         setWaitlistDone(true)
       } catch { /* fail silently */ }
       setWaitlistLoading(false)
