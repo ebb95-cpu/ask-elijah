@@ -100,9 +100,19 @@ function DisplayCard({ label, price, body, cream = false }: { label: string; pri
 function ValueStack() {
   const rows = [
     {
+      label: 'AAU and team fees',
+      cost: '$500-$3,000+ / season',
+      body: 'Gets him games. But games alone do not explain why he freezes, why he is losing minutes, or why he stopped talking on the ride home.',
+    },
+    {
       label: 'Private basketball trainer',
       cost: '$75-$200+ / session',
       body: 'Great for skill work. But most trainers are not answering the confidence, role, pressure, and coach problems that follow you home.',
+    },
+    {
+      label: 'Camps and showcases',
+      cost: '$150-$500+ / event',
+      body: 'Useful exposure. But exposure does not help much if he gets tight the moment coaches are watching.',
     },
     {
       label: 'Sport psychologist',
@@ -115,6 +125,11 @@ function ValueStack() {
       body: 'Important when your body needs help. This is for the part nobody can stretch out: fear, doubt, playing time, identity, and what to do next.',
     },
     {
+      label: 'Recruiting advice',
+      cost: '$100-$300+ / call',
+      body: 'Helpful for decisions. But players still need help with the pressure, the comparison, and what to actually do this week.',
+    },
+    {
       label: 'Pro locker-room perspective',
       cost: 'Usually not available',
       body: 'NBA and EuroLeague champion context. Coach problems. Role problems. Confidence problems. The stuff players do not always say out loud.',
@@ -125,9 +140,15 @@ function ValueStack() {
     <section className="mx-auto max-w-6xl px-5 py-14">
       <div className="rounded-[2rem] border border-gray-900 bg-[#050505] p-6 sm:p-8">
         <p className="text-xs font-black uppercase tracking-[0.24em] text-gray-600">
-          What families already pay for
+          You already pay for the outside work
         </p>
-        <div className="mt-8 grid gap-3 lg:grid-cols-4">
+        <h2 className="mt-4 max-w-3xl text-3xl font-black leading-tight text-[#F7F5F0] sm:text-5xl">
+          This is the part most families miss.
+        </h2>
+        <p className="mt-4 max-w-3xl text-base font-semibold leading-relaxed text-gray-500">
+          Skill work matters. Exposure matters. Recovery matters. But none of those always answer the question sitting in his head.
+        </p>
+        <div className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {rows.map((row) => (
             <div key={row.label} className="rounded-[1.5rem] border border-gray-900 bg-black p-5">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">{row.label}</p>
@@ -137,10 +158,10 @@ function ValueStack() {
           ))}
         </div>
         <div className="mt-6 rounded-[1.5rem] bg-[#F7F5F0] p-5 text-black">
-          <p className="text-2xl font-black">Ask Elijah is the missing part.</p>
+          <p className="text-2xl font-black">Ask Elijah fills the gap.</p>
           <p className="mt-2 max-w-3xl text-sm font-semibold leading-relaxed text-black/60">
             It does not replace a trainer, therapist, doctor, or physio. It gives players the conversation they usually cannot get:
-            a pro who has been in the arena helping them understand what is happening and what rep to take next.
+            a pro who has lived the bench, the pressure, the role changes, the slumps, the injuries, the locker room, and the next rep.
           </p>
         </div>
       </div>
