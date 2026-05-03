@@ -123,7 +123,7 @@ async function sendPlayerInvite(email: string, name?: string | null) {
     <h1 style="font-size:44px;line-height:1.02;letter-spacing:-0.04em;margin:0 0 8px;">You're in,</h1>
     <h2 style="font-size:44px;line-height:1.02;letter-spacing:-0.04em;color:#666;margin:0 0 48px;">${escapeHtml(firstName)}.</h2>
     <p style="font-size:17px;line-height:1.7;margin:0 0 24px;">Ask the question you've been sitting on. I'll send back one answer you can actually use.</p>
-    <p style="font-size:15px;line-height:1.7;color:#aaa;margin:0 0 36px;">Your invite is open for 7 days. If you don't ask a question by then, I'll give the spot to another player who's ready to work.</p>
+    <p style="font-size:15px;line-height:1.7;color:#aaa;margin:0 0 36px;">Your founder seat is held for 24 hours. If you want it, set up your locker room today. If not, I'll give the spot to another player who's ready to work.</p>
     <p style="border-left:3px solid #fff;padding-left:18px;font-size:17px;font-weight:700;margin:0 0 40px;">Ask. Elijah answers. Apply it.</p>
     <a href="${signUpUrl}" style="display:inline-block;color:#999;text-decoration:none;font-weight:700;">Set up my locker room →</a>
     <p style="font-size:15px;margin:56px 0 12px;">Elijah</p>

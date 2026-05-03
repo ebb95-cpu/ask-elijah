@@ -68,13 +68,13 @@ function cleanEmail(input: unknown): string {
   return typeof input === 'string' ? input.trim().toLowerCase() : ''
 }
 
-const INVITE_EXPIRES_DAYS = 7
+const INVITE_EXPIRES_HOURS = 24
 const FOUNDING_SEAT_LIMIT = 200
 
 function inviteWindow() {
   const sentAt = new Date()
   const expiresAt = new Date(sentAt)
-  expiresAt.setDate(expiresAt.getDate() + INVITE_EXPIRES_DAYS)
+  expiresAt.setHours(expiresAt.getHours() + INVITE_EXPIRES_HOURS)
   return {
     invite_sent_at: sentAt.toISOString(),
     access_expires_at: expiresAt.toISOString(),
@@ -220,7 +220,7 @@ async function sendAccessInviteEmail(args: { email: string; name?: string | null
           </p>
 
           <p style="font-size:14px;color:#bbbbbb !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-            Your invite is open for 7 days. If you don't ask a question by then, I'll give the spot to another player who's ready to work.
+            Your founder seat is held for 24 hours. If you want it, set up your locker room today. If not, I'll give the spot to another player who's ready to work.
           </p>
 
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
@@ -411,6 +411,14 @@ export async function GET() {
       entry.profile_created_at = row.created_at
       entry.is_founding_member = entry.is_founding_member || row.is_founding_member === true
       entry.approved = true
+      if (
+        row.created_at
+        && entry.access_expires_at
+        && row.created_at <= entry.access_expires_at
+        && (!entry.invite_sent_at || row.created_at >= entry.invite_sent_at)
+      ) {
+        entry.asked_during_invite_window = true
+      }
       if (!entry.waitlist_id && row.created_at) entry.created_at = row.created_at
     }
   }

@@ -617,7 +617,7 @@ export default function AdminAccessPage() {
                     )
                   })()}
                   <p className="mt-1 text-xs text-gray-700">
-                    {entry.access_expires_at ? `Spot opens ${formatDate(entry.access_expires_at)}` : 'No invite clock'}
+                    {entry.access_expires_at ? `Spot opens ${formatDateTime(entry.access_expires_at)}` : '24h clock starts after invite'}
                   </p>
                 </div>
                 <div className="hidden sm:block">
@@ -631,11 +631,11 @@ export default function AdminAccessPage() {
                   </p>
                   <p className="mt-1 text-xs text-gray-700">
                     {entry.access_expired
-                      ? 'No question in 7 days'
+                      ? 'No setup in 24h'
                       : entry.archived
                         ? `Removed ${formatDate(entry.archived_at)}`
                       : entry.access_expires_at
-                        ? `Invite expires ${formatDate(entry.access_expires_at)}`
+                        ? `Seat held until ${formatDateTime(entry.access_expires_at)}`
                         : entry.notified
                           ? 'Invite sent'
                           : 'Not invited yet'}
@@ -708,6 +708,16 @@ function formatDate(value: string | null) {
   return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+function formatDateTime(value: string | null) {
+  if (!value) return '-'
+  return new Date(value).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
 function providerLabel(provider: 'beehiiv' | 'resend') {
   return provider === 'beehiiv' ? 'Beehiiv' : 'Resend'
 }
@@ -737,16 +747,20 @@ function getInviteStatus(entry: AccessEntry): {
   }
 
   if (!entry.access_expires_at) {
-    return { label: entry.notified ? 'Invite sent' : 'No clock', className: 'text-gray-600', tone: 'none' }
+    return {
+      label: entry.notified ? 'Invite sent. No timer' : 'No invite sent yet',
+      className: 'text-gray-600',
+      tone: 'none',
+    }
   }
 
   const now = Date.now()
   const expires = new Date(entry.access_expires_at).getTime()
-  const daysLeft = Math.ceil((expires - now) / (1000 * 60 * 60 * 24))
+  const hoursLeft = Math.ceil((expires - now) / (1000 * 60 * 60))
 
-  if (daysLeft <= 0) return { label: 'Expires today', className: 'text-yellow-300', tone: 'countdown' }
-  if (daysLeft === 1) return { label: '1 day left', className: 'text-yellow-300', tone: 'countdown' }
-  return { label: `${daysLeft} days left`, className: daysLeft <= 2 ? 'text-yellow-300' : 'text-white', tone: 'countdown' }
+  if (hoursLeft <= 0) return { label: 'Expires now', className: 'text-yellow-300', tone: 'countdown' }
+  if (hoursLeft === 1) return { label: 'Seat held: 1h left', className: 'text-yellow-300', tone: 'countdown' }
+  return { label: `Seat held: ${hoursLeft}h left`, className: hoursLeft <= 6 ? 'text-yellow-300' : 'text-white', tone: 'countdown' }
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
