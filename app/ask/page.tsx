@@ -566,7 +566,7 @@ function AskPageInner() {
 
   const continueQuestionSubmit = async (userEmail: string) => {
     setEmailError('')
-    posthog?.capture('email_submitted', { email: userEmail })
+    posthog?.capture('email_submitted')
     posthog?.identify(userEmail, { email: userEmail })
 
     // Check if we need clarification before submitting.

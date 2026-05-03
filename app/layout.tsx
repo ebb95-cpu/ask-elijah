@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import ErrorCatcher from "@/components/ErrorCatcher";
 import BugReportButton from "@/components/BugReportButton";
+import PostHogProvider from "@/components/PostHogProvider";
 
 export const metadata: Metadata = {
   title: "Ask Elijah",
@@ -21,17 +22,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased min-h-screen flex flex-col">
-        {/* ErrorCatcher is pure (just listeners, no UI, no storage). Restored
-            so any remaining crash is captured to the error_log table instead
-            of being invisible. The other globals (PostHogProvider,
-            MobileBottomNav, NewAnswerNotification) stay removed — they were
-            candidate culprits in the last crash hunt. */}
-        <ErrorCatcher />
-        {children}
-        {/* Floating "Something broken?" button. Hides itself on /admin/*
-            and inside the student simulator iframe so bug reports only
-            come from real users on real pages. */}
-        <BugReportButton />
+        <PostHogProvider>
+          {/* ErrorCatcher is pure (just listeners, no UI, no storage). It stays
+              mounted so any remaining crash is captured to the error_log table
+              instead of being invisible. */}
+          <ErrorCatcher />
+          {children}
+          {/* Floating "Something broken?" button. Hides itself on /admin/*
+              and inside the student simulator iframe so bug reports only
+              come from real users on real pages. */}
+          <BugReportButton />
+        </PostHogProvider>
       </body>
     </html>
   );
