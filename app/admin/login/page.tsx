@@ -8,14 +8,15 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 type Props = {
-  searchParams?: { next?: string; error?: string }
+  searchParams?: Promise<{ next?: string; error?: string }>
 }
 
-export default function AdminLoginPage({ searchParams }: Props) {
-  const next = typeof searchParams?.next === 'string' && searchParams.next.startsWith('/admin')
-    ? searchParams.next
+export default async function AdminLoginPage({ searchParams }: Props) {
+  const params = await searchParams
+  const next = typeof params?.next === 'string' && params.next.startsWith('/admin')
+    ? params.next
     : '/admin/questions'
-  const error = searchParams?.error === 'wrong_password' ? 'Wrong password.' : null
+  const error = params?.error === 'wrong_password' ? 'Wrong password.' : null
 
   return (
     <div

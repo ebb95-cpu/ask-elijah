@@ -93,7 +93,8 @@ export async function attachTrackCookie(res: NextResponse, email: string): Promi
  * expired. Used by server components like /track/page.tsx.
  */
 export async function readTrackEmail(): Promise<string | null> {
-  const raw = cookies().get(TRACK_COOKIE)?.value
+  const cookieStore = await cookies()
+  const raw = cookieStore.get(TRACK_COOKIE)?.value
   if (!raw) return null
 
   const parts = raw.split('.')

@@ -12,7 +12,7 @@ import { ADMIN_COOKIE, verifyAdminSession } from '@/lib/admin-auth'
  * under this layout other than /admin/login; we rely on that invariant.
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const hasAdmin = await verifyAdminSession(cookieStore.get(ADMIN_COOKIE)?.value)
 
   // If there's no cookie, we're rendering /admin/login (middleware allowed

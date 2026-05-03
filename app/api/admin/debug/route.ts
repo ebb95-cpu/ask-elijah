@@ -14,7 +14,7 @@ import { ADMIN_COOKIE, verifyAdminSession } from '@/lib/admin-auth'
 export const dynamic = 'force-dynamic'
 
 export async function GET(_req: NextRequest) {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const tokenCookie = cookieStore.get(ADMIN_COOKIE)
 
   const adminPasswordSet = typeof process.env.ADMIN_PASSWORD === 'string' && process.env.ADMIN_PASSWORD.length > 0

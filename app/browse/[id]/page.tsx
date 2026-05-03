@@ -6,7 +6,7 @@ import { getSourceAction, getSourceIcon } from '@/lib/source-labels'
 
 export const dynamic = 'force-dynamic'
 
-type Params = { id: string }
+type Params = Promise<{ id: string }>
 
 async function fetchQuestion(id: string) {
   const supabase = getSupabase()
@@ -21,7 +21,8 @@ async function fetchQuestion(id: string) {
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const q = await fetchQuestion(params.id)
+  const { id } = await params
+  const q = await fetchQuestion(id)
   if (!q) return { title: 'Not found' }
 
   const title = q.question.length > 60 ? q.question.slice(0, 60) + '...' : q.question
@@ -44,7 +45,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 export default async function BrowseAnswerPage({ params }: { params: Params }) {
-  const q = await fetchQuestion(params.id)
+  const { id } = await params
+  const q = await fetchQuestion(id)
   if (!q) notFound()
 
   const formattedDate = new Date(q.created_at).toLocaleDateString('en-US', {

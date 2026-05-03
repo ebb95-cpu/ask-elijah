@@ -1,7 +1,12 @@
 import { withSentryConfig } from '@sentry/nextjs'
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const appRoot = dirname(fileURLToPath(import.meta.url))
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingRoot: appRoot,
   serverExternalPackages: ['pdf-parse'],
   async headers() {
     // Baseline security headers applied to every response. Kept conservative:

@@ -3,8 +3,9 @@ import { getSupabase } from '@/lib/supabase-server'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const token = req.nextUrl.searchParams.get('token')
   if (!token || token !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -14,7 +15,7 @@ export async function GET(
   const { data, error } = await supabase
     .from('questions')
     .select('id, question, answer, email, created_at, status')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (error || !data) {

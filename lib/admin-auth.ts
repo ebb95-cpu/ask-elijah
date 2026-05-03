@@ -135,7 +135,8 @@ export async function verifyAdminSession(
  *   if (unauthorized) return unauthorized
  */
 export async function requireAdmin(): Promise<NextResponse | null> {
-  const token = cookies().get(ADMIN_COOKIE)?.value
+  const cookieStore = await cookies()
+  const token = cookieStore.get(ADMIN_COOKIE)?.value
   const ok = await verifyAdminSession(token)
   if (!ok) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   return null

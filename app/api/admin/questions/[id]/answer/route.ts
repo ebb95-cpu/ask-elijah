@@ -43,10 +43,10 @@ async function upsertToPinecone(id: string, embedding: number[], text: string, q
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     const unauthorized = await requireAdmin()
     if (unauthorized) return unauthorized

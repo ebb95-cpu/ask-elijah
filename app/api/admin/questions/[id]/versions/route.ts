@@ -6,15 +6,16 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const unauthorized = await requireAdmin()
   if (unauthorized) return unauthorized
 
   const { data, error } = await getSupabase()
     .from('answer_versions')
     .select('id, version_number, answer, sources, change_note, opinion_changed, created_at')
-    .eq('question_id', params.id)
+    .eq('question_id', id)
     .order('version_number', { ascending: false })
 
   if (error) {
