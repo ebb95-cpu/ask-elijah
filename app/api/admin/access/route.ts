@@ -55,6 +55,15 @@ type AdminNoteRow = {
   updated_at: string | null
 }
 
+type CrmEmailEventRow = {
+  email: string
+  provider: 'beehiiv' | 'resend'
+  action: string
+  status: 'sent' | 'failed'
+  subject: string | null
+  created_at: string
+}
+
 function cleanEmail(input: unknown): string {
   return typeof input === 'string' ? input.trim().toLowerCase() : ''
 }
@@ -249,6 +258,7 @@ export async function GET() {
     feedbackResult,
     reflectionsResult,
     adminNotesResult,
+    crmEmailResult,
   ] = await Promise.all([
     fetchWaitlistRows(supabase),
     fetchProfileRows(supabase),
@@ -267,6 +277,11 @@ export async function GET() {
     supabase
       .from('player_admin_notes')
       .select('email, note, high_value, updated_at')
+      .limit(1000),
+    supabase
+      .from('crm_email_events')
+      .select('email, provider, action, status, subject, created_at')
+      .order('created_at', { ascending: false })
       .limit(1000),
   ])
 
@@ -308,6 +323,11 @@ export async function GET() {
     admin_note: string | null
     high_value: boolean
     admin_note_updated_at: string | null
+    last_email_provider: 'beehiiv' | 'resend' | null
+    last_email_action: string | null
+    last_email_status: 'sent' | 'failed' | null
+    last_email_subject: string | null
+    last_email_at: string | null
     has_profile: boolean
     is_founding_member: boolean
   }>()
@@ -350,6 +370,11 @@ export async function GET() {
         admin_note: null,
         high_value: false,
         admin_note_updated_at: null,
+        last_email_provider: null,
+        last_email_action: null,
+        last_email_status: null,
+        last_email_subject: null,
+        last_email_at: null,
         has_profile: false,
         is_founding_member: false,
       }
@@ -444,6 +469,18 @@ export async function GET() {
       entry.admin_note = row.note
       entry.high_value = row.high_value
       entry.admin_note_updated_at = row.updated_at
+    }
+  }
+
+  if (!crmEmailResult.error) {
+    for (const row of (crmEmailResult.data || []) as CrmEmailEventRow[]) {
+      const entry = ensureEntry(row.email)
+      if (entry.last_email_at) continue
+      entry.last_email_provider = row.provider
+      entry.last_email_action = row.action
+      entry.last_email_status = row.status
+      entry.last_email_subject = row.subject
+      entry.last_email_at = row.created_at
     }
   }
 
@@ -576,6 +613,11 @@ export async function POST(req: NextRequest) {
       admin_note: null,
       high_value: false,
       admin_note_updated_at: null,
+      last_email_provider: null,
+      last_email_action: null,
+      last_email_status: null,
+      last_email_subject: null,
+      last_email_at: null,
       has_profile: false,
       is_founding_member: shouldApprove,
     },
@@ -682,6 +724,11 @@ export async function PATCH(req: NextRequest) {
         admin_note: null,
         high_value: false,
         admin_note_updated_at: null,
+        last_email_provider: null,
+        last_email_action: null,
+        last_email_status: null,
+        last_email_subject: null,
+        last_email_at: null,
         has_profile: false,
         is_founding_member: false,
       },
@@ -738,6 +785,11 @@ export async function PATCH(req: NextRequest) {
             admin_note: null,
             high_value: false,
             admin_note_updated_at: null,
+            last_email_provider: null,
+            last_email_action: null,
+            last_email_status: null,
+            last_email_subject: null,
+            last_email_at: null,
             has_profile: false,
             is_founding_member: approved,
           },
@@ -808,6 +860,11 @@ export async function PATCH(req: NextRequest) {
       admin_note: null,
       high_value: false,
       admin_note_updated_at: null,
+      last_email_provider: null,
+      last_email_action: null,
+      last_email_status: null,
+      last_email_subject: null,
+      last_email_at: null,
       has_profile: false,
       is_founding_member: approved,
     },

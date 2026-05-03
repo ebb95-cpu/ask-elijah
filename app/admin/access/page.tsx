@@ -36,8 +36,22 @@ type AccessEntry = {
   admin_note: string | null
   high_value: boolean
   admin_note_updated_at: string | null
+  last_email_provider: 'beehiiv' | 'resend' | null
+  last_email_action: string | null
+  last_email_status: 'sent' | 'failed' | null
+  last_email_subject: string | null
+  last_email_at: string | null
   has_profile: boolean
   is_founding_member: boolean
+}
+
+type EmailAction = 'player_invite' | 'player_check_in' | 'parent_sequence' | 'consistency_club'
+
+const EMAIL_ACTIONS: Record<EmailAction, { label: string; provider: 'beehiiv' | 'resend' }> = {
+  player_invite: { label: 'Player invite', provider: 'resend' },
+  player_check_in: { label: 'Check in', provider: 'resend' },
+  parent_sequence: { label: 'Parent sequence', provider: 'beehiiv' },
+  consistency_club: { label: 'Consistency Club', provider: 'beehiiv' },
 }
 
 export default function AdminAccessPage() {
@@ -50,6 +64,7 @@ export default function AdminAccessPage() {
   const [saving, setSaving] = useState(false)
   const [savingNoteEmail, setSavingNoteEmail] = useState<string | null>(null)
   const [sendingInviteEmail, setSendingInviteEmail] = useState<string | null>(null)
+  const [sendingEmailAction, setSendingEmailAction] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
@@ -158,6 +173,11 @@ export default function AdminAccessPage() {
                 admin_note: item.admin_note,
                 high_value: item.high_value,
                 admin_note_updated_at: item.admin_note_updated_at,
+                last_email_provider: item.last_email_provider,
+                last_email_action: item.last_email_action,
+                last_email_status: item.last_email_status,
+                last_email_subject: item.last_email_subject,
+                last_email_at: item.last_email_at,
               }
             : item
         )
@@ -242,6 +262,11 @@ export default function AdminAccessPage() {
                 admin_note: item.admin_note,
                 high_value: item.high_value,
                 admin_note_updated_at: item.admin_note_updated_at,
+                last_email_provider: item.last_email_provider,
+                last_email_action: item.last_email_action,
+                last_email_status: item.last_email_status,
+                last_email_subject: item.last_email_subject,
+                last_email_at: item.last_email_at,
               }
             : item
         )
@@ -297,6 +322,63 @@ export default function AdminAccessPage() {
       setError(e instanceof Error ? e.message : 'Failed to update player note')
     } finally {
       setSavingNoteEmail(null)
+    }
+  }
+
+  async function sendEmailAction(entry: AccessEntry, action: EmailAction) {
+    const config = EMAIL_ACTIONS[action]
+    const key = `${entry.email}:${action}`
+    setSendingEmailAction(key)
+    setError('')
+    setNotice('')
+
+    try {
+      const res = await fetch('/api/admin/email-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: entry.email,
+          name: entry.name,
+          challenge: entry.challenge,
+          action,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Failed to send with ${providerLabel(config.provider)}`)
+
+      setEntries((prev) =>
+        prev.map((item) =>
+          item.email === entry.email
+            ? {
+                ...item,
+                last_email_provider: config.provider,
+                last_email_action: action,
+                last_email_status: 'sent',
+                last_email_subject: data.subject || null,
+                last_email_at: data.sent_at || new Date().toISOString(),
+              }
+            : item
+        )
+      )
+      setNotice(data.message || `${config.label} sent with ${providerLabel(config.provider)}.`)
+    } catch (e) {
+      setEntries((prev) =>
+        prev.map((item) =>
+          item.email === entry.email
+            ? {
+                ...item,
+                last_email_provider: config.provider,
+                last_email_action: action,
+                last_email_status: 'failed',
+                last_email_subject: null,
+                last_email_at: new Date().toISOString(),
+              }
+            : item
+        )
+      )
+      setError(e instanceof Error ? e.message : `Failed to send with ${providerLabel(config.provider)}`)
+    } finally {
+      setSendingEmailAction(null)
     }
   }
 
@@ -459,6 +541,41 @@ export default function AdminAccessPage() {
                   {savingNoteEmail === entry.email && (
                     <p className="mt-1 text-[11px] text-gray-700">Saving note...</p>
                   )}
+                  <div className="mt-3 rounded-xl border border-gray-900 bg-[#050505] p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gray-700">
+                        Email touch
+                      </p>
+                      <p className={`text-[11px] ${entry.last_email_status === 'failed' ? 'text-red-300' : 'text-gray-600'}`}>
+                        {formatEmailTouch(entry)}
+                      </p>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {(Object.keys(EMAIL_ACTIONS) as EmailAction[]).map((action) => {
+                        const config = EMAIL_ACTIONS[action]
+                        const isSending = sendingEmailAction === `${entry.email}:${action}`
+                        const isLastAction = entry.last_email_action === action && entry.last_email_provider === config.provider
+                        const sentText = entry.last_email_status === 'failed'
+                          ? `Failed with ${providerLabel(config.provider)}`
+                          : `Sent with ${providerLabel(config.provider)}`
+                        return (
+                          <button
+                            key={action}
+                            type="button"
+                            onClick={() => sendEmailAction(entry, action)}
+                            disabled={!!sendingEmailAction}
+                            className="rounded-full border border-gray-800 px-3 py-1.5 text-[11px] font-bold text-gray-500 transition-colors hover:border-gray-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            {isSending
+                              ? `Sending with ${providerLabel(config.provider)}...`
+                              : isLastAction
+                                ? sentText
+                                : `${config.label} · send with ${providerLabel(config.provider)}`}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                   <button
                     onClick={() => updatePlayerNote(entry, { high_value: !entry.high_value })}
                     className={`mt-3 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors sm:hidden ${
@@ -589,6 +706,21 @@ function AccessFilter({
 function formatDate(value: string | null) {
   if (!value) return '-'
   return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function providerLabel(provider: 'beehiiv' | 'resend') {
+  return provider === 'beehiiv' ? 'Beehiiv' : 'Resend'
+}
+
+function emailActionLabel(action: string | null) {
+  if (!action) return ''
+  return EMAIL_ACTIONS[action as EmailAction]?.label || action.replaceAll('_', ' ')
+}
+
+function formatEmailTouch(entry: AccessEntry) {
+  if (!entry.last_email_provider || !entry.last_email_at) return 'No email sent yet'
+  const verb = entry.last_email_status === 'failed' ? 'Failed with' : 'Sent with'
+  return `${verb} ${providerLabel(entry.last_email_provider)} · ${emailActionLabel(entry.last_email_action)} · ${formatDate(entry.last_email_at)}`
 }
 
 function getInviteStatus(entry: AccessEntry): {
