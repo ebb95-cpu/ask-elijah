@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 import { Resend } from 'resend'
+import { checkLimit } from '@/lib/rate-limit'
+
+async function authUserExists(email: string): Promise<boolean> {
+  const { data, error } = await getSupabase().auth.admin.listUsers({ page: 1, perPage: 1000 })
+  if (error) return false
+  return data.users.some((user) => user.email?.toLowerCase() === email)
+}
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
+  const limit = await checkLimit('rl:forgot-password', ip, 5, '1 h')
+  if (!limit.success) return NextResponse.json({ ok: true })
+
   const { email } = await req.json()
   if (!email?.trim()) {
     return NextResponse.json({ error: 'Email required' }, { status: 400 })
@@ -11,6 +22,11 @@ export async function POST(req: NextRequest) {
   const cleanEmail = email.trim().toLowerCase()
   const supabase = getSupabase()
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
+
+  // Search auth first. If there is no account, do not send anything, but keep
+  // the response neutral so people cannot use this endpoint to enumerate users.
+  const exists = await authUserExists(cleanEmail)
+  if (!exists) return NextResponse.json({ ok: true })
 
   const { data, error } = await supabase.auth.admin.generateLink({
     type: 'recovery',
