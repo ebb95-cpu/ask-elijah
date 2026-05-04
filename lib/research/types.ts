@@ -1,5 +1,5 @@
 /**
- * Shared shapes for the pain-research pipeline. Every source module
+ * Shared shapes for the question-discovery pipeline. Every source module
  * normalises its output into RawInsight[] before the synthesis step
  * reads the combined pile.
  */

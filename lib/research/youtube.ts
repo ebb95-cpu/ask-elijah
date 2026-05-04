@@ -1,5 +1,5 @@
 /**
- * YouTube pain-point scraper.
+ * YouTube question-discovery collector.
  *
  * For each seed query, finds the top videos and pulls their comments.
  * Uses the YouTube Data API v3. Cost per run (rough):

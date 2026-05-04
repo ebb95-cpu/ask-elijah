@@ -5,12 +5,12 @@ import Link from 'next/link'
 import LoadingDots from '@/components/ui/LoadingDots'
 
 /**
- * Pain-research admin dashboard.
+ * Question Discovery admin dashboard.
  *
- * Shows the latest synthesis run: clustered pain points with real quotes
- * from YouTube/Reddit, and the most-asked questions that surfaced. Plus
- * a trigger button for manual runs and a small history list so the admin
- * can see how pain patterns shift over time.
+ * Shows the latest discovery run: clustered demand signals with real quotes
+ * from YouTube/Reddit/search autocomplete, and the most-asked questions
+ * that surfaced. Discovery is append-only: it adds new queue candidates and
+ * never changes approved answers already saved in the knowledge base.
  */
 
 type Synthesis = {
@@ -50,7 +50,10 @@ export default function PainResearchPage() {
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/pain-research')
-      if (!res.ok) throw new Error(`${res.status}`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `${res.status}`)
+      }
       const data = await res.json()
       setLatest(data.latest)
       setHistory(data.history || [])
@@ -77,16 +80,17 @@ export default function PainResearchPage() {
   const runNow = async () => {
     if (starting) return
     setStarting(true)
-    setToast('Starting a fresh research run — this usually takes 1–3 minutes...')
+    setToast('Starting discovery. This can take 1-3 minutes while it scans YouTube, Reddit, and search demand...')
     try {
       const res = await fetch('/api/admin/pain-research', { method: 'POST' })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         throw new Error(d.error || `${res.status}`)
       }
-      setTimeout(load, 2000)
+      setToast('Discovery complete. New unanswered questions were added to the queue.')
+      setTimeout(load, 500)
     } catch (e) {
-      setToast(`Failed: ${e instanceof Error ? e.message : 'unknown error'}`)
+      setToast(`Discovery failed: ${e instanceof Error ? e.message : 'unknown error'}`)
     } finally {
       setStarting(false)
       setTimeout(() => setToast(null), 6000)
@@ -98,7 +102,7 @@ export default function PainResearchPage() {
   return (
     <div style={{ padding: '24px', maxWidth: 1000, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Pain Research</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Question Discovery</h1>
         <Link href="/admin/questions" style={{ fontSize: 12, color: '#555' }}>
           ← Queue
         </Link>
@@ -146,7 +150,7 @@ export default function PainResearchPage() {
 
       {!loading && !latest && (
         <div style={emptyStyle}>
-          No research runs yet. Hit <strong>Run now</strong> to kick off the first scrape across YouTube, Reddit, and Google autocomplete.
+          No discovery runs yet. Hit <strong>Run now</strong> to find the first batch of questions from YouTube, Reddit, and search demand.
         </div>
       )}
 
@@ -177,16 +181,20 @@ export default function PainResearchPage() {
             )}
           </div>
 
+          <div style={emptyStyle}>
+            This only creates new unanswered queue candidates. Approved answers and existing knowledge-base entries are never overwritten by discovery.
+          </div>
+
           {latest.error && (
             <div style={{ ...emptyStyle, borderColor: '#3a1515', color: '#ef4444' }}>
               Run failed: {latest.error}
             </div>
           )}
 
-          {/* Pain points */}
+          {/* Demand signals */}
           {synthesis && synthesis.pain_points.length > 0 && (
             <section style={{ marginBottom: 32 }}>
-              <h2 style={sectionTitleStyle}>Pain points · sorted by signal</h2>
+              <h2 style={sectionTitleStyle}>Demand signals · sorted by strength</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {synthesis.pain_points.map((p, i) => (
                   <div key={i} style={cardStyle}>
@@ -228,7 +236,7 @@ export default function PainResearchPage() {
           {/* Top questions */}
           {synthesis && synthesis.top_questions.length > 0 && (
             <section style={{ marginBottom: 32 }}>
-              <h2 style={sectionTitleStyle}>Questions being asked · sorted by frequency</h2>
+              <h2 style={sectionTitleStyle}>Questions found online · sorted by frequency</h2>
               <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {synthesis.top_questions.map((q, i) => (
                   <li key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '6px 0', borderBottom: '1px solid #111' }}>

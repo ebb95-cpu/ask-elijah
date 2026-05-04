@@ -2,7 +2,7 @@
  * Synthesis pass.
  *
  * Takes raw insights from every source, asks Claude to cluster them into
- * pain points + the most common questions being asked. Output is the
+ * demand signals + the most common questions being asked. Output is the
  * structured JSON the admin dashboard reads.
  *
  * We hard-cap the input payload so a single run can't blow the context
@@ -62,12 +62,12 @@ function buildPrompt(insights: RawInsight[]): string {
     return `- ${i.text.replace(/\s+/g, ' ').trim()}${sub}${score}${url}`
   }
 
-  return `You are analysing pain-point research for Elijah Bryant's basketball mindset product.
+  return `You are analysing question discovery for Elijah Bryant's basketball mindset product.
 
 TARGET DEMOGRAPHIC:
 ${RESEARCH_CONFIG.demographic}
 
-Below are raw comments, posts, and search queries collected from YouTube, Reddit, and Google autocomplete over the past 24 hours. Your job: cluster these into the most important pain points and the most frequently asked questions this demographic has right now.
+Below are raw comments, posts, and search queries collected from YouTube, Reddit, and Google autocomplete over the past 24 hours. Your job: cluster these into the most important demand signals and the most frequently asked questions this demographic has right now.
 
 === REDDIT (${bySource.reddit.length} items) ===
 ${bySource.reddit.map(format).join('\n')}

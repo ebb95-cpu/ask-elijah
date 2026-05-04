@@ -61,7 +61,7 @@ export async function GET() {
     envCheck('Email sending', ['RESEND_API_KEY']),
     envCheck('Knowledge base', ['PINECONE_HOST', 'PINECONE_API_KEY', 'VOYAGE_API_KEY']),
     {
-      label: 'Sentry',
+      label: 'Health issues',
       status: !isSentryConfigured() ? 'watch' : sentryCount > 0 ? 'watch' : 'ready',
       detail: !isSentryConfigured() ? 'Not configured' : `${sentryCount} unresolved issue${sentryCount === 1 ? '' : 's'}`,
     },

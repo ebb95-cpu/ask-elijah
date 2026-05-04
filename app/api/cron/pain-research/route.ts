@@ -102,8 +102,22 @@ async function seedQuestionQueue(
     if (existing) continue
 
     const coverage = await checkKnowledgeCoverage(cleaned)
-    const status = coverage.answered ? 'auto_answered' : 'pending'
-    if (coverage.answered) alreadyAnswered++
+    if (coverage.answered) {
+      alreadyAnswered++
+      continue
+    }
+
+    const { data: answeredQuestion } = await supabase
+      .from('questions')
+      .select('id')
+      .eq('question', cleaned)
+      .in('status', ['approved', 'answered'])
+      .limit(1)
+      .maybeSingle()
+    if (answeredQuestion) {
+      alreadyAnswered++
+      continue
+    }
 
     const matchingPain = synthesis.pain_points.find((p) =>
       cleaned.toLowerCase().includes(p.title.toLowerCase().split(' ')[0] || '')
@@ -111,35 +125,44 @@ async function seedQuestionQueue(
 
     const quotes = matchingPain?.quotes || []
     const originalText = [
-      matchingPain ? `Pain: ${matchingPain.title}\n${matchingPain.summary}` : 'Daily pain research question',
+      matchingPain ? `Demand signal: ${matchingPain.title}\n${matchingPain.summary}` : 'Daily question discovery candidate',
       `Signal score: ${item.score}`,
       `Knowledge coverage: ${coverage.answered ? 'answered' : 'needs Elijah'} (${coverage.bestScore.toFixed(2)})`,
       quotes.length ? `Representative quotes:\n${quotes.slice(0, 3).map((q) => `- ${q.text}`).join('\n')}` : '',
     ].filter(Boolean).join('\n\n')
 
     const { error } = await supabase.from('pain_points').insert({
-      source: 'pain_research',
+      source: 'question_discovery',
       source_url: quotes.find((q) => q.source_url)?.source_url || null,
       source_context: `daily-run:${runId}`,
       original_text: originalText,
       cleaned_question: cleaned,
-      status,
+      status: 'pending',
       draft_answer: null,
       kb_sources: coverage.kbSources,
     })
 
-    if (!error && status === 'pending') inserted++
+    if (error) {
+      await logError('research:queue-insert', error, { question: cleaned, runId })
+      if (error.code === '42P01') {
+        throw new Error('Question Discovery queue storage is missing. Apply supabase/migrations/add-pain-points.sql in Supabase.')
+      }
+    } else {
+      inserted++
+    }
   }
 
   return { queued: inserted, alreadyAnswered }
 }
 
 /**
- * Nightly pain-research cron.
+ * Nightly question-discovery cron.
  *
- * Runs all three sources in parallel, persists an initial "running" row so
+ * Runs all configured sources in parallel, persists an initial "running" row so
  * the admin dashboard can show progress, then stores the synthesized output
- * plus a sample of the raw data for spot-checking.
+ * plus a sample of the raw data for spot-checking. Discovery is append-only:
+ * it creates new pending queue rows and never edits approved answers or
+ * existing knowledge-base vectors.
  *
  * Auth: Vercel cron calls come with a Bearer token matching CRON_SECRET.
  * Returns quickly with a summary so Vercel's 300s budget is rarely tested.

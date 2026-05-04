@@ -46,7 +46,7 @@
     },
     {
       "path": "/api/cron/pain-research",
-      "schedule": "0 9 * * 1"
+      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/watchdog",

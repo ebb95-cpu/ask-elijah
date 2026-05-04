@@ -922,7 +922,7 @@ export default function AdminQuestionsPage() {
               fontFamily: '-apple-system, sans-serif',
             }}
           >
-            {researching ? <LoadingDots label="Researching" /> : 'Find new pain points'}
+            {researching ? <LoadingDots label="Discovering" /> : 'Find new questions'}
           </button>
         </div>
       </div>
@@ -1473,7 +1473,7 @@ function QueueCard({
         <span style={badgeStyle('#34d399', '#0a1f15', '#1f4030')}>✓ Reviewed</span>
       )}
       {q.item_type === 'pain_point' && (
-        <span title="Researched pain point" style={badgeStyle('#7dd3fc', '#07131a', '#123040')}>Research</span>
+        <span title="Question Discovery candidate" style={badgeStyle('#7dd3fc', '#07131a', '#123040')}>Discovery</span>
       )}
       <p style={{
         fontSize: 13, fontWeight: 600, color: '#fff', margin: 0,

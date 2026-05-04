@@ -1,5 +1,5 @@
 /**
- * Reddit pain-point scraper.
+ * Reddit question-discovery collector.
  *
  * For each seed query, searches Reddit inside the configured subreddits and
  * pulls the top posts + top comments. Reddit is the highest signal-to-noise

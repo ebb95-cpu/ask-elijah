@@ -3,15 +3,16 @@ import { getSupabase } from '@/lib/supabase-server'
 import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 
 /**
- * GET  — latest pain-research run + a trailing history list for the
- *        /admin/pain-research dashboard. Returns the synthesis JSON
+ * GET  — latest question-discovery run + a trailing history list for the
+ *        admin dashboard. Returns the synthesis JSON
  *        directly, plus run timestamps and counts.
  *
- * POST — admin-initiated manual run. Internally calls the cron endpoint
- *        with the CRON_SECRET so the admin can trigger research without
- *        waiting for the nightly schedule. Useful when you want fresh
+ * POST — admin-initiated manual run. Calls the cron endpoint with the
+ *        CRON_SECRET so the admin can trigger discovery without waiting
+ *        for the nightly schedule. Useful when you want fresh
  *        data before a content-planning session.
  */
 
@@ -32,7 +33,18 @@ export async function GET() {
     .order('started_at', { ascending: false })
     .limit(10)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    const missingTable = error.code === '42P01' || /pain_research_runs/i.test(error.message)
+    return NextResponse.json(
+      {
+        error: missingTable
+          ? 'Question Discovery storage is missing. Apply supabase/migrations/add-pain-research.sql in Supabase.'
+          : error.message,
+        code: error.code,
+      },
+      { status: 500 }
+    )
+  }
 
   const runsList = runs || []
   const latest = runsList.find((r) => r.status === 'completed') || runsList[0] || null
@@ -60,13 +72,19 @@ export async function POST() {
     return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 })
   }
 
-  // Fire-and-forget: the cron endpoint can take minutes, but the admin
-  // UI polls /api/admin/pain-research for the latest run so they don't
-  // need to wait here.
+  // Wait for the run to start/finish so the admin sees real failures instead
+  // of a vague 500. This route has the same 5-minute budget as the cron job.
   const siteUrl = getSiteUrl()
-  fetch(`${siteUrl}/api/cron/pain-research`, {
+  const res = await fetch(`${siteUrl}/api/cron/pain-research`, {
     headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
-  }).catch(() => { /* swallow — admin sees failure state via polling */ })
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    return NextResponse.json(
+      { error: data.error || `Question discovery failed with ${res.status}`, runId: data.runId },
+      { status: res.status }
+    )
+  }
 
-  return NextResponse.json({ ok: true, started: true })
+  return NextResponse.json({ ok: true, ...data })
 }

@@ -1,5 +1,5 @@
 /**
- * Google autocomplete pain-point scraper.
+ * Google autocomplete question-discovery collector.
  *
  * Surprisingly powerful — Google's suggest endpoint reveals the literal
  * questions and phrasings real people are typing. Lightweight (one HTTP

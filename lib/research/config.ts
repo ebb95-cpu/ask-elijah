@@ -1,8 +1,8 @@
 /**
- * Demographic definition for the pain-research pipeline.
+ * Demographic definition for the question-discovery pipeline.
  *
  * Every source module reads from this to decide what to search for. Keep
- * this tight — broader keywords = more noise, less signal. The current
+ * this tight: broader keywords = more noise, less signal. The current
  * focus is youth + amateur basketball players dealing with the mental
  * side of the game, since that's what Elijah's product is aimed at.
  */
@@ -16,6 +16,10 @@ export const RESEARCH_CONFIG = {
   // Seed search queries used across YouTube, Google autocomplete, and Reddit.
   // Phrased the way a player would type them.
   seedQueries: [
+    'how to get better at basketball',
+    'how to improve basketball skills',
+    'basketball advice for parents',
+    'how can parents help basketball players',
     'how to stop freezing up in basketball games',
     'how to build basketball confidence',
     'basketball coach benched me',

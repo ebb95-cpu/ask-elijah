@@ -19,7 +19,7 @@ const DEFAULT_ALERTS: AlertSetting[] = [
   { key: 'repeat_question', enabled: true, threshold: 5, description: 'Notify when multiple players are asking the same thing.' },
   { key: 'bad_feedback', enabled: true, threshold: 1, description: 'Notify when an answer gets negative written feedback.' },
   { key: 'weak_topic', enabled: true, threshold: 3, description: 'Notify when a topic has repeated questions but weak knowledge coverage.' },
-  { key: 'watchdog_failure', enabled: true, threshold: 1, description: 'Notify when the watchdog or Sentry sees a technical problem.' },
+  { key: 'watchdog_failure', enabled: true, threshold: 1, description: 'Notify when Health sees a technical problem.' },
 ]
 
 function topicFromQuestion(question: string | null | undefined): string {
@@ -140,7 +140,7 @@ export async function GET() {
     ...pendingPain.slice(0, 8).map((p) => ({
       type: 'research',
       title: p.cleaned_question,
-      detail: p.source_context || 'Research-discovered pain point waiting for Elijah POV.',
+      detail: p.source_context || 'Question Discovery candidate waiting for Elijah POV.',
     })),
     ...weakApproved.slice(0, 8).map((q) => ({
       type: 'weak_answer',
