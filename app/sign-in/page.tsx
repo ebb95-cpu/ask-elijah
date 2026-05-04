@@ -21,7 +21,6 @@ function Logo() {
 }
 
 type Step = 'email' | 'password' | 'reset-sent'
-type Role = 'admin' | 'user'
 
 export default function SignInPage() {
   return (
@@ -33,7 +32,6 @@ export default function SignInPage() {
 
 function SignInInner() {
   const [step, setStep] = useState<Step>('email')
-  const [role, setRole] = useState<Role>('user')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -96,19 +94,6 @@ function SignInInner() {
     }
 
     try {
-      const adminRes = await fetch('/api/admin/check-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
-      })
-      const { isAdmin } = await adminRes.json()
-      if (isAdmin) {
-        setRole('admin')
-        setStep('password')
-        setLoading(false)
-        return
-      }
-
       const checkRes = await fetch('/api/check-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,7 +113,6 @@ function SignInInner() {
         return
       }
 
-      setRole('user')
       setStep('password')
       setLoading(false)
     } catch {
@@ -155,26 +139,7 @@ function SignInInner() {
     }
   }
 
-  const handleAdminLogin = async () => {
-    if (!password.trim()) return
-    setLoading(true)
-    setError('')
-    try {
-      const res = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      })
-      if (!res.ok) throw new Error('Wrong password')
-      window.location.href = '/admin/questions'
-    } catch {
-      setError('Wrong password.')
-      setLoading(false)
-    }
-  }
-
   const handlePasswordSubmit = () => {
-    if (role === 'admin') return handleAdminLogin()
     return handleUserLogin()
   }
 
@@ -328,22 +293,13 @@ function SignInInner() {
                   </button>
                 </>
               )}
-
-              <div className="mt-8 pt-6 border-t border-gray-900 text-center">
-                <Link
-                  href="/admin/login"
-                  className="text-xs text-gray-500 hover:text-white transition-colors"
-                >
-                  Admin? Sign in here →
-                </Link>
-              </div>
             </>
           )}
 
           {step === 'password' && (
             <>
               <p className="text-xs text-gray-600 tracking-widest uppercase mb-6 text-center">
-                {role === 'admin' ? 'Admin' : 'Welcome back'}
+                Welcome back
               </p>
               <h1 className="text-3xl font-bold text-center mb-4 leading-tight">Enter your password.</h1>
               <p className="text-gray-500 text-sm text-center mb-8 break-words">{email}</p>
@@ -368,15 +324,13 @@ function SignInInner() {
                 {loading ? <LoadingDots label="Signing in" /> : 'Sign in →'}
               </button>
 
-              {role === 'user' && (
-                <button
-                  onClick={handleForgotPassword}
-                  disabled={loading}
-                  className="w-full text-xs text-gray-500 hover:text-white transition-colors mt-6 text-center disabled:opacity-40"
-                >
-                  Can&apos;t find your password? Send reset link →
-                </button>
-              )}
+              <button
+                onClick={handleForgotPassword}
+                disabled={loading}
+                className="w-full text-xs text-gray-500 hover:text-white transition-colors mt-6 text-center disabled:opacity-40"
+              >
+                Can&apos;t find your password? Send reset link →
+              </button>
 
               <button
                 onClick={() => { setStep('email'); setPassword(''); setError('') }}
