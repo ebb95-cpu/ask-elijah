@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 import { requireAuthorizedEmail } from '@/lib/session-email'
+import { profileHasEntitlement } from '@/lib/access-gate'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,9 +24,7 @@ export async function GET(req: NextRequest) {
     .eq('email', clean)
     .single()
 
-  const subscribed = profile?.subscription_status === 'active'
-    || profile?.subscription_status === 'trialing'
-    || profile?.subscription_status === 'past_due'
+  const subscribed = profileHasEntitlement(profile)
 
   // Paid locker-room limit is monthly. This endpoint is advisory for the UI;
   // the server ask route remains the source of truth.
@@ -40,7 +39,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     subscribed,
-    trialing: profile?.subscription_status === 'trialing',
+    trialing: subscribed && profile?.subscription_status === 'trialing',
     trialEndsAt: profile?.trial_ends_at ?? null,
     trialSource: profile?.trial_source ?? null,
     trialPromoCode: profile?.trial_promo_code ?? null,

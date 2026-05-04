@@ -10,6 +10,24 @@ export function isAccessGateEnabled(): boolean {
   return process.env.ACCESS_GATE_ENABLED !== 'false'
 }
 
+function isTrialStillValid(trialEndsAt?: string | null): boolean {
+  if (!trialEndsAt) return true
+  return new Date(trialEndsAt) > new Date()
+}
+
+export function profileHasEntitlement(profile: {
+  is_founding_member?: boolean | null
+  subscription_status?: string | null
+  trial_ends_at?: string | null
+} | null): boolean {
+  if (!profile) return false
+  if (profile.is_founding_member === true) return true
+
+  const status = (profile.subscription_status || '').toLowerCase()
+  if (status === 'trialing') return isTrialStillValid(profile.trial_ends_at)
+  return ['active', 'past_due', 'priority_paid'].includes(status)
+}
+
 export async function hasPlayerAccess(email: string): Promise<boolean> {
   if (!isAccessGateEnabled()) return true
 
@@ -59,13 +77,24 @@ export async function hasPlayerAccess(email: string): Promise<boolean> {
     return true
   }
 
-  // Existing accounts that predate the launch gate should not get locked out
-  // just because there is no waitlist row for them.
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id')
+    .select('is_founding_member, subscription_status, trial_ends_at')
     .eq('email', cleanEmail)
     .maybeSingle()
 
-  return !!profile?.id
+  if (!profileError) return profileHasEntitlement(profile)
+
+  // Emergency escape hatch only. Keeping this opt-in prevents "profile exists"
+  // from becoming the same thing as "has paid/trial access."
+  if (process.env.LEGACY_PROFILE_ACCESS_ENABLED === 'true') {
+    const { data: legacyProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', cleanEmail)
+      .maybeSingle()
+    return !!legacyProfile?.id
+  }
+
+  return false
 }
