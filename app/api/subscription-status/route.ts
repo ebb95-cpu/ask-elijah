@@ -19,11 +19,13 @@ export async function GET(req: NextRequest) {
   // Check subscription status
   const { data: profile } = await supabase
     .from('profiles')
-    .select('subscription_status, is_founding_member')
+    .select('subscription_status, is_founding_member, trial_ends_at, trial_source, trial_promo_code')
     .eq('email', clean)
     .single()
 
-  const subscribed = profile?.subscription_status === 'active' || profile?.subscription_status === 'past_due'
+  const subscribed = profile?.subscription_status === 'active'
+    || profile?.subscription_status === 'trialing'
+    || profile?.subscription_status === 'past_due'
 
   // Paid locker-room limit is monthly. This endpoint is advisory for the UI;
   // the server ask route remains the source of truth.
@@ -38,6 +40,10 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     subscribed,
+    trialing: profile?.subscription_status === 'trialing',
+    trialEndsAt: profile?.trial_ends_at ?? null,
+    trialSource: profile?.trial_source ?? null,
+    trialPromoCode: profile?.trial_promo_code ?? null,
     isFoundingMember: profile?.is_founding_member ?? false,
     questionsThisMonth: count ?? 0,
     monthlyLimit: 5,

@@ -43,6 +43,11 @@ type AccessEntry = {
   last_email_at: string | null
   has_profile: boolean
   is_founding_member: boolean
+  subscription_status: string | null
+  subscription_tier: string | null
+  trial_ends_at: string | null
+  trial_source: string | null
+  trial_promo_code: string | null
 }
 
 type EmailAction = 'player_invite' | 'player_check_in' | 'parent_sequence' | 'consistency_club'
@@ -497,6 +502,11 @@ export default function AdminAccessPage() {
                         High value
                       </span>
                     )}
+                    {entry.subscription_status === 'trialing' && (
+                      <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300">
+                        Trial
+                      </span>
+                    )}
                     {entry.archived && (
                       <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-red-300">
                         Archived
@@ -507,6 +517,11 @@ export default function AdminAccessPage() {
                   {(entry.position || entry.level) && (
                     <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-gray-700">
                       {[entry.position, entry.level].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                  {entry.subscription_status === 'trialing' && (
+                    <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-sky-500">
+                      {[entry.trial_promo_code ? `Code ${entry.trial_promo_code}` : 'Promo trial', entry.trial_ends_at ? `ends ${formatDate(entry.trial_ends_at)}` : null].filter(Boolean).join(' · ')}
                     </p>
                   )}
                   {entry.challenge && (

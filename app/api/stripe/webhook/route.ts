@@ -10,6 +10,19 @@ function getStripe() {
 
 export const dynamic = 'force-dynamic'
 
+function mapSubscriptionStatus(status: Stripe.Subscription.Status) {
+  if (status === 'trialing') return 'trialing'
+  if (status === 'active') return 'active'
+  if (status === 'past_due') return 'past_due'
+  if (status === 'canceled') return 'cancelled'
+  if (status === 'paused') return 'cancelled'
+  return status
+}
+
+function stripeTimestampToIso(value?: number | null) {
+  return value ? new Date(value * 1000).toISOString() : null
+}
+
 async function findProfileEmail(params: {
   supabase: ReturnType<typeof getSupabase>
   subscriptionId?: string | null
@@ -68,8 +81,13 @@ export async function POST(req: NextRequest) {
         const email = session.metadata?.email?.toLowerCase()
         const tier = session.metadata?.tier || (session.mode === 'payment' ? 'priority' : 'locker_room')
         const isFoundingMember = session.metadata?.is_founding_member === 'true'
+        const trialPromoCode = session.metadata?.trial_promo_code || null
+        const trialSource = session.metadata?.trial_source || null
         const customerId = session.customer as string
         const subscriptionId = typeof session.subscription === 'string' ? session.subscription : null
+        const subscription = subscriptionId ? await stripe.subscriptions.retrieve(subscriptionId) : null
+        const subscriptionStatus = subscription ? mapSubscriptionStatus(subscription.status) : 'active'
+        const trialEndsAt = stripeTimestampToIso(subscription?.trial_end)
 
         if (!email) break
 
@@ -85,13 +103,17 @@ export async function POST(req: NextRequest) {
             email,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
-            subscription_status: session.mode === 'payment' ? 'priority_paid' : 'active',
+            subscription_status: session.mode === 'payment' ? 'priority_paid' : subscriptionStatus,
             subscription_tier: tier,
             priority_credits: session.mode === 'payment'
               ? (Number(existingProfile?.priority_credits) || 0) + 1
               : (Number(existingProfile?.priority_credits) || 0),
             is_founding_member: isFoundingMember,
             subscription_started_at: new Date().toISOString(),
+            trial_started_at: trialPromoCode ? new Date().toISOString() : null,
+            trial_ends_at: trialEndsAt,
+            trial_source: trialSource || null,
+            trial_promo_code: trialPromoCode,
           }, { onConflict: 'email' })
 
         console.log(`Subscription activated for ${email} (founding: ${isFoundingMember})`)
@@ -121,6 +143,7 @@ export async function POST(req: NextRequest) {
       }
 
       case 'customer.subscription.resumed':
+      case 'customer.subscription.updated':
       case 'invoice.payment_succeeded': {
         const obj = event.data.object as Stripe.Invoice | Stripe.Subscription
         const subscriptionId = obj.object === 'subscription'
@@ -143,9 +166,10 @@ export async function POST(req: NextRequest) {
         await supabase
           .from('profiles')
           .update({
-            subscription_status: 'active',
+            subscription_status: mapSubscriptionStatus(subscription.status),
             stripe_subscription_id: subscriptionId,
             stripe_customer_id: customerId,
+            trial_ends_at: stripeTimestampToIso(subscription.trial_end),
           })
           .eq('email', email)
 

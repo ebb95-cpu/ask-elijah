@@ -34,6 +34,11 @@ type ProfileRow = {
   level: string | null
   challenge: string | null
   is_founding_member?: boolean | null
+  subscription_status?: string | null
+  subscription_tier?: string | null
+  trial_ends_at?: string | null
+  trial_source?: string | null
+  trial_promo_code?: string | null
   created_at: string | null
 }
 
@@ -109,7 +114,7 @@ async function fetchWaitlistRows(supabase: ReturnType<typeof getSupabase>) {
 async function fetchProfileRows(supabase: ReturnType<typeof getSupabase>) {
   const withFounderFlag = await supabase
     .from('profiles')
-    .select('id, email, first_name, name, position, level, challenge, is_founding_member, created_at')
+    .select('id, email, first_name, name, position, level, challenge, is_founding_member, subscription_status, subscription_tier, trial_ends_at, trial_source, trial_promo_code, created_at')
     .order('created_at', { ascending: false })
     .limit(500)
 
@@ -330,6 +335,11 @@ export async function GET() {
     last_email_at: string | null
     has_profile: boolean
     is_founding_member: boolean
+    subscription_status: string | null
+    subscription_tier: string | null
+    trial_ends_at: string | null
+    trial_source: string | null
+    trial_promo_code: string | null
   }>()
 
   const ensureEntry = (email: string) => {
@@ -377,6 +387,11 @@ export async function GET() {
         last_email_at: null,
         has_profile: false,
         is_founding_member: false,
+        subscription_status: null,
+        subscription_tier: null,
+        trial_ends_at: null,
+        trial_source: null,
+        trial_promo_code: null,
       }
       byEmail.set(clean, entry)
     }
@@ -410,6 +425,11 @@ export async function GET() {
       entry.level = row.level
       entry.profile_created_at = row.created_at
       entry.is_founding_member = entry.is_founding_member || row.is_founding_member === true
+      entry.subscription_status = row.subscription_status || null
+      entry.subscription_tier = row.subscription_tier || null
+      entry.trial_ends_at = row.trial_ends_at || null
+      entry.trial_source = row.trial_source || null
+      entry.trial_promo_code = row.trial_promo_code || null
       entry.approved = true
       if (
         row.created_at

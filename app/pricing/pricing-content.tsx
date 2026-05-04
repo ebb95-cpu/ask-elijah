@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { unstable_cache } from 'next/cache'
 import type { ReactNode } from 'react'
 import FoundersBetaForm from './founders-beta-form'
+import CheckoutButton from './checkout-button'
 import { getSupabase } from '@/lib/supabase-server'
 import type { PricingPhase } from '@/lib/pricing-phase'
 
@@ -279,14 +280,19 @@ async function PublicPricing({ isPreview = false }: { isPreview?: boolean }) {
           body="Unlimited questions. Personal archive. Source citations. Reviewed by Elijah's standard."
           cream
         >
-          {/* TODO: connect Stripe checkout for locker_monthly */}
-          <button className="block w-full rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white">
+          <CheckoutButton
+            plan="locker_monthly"
+            showPromoCode
+            className="block w-full rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white disabled:opacity-60"
+          >
             Join monthly
-          </button>
-          {/* TODO: connect Stripe checkout for locker_annual */}
-          <button className="block w-full rounded-full border border-black/20 px-5 py-4 text-center text-sm font-black text-black">
+          </CheckoutButton>
+          <CheckoutButton
+            plan="locker_annual"
+            className="block w-full rounded-full border border-black/20 px-5 py-4 text-center text-sm font-black text-black disabled:opacity-60"
+          >
             Or $129/year
-          </button>
+          </CheckoutButton>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">15% off annual</p>
         </PublicTierCard>
 
@@ -302,23 +308,29 @@ async function PublicPricing({ isPreview = false }: { isPreview?: boolean }) {
             </div>
           ) : (
             <>
-              {/* TODO: connect Stripe checkout for inner_circle_monthly */}
-              <button className="block w-full rounded-full border border-gray-800 px-5 py-4 text-center text-sm font-black text-white hover:border-white">
+              <CheckoutButton
+                plan="inner_circle_monthly"
+                className="block w-full rounded-full border border-gray-800 px-5 py-4 text-center text-sm font-black text-white hover:border-white disabled:opacity-60"
+              >
                 Join monthly
-              </button>
-              {/* TODO: connect Stripe checkout for inner_circle_annual */}
-              <button className="block w-full rounded-full border border-gray-800 px-5 py-4 text-center text-sm font-black text-white hover:border-white">
+              </CheckoutButton>
+              <CheckoutButton
+                plan="inner_circle_annual"
+                className="block w-full rounded-full border border-gray-800 px-5 py-4 text-center text-sm font-black text-white hover:border-white disabled:opacity-60"
+              >
                 Or $290/year
-              </button>
+              </CheckoutButton>
             </>
           )}
         </PublicTierCard>
 
         <PublicTierCard label="Skip the Line" price="$29" body="Single fast-routed question for non-members. One per quarter.">
-          {/* TODO: connect Stripe checkout for priority */}
-          <button className="block w-full rounded-full border border-gray-800 px-5 py-4 text-center text-sm font-black text-white hover:border-white">
+          <CheckoutButton
+            plan="priority"
+            className="block w-full rounded-full border border-gray-800 px-5 py-4 text-center text-sm font-black text-white hover:border-white disabled:opacity-60"
+          >
             Ask one question
-          </button>
+          </CheckoutButton>
         </PublicTierCard>
       </section>
 
@@ -332,10 +344,12 @@ async function PublicPricing({ isPreview = false }: { isPreview?: boolean }) {
                 One year of Locker Room as a giftable code.
               </p>
             </div>
-            {/* TODO: connect Stripe checkout for gift_card_annual */}
-            <button className="rounded-full bg-black px-6 py-4 text-sm font-black text-white">
+            <CheckoutButton
+              plan="gift_card_annual"
+              className="rounded-full bg-black px-6 py-4 text-sm font-black text-white disabled:opacity-60"
+            >
               Gift one year
-            </button>
+            </CheckoutButton>
           </div>
         </div>
         <p className="mt-6 text-center text-sm font-bold text-gray-600">

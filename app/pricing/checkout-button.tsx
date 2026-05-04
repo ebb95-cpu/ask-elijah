@@ -33,6 +33,7 @@ export default function CheckoutButton({
   disabled = false,
   isFoundingMember = false,
   email,
+  showPromoCode = false,
 }: {
   plan: CheckoutPlan
   children: ReactNode
@@ -40,9 +41,11 @@ export default function CheckoutButton({
   disabled?: boolean
   isFoundingMember?: boolean
   email?: string
+  showPromoCode?: boolean
 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [promoCode, setPromoCode] = useState('')
 
   async function handleClick() {
     setError('')
@@ -65,7 +68,7 @@ export default function CheckoutButton({
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: checkoutEmail, plan, isFoundingMember }),
+        body: JSON.stringify({ email: checkoutEmail, plan, isFoundingMember, promoCode }),
       })
       const data = await res.json().catch(() => ({}))
 
@@ -82,6 +85,17 @@ export default function CheckoutButton({
 
   return (
     <div>
+      {showPromoCode ? (
+        <label className="mb-3 block text-left text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
+          Tester code
+          <input
+            value={promoCode}
+            onChange={(e) => setPromoCode(e.target.value)}
+            placeholder="Optional"
+            className="mt-2 w-full rounded-full border border-black/15 bg-white px-4 py-3 text-sm font-bold normal-case tracking-normal text-black outline-none placeholder:text-gray-400 focus:border-black"
+          />
+        </label>
+      ) : null}
       <button type="button" onClick={handleClick} disabled={disabled || loading} className={className}>
         {loading ? 'Opening checkout...' : children}
       </button>
