@@ -67,6 +67,13 @@ function dupeCount(q: PlayerQuestion) {
   return q.dupes?.length ?? 0
 }
 
+function getAudience(q: PlayerQuestion): 'player' | 'parent' {
+  const text = `${q.question} ${q.source_context || ''}`.toLowerCase()
+  return /\b(as a parent|my son|my daughter|my child|my kid|my player|our son|our daughter|our child|our kid|our player|parents? ask|parents? want)\b/.test(text)
+    ? 'parent'
+    : 'player'
+}
+
 function queueScore(q: PlayerQuestion) {
   const ageHours = Math.max(0, (Date.now() - new Date(q.created_at).getTime()) / 3600000)
   const recencyBoost = Math.max(0, 24 - ageHours) / 24
@@ -75,9 +82,9 @@ function queueScore(q: PlayerQuestion) {
 
 function getQueueReasons(q: PlayerQuestion): QueueReason[] {
   const reasons: QueueReason[] = []
-  if (q.item_type === 'pain_point') reasons.push({ label: 'Needs Elijah POV', tone: 'blue' })
-  else reasons.push({ label: 'Real player', tone: 'green' })
-  if (dupeCount(q) > 0) reasons.push({ label: `${dupeCount(q) + 1} players ask this`, tone: 'gold' })
+  reasons.push({ label: getAudience(q) === 'parent' ? 'Parent' : 'Player', tone: 'green' })
+  if (q.item_type === 'pain_point') reasons.push({ label: 'Discovery', tone: 'blue' })
+  if (dupeCount(q) > 0) reasons.push({ label: `${dupeCount(q) + 1} people ask this`, tone: 'gold' })
   if (q.source_context) reasons.push({ label: 'Research signal', tone: 'gray' })
   return reasons
 }
@@ -225,7 +232,8 @@ export default function AdminQuestionsPage() {
   }, [filter, load])
 
   const researchItems = items.filter((q) => q.item_type === 'pain_point')
-  const playerItems = items.filter((q) => q.item_type !== 'pain_point')
+  const parentItems = items.filter((q) => getAudience(q) === 'parent')
+  const playerItems = items.filter((q) => getAudience(q) === 'player')
 
   const runResearchNow = async () => {
     if (researching) return
@@ -501,7 +509,7 @@ export default function AdminQuestionsPage() {
         {/* Question */}
         <div style={{ marginBottom: 20 }}>
           <p style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-            {openItem.item_type === 'pain_point' ? 'research' : (openItem.email || 'anon')} · {formatDate(openItem.created_at)}
+            {getAudience(openItem) === 'parent' ? 'parent' : 'player'} · {openItem.item_type === 'pain_point' ? 'discovery' : (openItem.email || 'anon')} · {formatDate(openItem.created_at)}
             {openItem.dupes && openItem.dupes.length > 0 && (
               <> · <span style={{ color: '#fbbf24' }}>+{openItem.dupes.length} asked the same</span></>
             )}
@@ -856,7 +864,7 @@ export default function AdminQuestionsPage() {
             {openItem.dupes && openItem.dupes.length > 0 && (
               <details style={{ padding: 14, border: '1px solid #2a2015', borderRadius: 10, background: '#15100a' }}>
                 <summary style={{ cursor: 'pointer', fontSize: 13, color: '#fbbf24', fontWeight: 800 }}>
-                  {openItem.dupes.length + 1} players need this answer
+                  {openItem.dupes.length + 1} people need this answer
                 </summary>
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {openItem.dupes.map((d) => (
@@ -934,9 +942,9 @@ export default function AdminQuestionsPage() {
           gap: 10,
           marginBottom: 18,
         }}>
-          <SummaryCard label="Research prompts" value={researchItems.length} color="#7dd3fc" />
-          <SummaryCard label="Player questions" value={playerItems.length} color="#fbbf24" />
-          <SummaryCard label="Total ready" value={items.length} color="#fff" />
+          <SummaryCard label="Players" value={playerItems.length} color="#fbbf24" />
+          <SummaryCard label="Parents" value={parentItems.length} color="#34d399" />
+          <SummaryCard label="Discovered" value={researchItems.length} color="#7dd3fc" />
         </div>
       )}
 
@@ -1487,7 +1495,7 @@ function QueueCard({
       </p>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
         <span style={{ fontSize: 10, color: '#555' }}>
-          {q.item_type === 'pain_point' ? 'research' : q.email ? q.email.split('@')[0] : 'anon'}
+          {getAudience(q) === 'parent' ? 'parent' : 'player'} · {q.item_type === 'pain_point' ? 'discovery' : q.email ? q.email.split('@')[0] : 'anon'}
           {q.dupes && q.dupes.length > 0 && (
             <span style={{ color: '#fbbf24', background: '#2a2015', padding: '1px 6px', borderRadius: 10, fontWeight: 700, marginLeft: 4 }}>
               +{q.dupes.length}

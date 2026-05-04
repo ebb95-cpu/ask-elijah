@@ -7,31 +7,12 @@ import { useEffect, useRef, useState } from 'react'
  * dropdown. Click it to jump between the core admin surfaces.
  */
 
-const SECTIONS: Array<{ title: string; items: Array<{ href: string; label: string }> }> = [
-  {
-    title: 'V1',
-    items: [
-      { href: '/admin/questions', label: 'Queue' },
-      { href: '/admin/test-chat', label: 'Test Chat' },
-      { href: '/admin/access', label: 'Players' },
-      { href: '/admin/kb-sources', label: 'Knowledge' },
-      { href: '/admin/launch', label: 'Launch' },
-    ],
-  },
-  {
-    title: 'Signals',
-    items: [
-      { href: '/admin/feedback', label: 'Health' },
-      { href: '/admin/question-discovery', label: 'Question Discovery' },
-    ],
-  },
-  {
-    title: 'Lab',
-    items: [
-      { href: '/admin/brain', label: 'Elijah Brain' },
-      { href: '/admin/simulate', label: 'App Preview' },
-    ],
-  },
+const NAV_ITEMS: Array<{ href: string; label: string }> = [
+  { href: '/admin/questions', label: 'Queue' },
+  { href: '/admin/test-chat', label: 'Test Chat' },
+  { href: '/admin/question-discovery', label: 'Discover' },
+  { href: '/admin/kb-sources', label: 'Knowledge' },
+  { href: '/admin/feedback', label: 'Health' },
 ]
 
 export default function AdminNav() {
@@ -105,53 +86,30 @@ export default function AdminNav() {
             zIndex: 50,
           }}
         >
-          {SECTIONS.map((section, sectionIndex) => (
-            <div
-              key={section.title}
+          {NAV_ITEMS.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              onClick={() => setOpen(false)}
               style={{
-                borderTop: sectionIndex === 0 ? 'none' : '1px solid #1a1a1a',
-                marginTop: sectionIndex === 0 ? 0 : 6,
-                paddingTop: sectionIndex === 0 ? 0 : 6,
+                display: 'block',
+                padding: '12px 14px',
+                borderRadius: 8,
+                textDecoration: 'none',
+                fontSize: 17,
+                color: '#cccccc',
+              }}
+              onMouseEnter={(e) => {
+                ;(e.currentTarget as HTMLAnchorElement).style.background = '#1a1a1a'
+                ;(e.currentTarget as HTMLAnchorElement).style.color = '#ffffff'
+              }}
+              onMouseLeave={(e) => {
+                ;(e.currentTarget as HTMLAnchorElement).style.background = 'transparent'
+                ;(e.currentTarget as HTMLAnchorElement).style.color = '#cccccc'
               }}
             >
-              <p
-                style={{
-                  color: '#555',
-                  fontSize: 9,
-                  fontWeight: 800,
-                  letterSpacing: '0.12em',
-                  margin: '4px 10px 5px',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {section.title}
-              </p>
-              {section.items.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  style={{
-                    display: 'block',
-                    padding: '9px 12px',
-                    borderRadius: 7,
-                    textDecoration: 'none',
-                    fontSize: 14,
-                    color: '#cccccc',
-                  }}
-                  onMouseEnter={(e) => {
-                    ;(e.currentTarget as HTMLAnchorElement).style.background = '#1a1a1a'
-                    ;(e.currentTarget as HTMLAnchorElement).style.color = '#ffffff'
-                  }}
-                  onMouseLeave={(e) => {
-                    ;(e.currentTarget as HTMLAnchorElement).style.background = 'transparent'
-                    ;(e.currentTarget as HTMLAnchorElement).style.color = '#cccccc'
-                  }}
-                >
-                  {item.label}
-                </a>
-              ))}
-            </div>
+              {item.label}
+            </a>
           ))}
         </div>
       )}

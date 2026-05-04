@@ -240,9 +240,9 @@ export default function AdminTestChatPage() {
               <p style={eyebrow}>V1 Admin</p>
               <div style={{ display: 'grid', gap: 8 }}>
                 <AdminLink href="/admin/questions">Queue</AdminLink>
-                <AdminLink href="/admin/access">Players</AdminLink>
+                <AdminLink href="/admin/question-discovery">Discover</AdminLink>
                 <AdminLink href="/admin/kb-sources">Knowledge</AdminLink>
-                <AdminLink href="/admin/launch">Launch</AdminLink>
+                <AdminLink href="/admin/feedback">Health</AdminLink>
               </div>
             </section>
           </aside>
