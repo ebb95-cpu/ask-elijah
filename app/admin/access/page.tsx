@@ -33,6 +33,7 @@ type AccessEntry = {
   positive_reflection_count: number
   negative_reflection_count: number
   last_reflection_at: string | null
+  application_score: number
   admin_note: string | null
   high_value: boolean
   admin_note_updated_at: string | null
@@ -55,13 +56,20 @@ type AccessEntry = {
 }
 
 type EmailAction = 'player_invite' | 'player_check_in' | 'parent_sequence' | 'consistency_club'
-type AccessFilterKey = 'subscribers' | 'applied' | 'approved' | 'founders' | 'waiting' | 'expired' | 'archived'
+type AccessFilterKey = 'subscribers' | 'most_active' | 'applied' | 'approved' | 'founders' | 'waiting' | 'expired' | 'archived'
 
 const EMAIL_ACTIONS: Record<EmailAction, { label: string; provider: 'beehiiv' | 'resend' }> = {
   player_invite: { label: 'Player invite', provider: 'resend' },
   player_check_in: { label: 'Check in', provider: 'resend' },
   parent_sequence: { label: 'Parent sequence', provider: 'beehiiv' },
   consistency_club: { label: 'Consistency Club', provider: 'beehiiv' },
+}
+
+function calculateApplicationScore(entry: Pick<AccessEntry, 'reflection_count' | 'positive_reflection_count' | 'feedback_up_count' | 'high_value'>) {
+  return (entry.reflection_count * 5)
+    + (entry.positive_reflection_count * 3)
+    + entry.feedback_up_count
+    + (entry.high_value ? 10 : 0)
 }
 
 export default function AdminAccessPage() {
@@ -89,19 +97,27 @@ export default function AdminAccessPage() {
   const expiredCount = useMemo(() => activeEntries.filter((e) => e.access_expired).length, [activeEntries])
   const totalQuestions = useMemo(() => activeEntries.reduce((sum, entry) => sum + entry.question_count, 0), [activeEntries])
   const pendingQuestions = useMemo(() => activeEntries.reduce((sum, entry) => sum + entry.pending_count, 0), [activeEntries])
+  const mostActiveEntries = useMemo(
+    () => [...activeEntries]
+      .filter((entry) => entry.application_score > 0)
+      .sort((a, b) => b.application_score - a.application_score || (b.last_reflection_at || '').localeCompare(a.last_reflection_at || '')),
+    [activeEntries]
+  )
+  const topApplicationScore = mostActiveEntries[0]?.application_score || 0
   const heldSpots = useMemo(
     () => activeEntries.filter((entry) => getInviteStatus(entry).tone === 'countdown').length,
     [activeEntries]
   )
   const filteredEntries = useMemo(() => {
     if (filter === 'archived') return archivedEntries
+    if (filter === 'most_active') return mostActiveEntries
     if (filter === 'subscribers') return subscriberEntries
     if (filter === 'approved') return activeEntries.filter((e) => e.approved && !e.access_expired)
     if (filter === 'founders') return activeEntries.filter((e) => e.is_founding_member)
     if (filter === 'waiting') return activeEntries.filter((e) => !e.approved && !e.access_expired)
     if (filter === 'expired') return activeEntries.filter((e) => e.access_expired)
     return activeEntries
-  }, [activeEntries, archivedEntries, subscriberEntries, filter])
+  }, [activeEntries, archivedEntries, mostActiveEntries, subscriberEntries, filter])
 
   async function loadEntries() {
     setLoading(true)
@@ -309,6 +325,10 @@ export default function AdminAccessPage() {
               ...item,
               admin_note: updates.admin_note ?? item.admin_note,
               high_value: updates.high_value ?? item.high_value,
+              application_score: calculateApplicationScore({
+                ...item,
+                high_value: updates.high_value ?? item.high_value,
+              }),
             }
           : item
       )
@@ -334,6 +354,10 @@ export default function AdminAccessPage() {
                 admin_note: data.entry.admin_note,
                 high_value: data.entry.high_value,
                 admin_note_updated_at: data.entry.admin_note_updated_at,
+                application_score: calculateApplicationScore({
+                  ...item,
+                  high_value: data.entry.high_value,
+                }),
               }
             : item
         )
@@ -424,11 +448,13 @@ export default function AdminAccessPage() {
             <Stat label="Held spots" value={heldSpots} />
             <Stat label="Questions" value={totalQuestions} />
             <Stat label="Pending" value={pendingQuestions} />
+            <Stat label="Top score" value={topApplicationScore} />
           </div>
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2">
           <AccessFilter active={filter === 'subscribers'} label="Subscribers" count={subscriberCount} onClick={() => setFilter('subscribers')} />
+          <AccessFilter active={filter === 'most_active'} label="Most active" count={mostActiveEntries.length} onClick={() => setFilter('most_active')} />
           <AccessFilter active={filter === 'applied'} label="Applied" count={activeEntries.length} onClick={() => setFilter('applied')} />
           <AccessFilter active={filter === 'approved'} label="Approved" count={approvedCount} onClick={() => setFilter('approved')} />
           <AccessFilter active={filter === 'founders'} label="Founders" count={foundingCount} onClick={() => setFilter('founders')} />
@@ -552,6 +578,9 @@ export default function AdminAccessPage() {
                     <p>
                       {entry.reflection_count} reflected · {entry.feedback_up_count} yes · {entry.feedback_down_count} no
                     </p>
+                    <p>
+                      Application score: {entry.application_score}
+                    </p>
                     <p className={getInviteStatus(entry).className}>
                       {getInviteStatus(entry).label}
                     </p>
@@ -657,6 +686,9 @@ export default function AdminAccessPage() {
                   </p>
                   <p className="mt-1 text-xs text-gray-700">
                     {entry.reflection_count} reflected · {entry.positive_reflection_count} positive
+                  </p>
+                  <p className="mt-1 text-xs font-bold text-gray-500">
+                    Application score: {entry.application_score}
                   </p>
                   <p className="mt-1 text-xs text-gray-700">
                     Last reflection: {formatDate(entry.last_reflection_at)}

@@ -5,20 +5,17 @@ type ValueItem = {
 }
 
 export const HOME_VALUE_ITEMS: ValueItem[] = [
-  { title: 'Unlimited reviewed questions.', body: '24 to 48 hour answers, reviewed by my standard.', value: 'Value: $200/mo' },
-  { title: 'The Weekly Rep.', body: 'Every Sunday. The whole room works on the same mental rep that week.', value: 'Value: $40/mo' },
-  { title: 'The Drive Home.', body: 'Weekly voice note from me on one principle. Audio that travels.', value: 'Value: $40/mo' },
-  { title: 'Film Notes.', body: "Weekly clip from an NBA or EuroLeague game with my read on what is in the player's head.", value: 'Value: $30/mo' },
-  { title: 'Game Day Protocol Cards.', body: 'Pre-game mental routines. New versions every month.', value: 'Value: $20/mo' },
-  { title: 'The Locker Room Library.', body: 'Every reviewed answer searchable forever. Grows every week.', value: 'Priceless. Lost the day you cancel.' },
-  { title: 'Wins Wall.', body: 'Anonymous wins from the rest of the room.', value: 'Value: $15/mo' },
-  { title: '7-day rep follow-up.', body: 'The system asks if you tried it. Tracks what is shifting.', value: 'Value: $15/mo' },
-  { title: 'Pro Reset PDF library.', body: 'One new downloadable every month.', value: 'Value: $15 each. $180/year.' },
-  { title: 'Source citations on every answer.', body: 'Where it came from. Where to go deeper.', value: 'Included.' },
+  { title: 'Unlimited reviewed questions.', body: 'Ask what is actually happening in your game. I review the answers before they reach you.', value: 'Core access.' },
+  { title: 'Apply it. Then report back.', body: 'The follow-up matters as much as the question. Tell me what you tried and what changed.', value: 'This is how the room gets built.' },
+  { title: 'Earned deeper review.', body: 'The most engaged players can submit clips or situations for deeper breakdowns as the room develops.', value: 'Activity means application.' },
+  { title: 'The Locker Room Library.', body: 'Reviewed answers become a searchable library for the room. It grows from real questions.', value: 'Built by the Founders.' },
+  { title: 'Founders shape the roadmap.', body: 'Your questions, follow-ups, clips, and feedback decide what gets built next.', value: 'Early seat. Real influence.' },
+  { title: 'Bonus drops when they are ready.', body: 'Voice notes, film notes, PDFs, protocols, and other tools can be added as the room proves what it needs.', value: 'No fake promises.' },
+  { title: 'Locked Founders rate.', body: 'Founders keep $9.99/mo for life as long as the membership stays active.', value: 'The early-builder discount.' },
 ]
 
 export const PRICING_VALUE_ITEMS: ValueItem[] = [
-  { title: 'Unlimited questions, reviewed by my standard.', body: '24 to 48 hour answers. Receipts when they matter.', value: 'Value: $200/mo' },
+  { title: 'Unlimited reviewed questions.', body: '24 to 48 hour answers when possible. Reviewed by my standard before they reach you.', value: 'Core access.' },
   ...HOME_VALUE_ITEMS.slice(1),
 ]
 
@@ -39,9 +36,9 @@ export function ValueStack({ items = HOME_VALUE_ITEMS }: { items?: ValueItem[] }
 export function MathReveal({ dark = false }: { dark?: boolean }) {
   return (
     <div className={`mt-8 rounded-[1.5rem] border ${dark ? 'border-gray-900 bg-black' : 'border-gray-900 bg-[#050505]'} p-6 font-mono text-lg font-black leading-loose text-white tabular-nums sm:text-2xl`}>
-      <p>Total value:   $540/mo</p>
-      <p>Your price:    $14.99/mo</p>
-      <p>You save:      $525/mo</p>
+      <p>Founders:      $9.99/mo</p>
+      <p>Locker Room:   $14.99/mo</p>
+      <p>Founders keep: the early rate</p>
     </div>
   )
 }

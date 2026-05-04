@@ -92,10 +92,10 @@ function PricingTiers({ seatsTaken }: { seatsTaken: number | null }) {
           <p className="mt-6 text-5xl font-black">$9.99/mo</p>
           <p className="mt-3 text-sm font-black text-black/60">Locked for life. Cancel and lose the rate forever.</p>
           <p className="mt-6 text-sm font-semibold leading-relaxed text-black/65">
-            The original class. Their questions trained the brain. They keep the rate as long as the membership stays active.
+            The original class. Their questions, follow-ups, and clips shape what the Locker Room becomes.
           </p>
           <p className="mt-6 text-sm font-black leading-relaxed text-black">
-            Everything in the Locker Room is included. Plus the badge. Plus the rate. Forever.
+            Ask real questions. Apply the answers. Report back. Keep the early rate forever.
           </p>
           <Link href="#founders-application" className="mt-8 inline-flex rounded-full bg-black px-6 py-4 text-sm font-black text-white">
             Apply for a founding seat →
@@ -106,7 +106,7 @@ function PricingTiers({ seatsTaken }: { seatsTaken: number | null }) {
           <p className="text-xs font-black uppercase tracking-[0.22em] text-gray-600">LOCKER ROOM · OPENS DAY 90</p>
           <p className="mt-6 text-5xl font-black">$14.99/mo</p>
           <p className="mt-3 text-sm font-black text-[#555]">or $129/year</p>
-          <p className="mt-8 text-2xl font-black leading-tight">Less than one trainer session. Every month. Forever.</p>
+          <p className="mt-8 text-2xl font-black leading-tight">Built from real questions and real follow-through.</p>
           <div className="mt-8">
             <ValueStack items={PRICING_VALUE_ITEMS} />
           </div>
@@ -124,7 +124,7 @@ function PricingTiers({ seatsTaken }: { seatsTaken: number | null }) {
       <div className="mt-6 rounded-[2rem] bg-[#F7F5F0] p-7 text-black">
         <h3 className="text-3xl font-black leading-tight">The Founders 200 closes at 200 seats.</h3>
         <p className="mt-4 max-w-3xl text-sm font-semibold leading-relaxed text-black/65">
-          After that, public pricing only. The Founders rate is gone the day the cap fills. If you are in, you keep $9.99/mo locked for life. Cancel and you lose the rate forever.
+          After that, public pricing only. The Founders rate is gone the day the cap fills. If you are in, you keep $9.99/mo locked for life as long as your membership stays active.
         </p>
         <p className="mt-8 text-4xl font-black tabular-nums">{seatsLeft} / 200 SEATS LEFT</p>
         <Link href="#founders-application" className="mt-8 inline-flex rounded-full bg-black px-6 py-4 text-sm font-black text-white">

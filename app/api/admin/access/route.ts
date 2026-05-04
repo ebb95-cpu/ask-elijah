@@ -325,6 +325,7 @@ export async function GET() {
     positive_reflection_count: number
     negative_reflection_count: number
     last_reflection_at: string | null
+    application_score: number
     admin_note: string | null
     high_value: boolean
     admin_note_updated_at: string | null
@@ -381,6 +382,7 @@ export async function GET() {
         positive_reflection_count: 0,
         negative_reflection_count: 0,
         last_reflection_at: null,
+        application_score: 0,
         admin_note: null,
         high_value: false,
         admin_note_updated_at: null,
@@ -532,6 +534,11 @@ export async function GET() {
     entry.access_expired = !!entry.access_expires_at
       && new Date(entry.access_expires_at) < new Date()
       && !entry.asked_during_invite_window
+    entry.application_score =
+      (entry.reflection_count * 5)
+      + (entry.positive_reflection_count * 3)
+      + entry.feedback_up_count
+      + (entry.high_value ? 10 : 0)
   }
 
   const entries = Array.from(byEmail.values()).sort((a, b) => {
@@ -654,6 +661,7 @@ export async function POST(req: NextRequest) {
       positive_reflection_count: 0,
       negative_reflection_count: 0,
       last_reflection_at: null,
+      application_score: 0,
       admin_note: null,
       high_value: false,
       admin_note_updated_at: null,
@@ -765,6 +773,7 @@ export async function PATCH(req: NextRequest) {
         positive_reflection_count: 0,
         negative_reflection_count: 0,
         last_reflection_at: null,
+        application_score: 0,
         admin_note: null,
         high_value: false,
         admin_note_updated_at: null,
@@ -826,6 +835,7 @@ export async function PATCH(req: NextRequest) {
             positive_reflection_count: 0,
             negative_reflection_count: 0,
             last_reflection_at: null,
+            application_score: 0,
             admin_note: null,
             high_value: false,
             admin_note_updated_at: null,
@@ -901,6 +911,7 @@ export async function PATCH(req: NextRequest) {
       positive_reflection_count: 0,
       negative_reflection_count: 0,
       last_reflection_at: null,
+      application_score: 0,
       admin_note: null,
       high_value: false,
       admin_note_updated_at: null,

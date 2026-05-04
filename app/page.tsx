@@ -1039,7 +1039,7 @@ export default function HomePage() {
         <div className="max-w-xl mx-auto">
           <p className="text-xs text-gray-600 uppercase tracking-widest mb-6">WHAT YOU GET WHEN YOU GET IN</p>
           <h2 className="mb-10 text-4xl font-black leading-tight tracking-tight text-white sm:text-5xl">
-            Less than one trainer session. Every month. Forever.
+            Help build the room. Keep the early rate.
           </h2>
           <ValueStack />
           <MathReveal />

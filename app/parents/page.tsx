@@ -58,8 +58,8 @@ export default async function ParentsPage() {
   const isBeta = pricingPhase === 'beta'
   const primaryCta = 'Apply for a Founding 200 seat'
   const primarySubcopy = isBeta
-    ? 'Founders Beta is free for 90 days. If he is accepted, he locks $9.99/mo for life. Less than one trainer session, every month, forever. Public pricing after launch is $14.99/mo.'
-    : 'The Locker Room gives him reviewed answers, follow-up, and a library that stays with him. Less than one trainer session, every month, forever.'
+    ? 'Founders Beta is free for 90 days. If he is accepted, he locks $9.99/mo for life by helping build the room with real questions, real follow-through, and honest feedback.'
+    : 'The Locker Room gives him reviewed answers, follow-up, and a library built from real questions and real follow-through.'
   const whatHeGets = isBeta
     ? [
         ['A free beta seat.', 'If he is accepted, he can ask unlimited questions during the 90-day beta.'],
@@ -159,16 +159,16 @@ export default async function ParentsPage() {
           WHAT HE ACTUALLY GETS
         </p>
         <h2 className="text-4xl font-black leading-tight tracking-tight sm:text-5xl">
-          For less than the price of a single trainer session.
+          The support that happens after practice.
         </h2>
         <div className="mt-8 divide-y divide-gray-900 border-y border-gray-900">
           {[
-            ['Unlimited reviewed questions.', 'Pro answers in 24 to 48 hours.'],
-            ['The Weekly Rep.', 'One mental rep every Sunday. The whole room works on it together.'],
-            ['The Drive Home.', 'Weekly voice note from me on one principle.'],
-            ['Film Notes, Game Day Cards, Pro Reset PDFs.', 'New drops every month.'],
-            ['The Locker Room Library.', 'Every answer he gets, searchable forever.'],
-            ['Wins Wall.', 'Anonymous wins from the rest of the room.'],
+            ['Unlimited reviewed questions.', 'He can ask what he is actually dealing with, not just what fits into a lesson plan.'],
+            ['Application follow-ups.', 'The system checks whether he tried the advice and what changed.'],
+            ['Earned deeper review.', 'The most engaged players can submit clips or situations for deeper breakdowns as the room develops.'],
+            ['The Locker Room Library.', 'Reviewed answers become searchable for the room over time.'],
+            ['Founder influence.', 'Early players help decide what gets built next.'],
+            ['Bonus drops when they are ready.', 'Film notes, voice notes, PDFs, and protocols can be added when they are useful, not promised before they are proven.'],
           ].map(([title, body]) => (
             <div key={title} className="py-5">
               <p className="text-xl font-black text-white">{title}</p>
