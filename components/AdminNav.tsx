@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react'
 const NAV_ITEMS: Array<{ href: string; label: string }> = [
   { href: '/admin/questions', label: 'Queue' },
   { href: '/admin/test-chat', label: 'Test Chat' },
+  { href: '/admin/access', label: 'Subscribers' },
   { href: '/admin/question-discovery', label: 'Discover' },
   { href: '/admin/kb-sources', label: 'Knowledge' },
   { href: '/admin/promo-codes', label: 'Promos' },

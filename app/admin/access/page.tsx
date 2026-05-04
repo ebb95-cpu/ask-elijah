@@ -55,6 +55,7 @@ type AccessEntry = {
 }
 
 type EmailAction = 'player_invite' | 'player_check_in' | 'parent_sequence' | 'consistency_club'
+type AccessFilterKey = 'subscribers' | 'applied' | 'approved' | 'founders' | 'waiting' | 'expired' | 'archived'
 
 const EMAIL_ACTIONS: Record<EmailAction, { label: string; provider: 'beehiiv' | 'resend' }> = {
   player_invite: { label: 'Player invite', provider: 'resend' },
@@ -65,7 +66,7 @@ const EMAIL_ACTIONS: Record<EmailAction, { label: string; provider: 'beehiiv' | 
 
 export default function AdminAccessPage() {
   const [entries, setEntries] = useState<AccessEntry[]>([])
-  const [filter, setFilter] = useState<'applied' | 'approved' | 'founders' | 'waiting' | 'expired' | 'archived'>('applied')
+  const [filter, setFilter] = useState<AccessFilterKey>('subscribers')
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [sendInviteOnAdd, setSendInviteOnAdd] = useState(true)
@@ -79,6 +80,8 @@ export default function AdminAccessPage() {
 
   const activeEntries = useMemo(() => entries.filter((e) => !e.archived), [entries])
   const archivedEntries = useMemo(() => entries.filter((e) => e.archived), [entries])
+  const subscriberEntries = useMemo(() => activeEntries.filter(isSubscriber), [activeEntries])
+  const subscriberCount = subscriberEntries.length
   const approvedCount = useMemo(() => activeEntries.filter((e) => e.approved).length, [activeEntries])
   const foundingCount = useMemo(() => activeEntries.filter((e) => e.is_founding_member).length, [activeEntries])
   const foundingSeatsLeft = Math.max(0, 200 - foundingCount)
@@ -92,12 +95,13 @@ export default function AdminAccessPage() {
   )
   const filteredEntries = useMemo(() => {
     if (filter === 'archived') return archivedEntries
+    if (filter === 'subscribers') return subscriberEntries
     if (filter === 'approved') return activeEntries.filter((e) => e.approved && !e.access_expired)
     if (filter === 'founders') return activeEntries.filter((e) => e.is_founding_member)
     if (filter === 'waiting') return activeEntries.filter((e) => !e.approved && !e.access_expired)
     if (filter === 'expired') return activeEntries.filter((e) => e.access_expired)
     return activeEntries
-  }, [activeEntries, archivedEntries, filter])
+  }, [activeEntries, archivedEntries, subscriberEntries, filter])
 
   async function loadEntries() {
     setLoading(true)
@@ -405,14 +409,15 @@ export default function AdminAccessPage() {
         <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.24em] text-gray-600">
-              Launch gate
+              Admin
             </p>
-            <h1 className="text-4xl font-bold tracking-tight">Access List</h1>
+            <h1 className="text-4xl font-bold tracking-tight">Subscribers</h1>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-gray-500">
-              Approve up to 200 Founding players who can create accounts and send questions while the launch stays controlled.
+              See paid members, promo trials, founders, and waitlist access in one place.
             </p>
           </div>
           <div className="flex gap-3 text-sm">
+            <Stat label="Subscribers" value={subscriberCount} />
             <Stat label="Founders" value={foundingCount} />
             <Stat label="Seats left" value={foundingSeatsLeft} />
             <Stat label="Waiting" value={waitingCount} />
@@ -423,6 +428,7 @@ export default function AdminAccessPage() {
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2">
+          <AccessFilter active={filter === 'subscribers'} label="Subscribers" count={subscriberCount} onClick={() => setFilter('subscribers')} />
           <AccessFilter active={filter === 'applied'} label="Applied" count={activeEntries.length} onClick={() => setFilter('applied')} />
           <AccessFilter active={filter === 'approved'} label="Approved" count={approvedCount} onClick={() => setFilter('approved')} />
           <AccessFilter active={filter === 'founders'} label="Founders" count={foundingCount} onClick={() => setFilter('founders')} />
@@ -765,6 +771,14 @@ function formatDateTime(value: string | null) {
     hour: 'numeric',
     minute: '2-digit',
   })
+}
+
+function isSubscriber(entry: AccessEntry) {
+  const status = (entry.subscription_status || '').toLowerCase()
+  if (status === 'trialing') {
+    return !entry.trial_ends_at || new Date(entry.trial_ends_at) > new Date()
+  }
+  return ['active', 'past_due', 'priority_paid'].includes(status)
 }
 
 function providerLabel(provider: 'beehiiv' | 'resend') {
