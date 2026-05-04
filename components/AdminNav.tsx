@@ -21,7 +21,7 @@ const SECTIONS: Array<{ title: string; items: Array<{ href: string; label: strin
   {
     title: 'Signals',
     items: [
-      { href: '/admin/feedback', label: 'Feedback' },
+      { href: '/admin/feedback', label: 'Health' },
       { href: '/admin/pain-research', label: 'Pain Research' },
     ],
   },

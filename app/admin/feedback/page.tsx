@@ -5,12 +5,13 @@ import Link from 'next/link'
 import LoadingDots from '@/components/ui/LoadingDots'
 
 /**
- * Feedback + bug triage dashboard.
+ * Health dashboard.
  *
  * One admin surface for three signals:
  *   1. Thumbs up/down on answers — "which answers land"
  *   2. Bug reports — user-submitted, one-click resolve
  *   3. Client crashes — auto-captured by ErrorCatcher, read-only
+ *   4. Platform issues — unresolved production issues from Sentry
  *
  * Tabs at the top toggle the active feed; summary stats stay visible on
  * all tabs so the overall health of the product is always in frame.
@@ -83,7 +84,7 @@ type CrashGroup = {
   latest: string
 }
 
-type Tab = 'feedback' | 'bugs' | 'crashes' | 'sentry'
+type Tab = 'feedback' | 'bugs' | 'crashes' | 'health'
 
 function timeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime()
@@ -204,7 +205,7 @@ export default function FeedbackPage() {
   return (
     <div style={{ padding: '24px', maxWidth: 1000, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Feedback</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Health</h1>
         <Link href="/admin/questions" style={{ fontSize: 12, color: '#555' }}>← Queue</Link>
         <button
           onClick={load}
@@ -234,7 +235,7 @@ export default function FeedbackPage() {
           <Stat label="Open bugs" value={String(summary.open_bugs)} color={summary.open_bugs > 0 ? '#f59e0b' : '#34d399'} />
           <Stat label="Recent crashes" value={String(summary.recent_crashes)} color={summary.recent_crashes > 0 ? '#ef4444' : '#666'} />
           <Stat
-            label="Sentry issues"
+            label="Health issues"
             value={summary.sentry_configured ? String(summary.sentry_issues) : '—'}
             color={summary.sentry_issues > 0 ? '#ef4444' : '#666'}
           />
@@ -332,8 +333,8 @@ export default function FeedbackPage() {
         <TabBtn active={tab === 'crashes'} onClick={() => setTab('crashes')}>
           Client crashes {crashes.length > 0 && <Counter n={crashes.length} attn />}
         </TabBtn>
-        <TabBtn active={tab === 'sentry'} onClick={() => setTab('sentry')}>
-          Sentry {sentryIssues.length > 0 && <Counter n={sentryIssues.length} attn />}
+        <TabBtn active={tab === 'health'} onClick={() => setTab('health')}>
+          Health {sentryIssues.length > 0 && <Counter n={sentryIssues.length} attn />}
         </TabBtn>
       </div>
 
@@ -421,12 +422,11 @@ export default function FeedbackPage() {
         </>
       )}
 
-      {tab === 'sentry' && (
+      {tab === 'health' && (
         <>
           {summary && !summary.sentry_configured ? (
             <Empty>
-              Sentry API integration not configured. Add these env vars to pull
-              unresolved issues inline:
+              Error monitoring is not configured. Add these env vars to pull unresolved production issues inline:
               <br />
               <code style={{ display: 'inline-block', marginTop: 8, fontSize: 11, color: '#aaa' }}>
                 SENTRY_AUTH_TOKEN · SENTRY_ORG_SLUG · SENTRY_PROJECT_SLUG
@@ -439,12 +439,12 @@ export default function FeedbackPage() {
                 rel="noopener noreferrer"
                 style={{ color: '#7dd3fc', fontSize: 13 }}
               >
-                Open Sentry dashboard ↗
+                Open error dashboard ↗
               </a>
             </Empty>
           ) : sentryIssues.length === 0 ? (
             <Empty>
-              No unresolved Sentry issues. 🎉
+              No unresolved health issues.
               <br />
               <br />
               <a
@@ -453,7 +453,7 @@ export default function FeedbackPage() {
                 rel="noopener noreferrer"
                 style={{ color: '#7dd3fc', fontSize: 13 }}
               >
-                Open Sentry dashboard ↗
+                Open error dashboard ↗
               </a>
             </Empty>
           ) : (
@@ -465,7 +465,7 @@ export default function FeedbackPage() {
                   rel="noopener noreferrer"
                   style={{ fontSize: 11, color: '#7dd3fc', textDecoration: 'none' }}
                 >
-                  Open all in Sentry ↗
+                  Open all health issues ↗
                 </a>
               </div>
               <ul style={listStyle}>
@@ -512,7 +512,7 @@ export default function FeedbackPage() {
                         rel="noopener noreferrer"
                         style={{ fontSize: 11, color: '#7dd3fc', textDecoration: 'none' }}
                       >
-                        View in Sentry ↗
+                        View details ↗
                       </a>
                     </li>
                   )
