@@ -30,6 +30,8 @@ const LEVELS = [
 
 export default function AdminTestChatPage() {
   const [question, setQuestion] = useState(SAMPLE_QUESTIONS[0])
+  const [firstName, setFirstName] = useState('Jayden')
+  const [askerType, setAskerType] = useState<'player' | 'parent'>('player')
   const [age, setAge] = useState('15')
   const [level, setLevel] = useState('varsity')
   const [position, setPosition] = useState('Guard')
@@ -55,7 +57,7 @@ export default function AdminTestChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: q,
-          profile: { age, level, position, challenge },
+          profile: { firstName, askerType, age, level, position, challenge },
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -184,6 +186,14 @@ export default function AdminTestChatPage() {
             <section style={panelStyle}>
               <p style={eyebrow}>Student</p>
               <div style={{ display: 'grid', gap: 10 }}>
+                <Field label="First name" value={firstName} onChange={setFirstName} />
+                <label style={labelStyle}>
+                  Asker
+                  <select value={askerType} onChange={(e) => setAskerType(e.target.value as 'player' | 'parent')} style={inputStyle}>
+                    <option value="player">Student</option>
+                    <option value="parent">Parent</option>
+                  </select>
+                </label>
                 <Field label="Age" value={age} onChange={setAge} />
                 <label style={labelStyle}>
                   Level

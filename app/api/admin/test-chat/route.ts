@@ -10,6 +10,8 @@ import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 export const maxDuration = 60
 
 type TestProfile = {
+  firstName?: string
+  askerType?: 'player' | 'parent'
   age?: string
   level?: string
   position?: string
@@ -82,13 +84,15 @@ async function searchPinecone(embedding: number[], topK = 5): Promise<{ chunks: 
 
 function getProfileContext(profile: TestProfile) {
   const parts = [
+    profile.firstName ? `First name: ${profile.firstName}` : null,
+    profile.askerType ? `Asker type: ${profile.askerType}` : null,
     profile.age ? `Age: ${profile.age}` : null,
     profile.level ? `Level: ${profile.level}` : null,
     profile.position ? `Position: ${profile.position}` : null,
     profile.challenge ? `Current challenge: ${profile.challenge}` : null,
   ].filter(Boolean)
 
-  return parts.length ? `TEST STUDENT PROFILE\n${parts.join('\n')}\n\n---\n\n` : ''
+  return parts.length ? `TEST ASKER PROFILE\n${parts.join('\n')}\n\n---\n\n` : ''
 }
 
 export async function POST(req: NextRequest) {
@@ -126,9 +130,11 @@ ${cleanQuestion}${freshnessInstruction}
 
 This is an admin-only sandbox test. Do not mention that it is a test. Do not save anything. Do not ask for an email.
 
-Every answer must name what the player is feeling, explain why it happens in simple psychology/body language, connect it to Elijah's credible pro perspective, and end with one clear action plan they can do today.
+Every answer must name what the player or parent is feeling, explain why it happens in simple psychology/body language, connect it to Elijah's credible pro perspective, and end with one clear action plan they can do today.
 
-Return only the words Elijah would say to the player. No preamble, no research-process narration, no "here's the answer," no ChatGPT/LLM language. Start directly with the answer. Never use dash punctuation. No em dashes, no en dashes, and no spaced hyphens.`
+If the test profile includes a first name, open with that first name naturally in the first sentence. If the asker type is parent, address the parent by name and speak to the parent, not the kid.
+
+Return only the words Elijah would say to the player or parent. No preamble, no research-process narration, no "here's the answer," no ChatGPT/LLM language. Start directly with the answer. Never use dash punctuation. No em dashes, no en dashes, and no spaced hyphens.`
 
     const response = await getAnthropic().messages.create({
       model: 'claude-sonnet-4-5',
