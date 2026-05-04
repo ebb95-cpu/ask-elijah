@@ -191,7 +191,7 @@ async function generateDraftAnswer(cleanedQuestion: string, kbSources: KbSource[
 async function sendSummaryEmail(pendingCount: number, autoAnsweredCount: number) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   // Env var has sometimes had a trailing newline in the past — trim defensively.
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app').trim()
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro').trim()
 
   await resend.emails.send({
     from: 'Ask Elijah <elijah@elijahbryant.pro>',

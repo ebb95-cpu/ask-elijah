@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const supabase = getSupabase()
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
 
   // Get upvote counts for all approved questions
   const { data: upvoteCounts } = await supabase

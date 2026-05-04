@@ -571,7 +571,7 @@ async function notifyElijah(
   playerContext: string
 ) {
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
   const approveUrl = `${siteUrl}/approve/${questionId}?token=${process.env.CRON_SECRET}`
 
   await resend.emails.send({
@@ -643,7 +643,7 @@ async function addToBeehiiv(email: string) {
 
 async function sendConfirmation(question: string, userEmail: string, newsletterOptIn: boolean) {
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
   const supabase = getSupabase()
 
   const { data: confirmProfile } = await supabase

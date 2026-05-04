@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = getSupabase()
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ask-the-pro.vercel.app'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
   // Find approved answers from exactly ~7 days ago that haven't had a followup yet.
