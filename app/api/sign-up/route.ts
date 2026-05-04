@@ -6,7 +6,7 @@ import { ACCESS_REQUIRED_MESSAGE, hasPlayerAccess } from '@/lib/access-gate'
 import { normalizePromoCode, recordPromoRedemption, validateTrialPromoCode } from '@/lib/promo-codes'
 
 export async function POST(req: NextRequest) {
-  const { email, password, firstName, challenge, weaknesses, strengths, age, position, promoCode: rawPromoCode, skipEmailVerify } = await req.json()
+  const { email, password, firstName, challenge, weaknesses, strengths, age, position, language: rawLanguage, promoCode: rawPromoCode, skipEmailVerify } = await req.json()
 
   if (!email?.trim() || !password || !firstName?.trim()) {
     return NextResponse.json({ error: 'Email, password, and first name are required' }, { status: 400 })
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
   const cleanStrengths = typeof strengths === 'string' ? strengths.trim() : ''
   const cleanAge = typeof age === 'string' ? age.trim() : ''
   const cleanPosition = typeof position === 'string' ? position.trim() : ''
+  const cleanLanguage = typeof rawLanguage === 'string' ? rawLanguage.trim() : ''
   const promoCode = normalizePromoCode(rawPromoCode)
   const promoValidation = promoCode ? await validateTrialPromoCode(promoCode) : null
 
@@ -87,6 +88,7 @@ export async function POST(req: NextRequest) {
     if (cleanStrengths) upsertRow.strengths = cleanStrengths
     if (cleanAge) upsertRow.age = cleanAge
     if (cleanPosition) upsertRow.position = cleanPosition
+    if (cleanLanguage) upsertRow.language = cleanLanguage
     // Fire-and-forget — if `weaknesses`/`strengths` columns don't exist yet
     // in Supabase, the upsert will fail silently and the rest of the row
     // still saves. See scripts/add-profile-columns.sql for the migration.

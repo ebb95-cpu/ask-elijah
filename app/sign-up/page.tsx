@@ -43,6 +43,7 @@ function SignUpInner() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const browserLanguage = typeof navigator !== 'undefined' ? navigator.language || 'en' : 'en'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,7 +55,7 @@ function SignUpInner() {
       const res = await fetch('/api/sign-up', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, firstName, promoCode }),
+        body: JSON.stringify({ email, password, firstName, promoCode, language: browserLanguage }),
       })
       const result = await res.json()
 

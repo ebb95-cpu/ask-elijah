@@ -79,6 +79,7 @@ export default function AccountSetupForm({
   const [promoCode, setPromoCode] = useState('')
   const [loading, setLoading] = useState<null | 'password' | 'google'>(null)
   const [error, setError] = useState('')
+  const browserLanguage = typeof navigator !== 'undefined' ? navigator.language || 'en' : 'en'
 
   const goBack = () => {
     if (step === 1) return
@@ -140,6 +141,7 @@ export default function AccountSetupForm({
           age: age.trim(),
           position: position.trim(),
           challenge: struggle.trim(),
+          language: browserLanguage,
           promoCode: promoCode.trim(),
           skipEmailVerify: true,
         }),
@@ -183,6 +185,7 @@ export default function AccountSetupForm({
         age: age.trim() || null,
         position: position.trim() || null,
         challenge: struggle.trim() || null,
+        language: browserLanguage,
         promo_code: promoCode.trim() || null,
         pending_question: question || null,
       }))
@@ -207,6 +210,7 @@ export default function AccountSetupForm({
             age: age.trim(),
             position: position.trim(),
             challenge: struggle.trim(),
+            language: browserLanguage,
             promo_code: promoCode.trim(),
           }),
         }).catch(() => {})

@@ -295,14 +295,14 @@ async function getPlayerContext(email: string): Promise<string> {
   const now = new Date().toISOString()
 
   const [profileRes, memoriesRes, historyRes] = await Promise.all([
-    supabase.from('profiles').select('first_name, name, age, position, level, country, challenge').eq('email', clean).single(),
+    supabase.from('profiles').select('first_name, name, age, position, level, country, challenge, language').eq('email', clean).single(),
     supabase.from('player_memories').select('fact_type, fact_text').eq('email', clean).or(`expires_at.is.null,expires_at.gt.${now}`).order('created_at', { ascending: false }).limit(10),
     supabase.from('questions').select('question, answer').eq('email', clean).eq('status', 'approved').order('updated_at', { ascending: false }).limit(3),
   ])
 
   const lines: string[] = []
 
-  const p = profileRes.data as { first_name?: string; name?: string; age?: string; position?: string; level?: string; country?: string; challenge?: string } | null
+  const p = profileRes.data as { first_name?: string; name?: string; age?: string; position?: string; level?: string; country?: string; challenge?: string; language?: string } | null
   if (p) {
     // Age first — it's the single most context-shaping detail (you'd
     // write to a 14-year-old very differently than a 22-year-old), so it
@@ -314,6 +314,7 @@ async function getPlayerContext(email: string): Promise<string> {
       p.level,
       p.country,
       p.challenge ? `struggles with ${p.challenge}` : null,
+      p.language && normalizeLanguagePreference(p.language) !== 'English' ? `preferred language ${normalizeLanguagePreference(p.language)}` : null,
     ].filter(Boolean)
     if (parts.length) lines.push(`Profile: ${parts.join(', ')}`)
   }
@@ -379,6 +380,23 @@ Text: "${text.replace(/"/g, '\\"')}"`,
   } catch {
     return { language: 'English', englishTranslation: null }
   }
+}
+
+function normalizeLanguagePreference(input: unknown): string {
+  if (typeof input !== 'string' || !input.trim()) return 'English'
+  const clean = input.trim()
+  const lower = clean.toLowerCase()
+  if (lower === 'en' || lower === 'en-us' || lower === 'en-gb' || lower === 'english') return 'English'
+
+  const code = lower.split('-')[0]
+  try {
+    const display = new Intl.DisplayNames(['en'], { type: 'language' }).of(code)
+    if (display && display.toLowerCase() !== code) return display
+  } catch {
+    /* fall through */
+  }
+
+  return clean.charAt(0).toUpperCase() + clean.slice(1)
 }
 
 /**
@@ -719,7 +737,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 })
     }
 
-    const { question, email, previewAnswer, newsletterOptIn, utm_source, utm_medium, utm_campaign, mode: rawMode, askerType: rawAskerType, level: rawLevel } = await req.json()
+    const { question, email, previewAnswer, newsletterOptIn, utm_source, utm_medium, utm_campaign, mode: rawMode, askerType: rawAskerType, level: rawLevel, language: rawLanguage } = await req.json()
 
     const mode: EntryMode = (['bad_game', 'coach', 'playing_time', 'parent', 'general'] as const).includes(rawMode)
       ? (rawMode as EntryMode)
@@ -729,6 +747,7 @@ export async function POST(req: NextRequest) {
     const clientLevel: string | null = typeof rawLevel === 'string' && (VALID_LEVELS as readonly string[]).includes(rawLevel)
       ? rawLevel
       : null
+    const clientLanguage = normalizeLanguagePreference(rawLanguage)
 
     if (!question?.trim()) {
       return NextResponse.json({ error: 'Question required' }, { status: 400 })
@@ -812,6 +831,19 @@ export async function POST(req: NextRequest) {
       return ''
     })
 
+    const profileLanguagePromise = (async () => {
+      try {
+        const { data } = await getSupabase()
+          .from('profiles')
+          .select('language')
+          .eq('email', cleanEmailEarly)
+          .maybeSingle()
+        return normalizeLanguagePreference(data?.language)
+      } catch {
+        return 'English'
+      }
+    })()
+
     // Determine level: prefer what the client sent (fresh from the chooser),
     // fall back to what's on the profile. If the client provided one and it
     // differs from profile, update the profile so it persists.
@@ -852,13 +884,28 @@ export async function POST(req: NextRequest) {
       }
     })()
 
-    const [{ language: detectedLanguage, englishTranslation }, topicResult, trigger] = await Promise.all([
+    const [{ language: detectedLanguage, englishTranslation }, topicResult, trigger, profileLanguage] = await Promise.all([
       detectLanguage(question).catch(() => ({ language: 'English', englishTranslation: null })),
       tagTopic(question),
       tagTrigger(question),
+      profileLanguagePromise,
     ])
     const { topic, confidence: topicConfidence } = topicResult
     const queryForEmbedding = englishTranslation || question
+    const responseLanguage = detectedLanguage && detectedLanguage !== 'English'
+      ? detectedLanguage
+      : profileLanguage !== 'English'
+        ? profileLanguage
+        : clientLanguage !== 'English'
+          ? clientLanguage
+          : 'English'
+
+    if (responseLanguage !== 'English') {
+      getSupabase()
+        .from('profiles')
+        .upsert({ email: cleanEmailEarly, language: responseLanguage, updated_at: new Date().toISOString() }, { onConflict: 'email' })
+        .then(() => {}, (e) => logError('ask:language-profile-save', e, { email: cleanEmailEarly, responseLanguage }))
+    }
 
     // RAG lookup
     let ragContext = ''
@@ -890,7 +937,7 @@ export async function POST(req: NextRequest) {
       const supabase = getSupabase()
       const { data: record } = await supabase
         .from('questions')
-        .insert({ question, answer: FALLBACK, ai_draft: FALLBACK, sources: [], ip, email: cleanEmailEarly, status: 'pending', topic: topic ?? null, topic_confidence: topicConfidence, trigger: trigger ?? null, language_detected: detectedLanguage !== 'English' ? detectedLanguage : null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, mode, asker_type: askerType, level_snapshot: levelSnapshot })
+        .insert({ question, answer: FALLBACK, ai_draft: FALLBACK, sources: [], ip, email: cleanEmailEarly, status: 'pending', topic: topic ?? null, topic_confidence: topicConfidence, trigger: trigger ?? null, language_detected: responseLanguage !== 'English' ? responseLanguage : null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, mode, asker_type: askerType, level_snapshot: levelSnapshot })
         .select('id').single()
       const playerContext = await playerContextPromise
       if (record?.id) await notifyElijah(record.id, question, FALLBACK, email, playerContext).catch((e) => logError('ask:notify-elijah', e, { questionId: record.id }))
@@ -908,9 +955,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, questionId: record?.id, draft: null })
     }
 
-    // Language instruction — use detected language from question content
-    const langInstruction = detectedLanguage && detectedLanguage !== 'English'
-      ? `\n\nIMPORTANT: The user wrote in ${detectedLanguage}. Respond entirely in ${detectedLanguage}.`
+    // Language instruction: prefer the language of the current question, then
+    // the stored profile language, then the browser language sent by client.
+    const langInstruction = responseLanguage !== 'English'
+      ? `\n\nIMPORTANT: Respond entirely in ${responseLanguage}. Keep Elijah's voice natural in ${responseLanguage}, not translated word-for-word from English.`
       : ''
 
     // Await player context so Claude can tailor the draft to this specific player
@@ -1021,7 +1069,7 @@ export async function POST(req: NextRequest) {
         topic: topic ?? null,
         topic_confidence: topicConfidence,
         trigger: trigger ?? null,
-        language_detected: detectedLanguage !== 'English' ? detectedLanguage : null,
+        language_detected: responseLanguage !== 'English' ? responseLanguage : null,
         utm_source: utm_source || null,
         utm_medium: utm_medium || null,
         utm_campaign: utm_campaign || null,
