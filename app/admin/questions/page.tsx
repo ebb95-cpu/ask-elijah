@@ -890,23 +890,41 @@ export default function AdminQuestionsPage() {
             Questions Ready For You
           </h1>
         </div>
-        <button
-          onClick={runResearchNow}
-          disabled={researching}
-          style={{
-            background: researching ? '#222' : '#fff',
-            color: researching ? '#777' : '#000',
-            border: '1px solid #fff',
-            borderRadius: 6,
-            padding: '10px 14px',
-            fontSize: 12,
-            fontWeight: 800,
-            cursor: researching ? 'wait' : 'pointer',
-            fontFamily: '-apple-system, sans-serif',
-          }}
-        >
-          {researching ? <LoadingDots label="Researching" /> : 'Find new pain points'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <a
+            href="/admin/test-chat"
+            style={{
+              background: 'transparent',
+              color: '#ddd',
+              border: '1px solid #333',
+              borderRadius: 6,
+              padding: '10px 14px',
+              fontSize: 12,
+              fontWeight: 800,
+              fontFamily: '-apple-system, sans-serif',
+              textDecoration: 'none',
+            }}
+          >
+            Test chat
+          </a>
+          <button
+            onClick={runResearchNow}
+            disabled={researching}
+            style={{
+              background: researching ? '#222' : '#fff',
+              color: researching ? '#777' : '#000',
+              border: '1px solid #fff',
+              borderRadius: 6,
+              padding: '10px 14px',
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: researching ? 'wait' : 'pointer',
+              fontFamily: '-apple-system, sans-serif',
+            }}
+          >
+            {researching ? <LoadingDots label="Researching" /> : 'Find new pain points'}
+          </button>
+        </div>
       </div>
 
       {filter === 'pending' && (

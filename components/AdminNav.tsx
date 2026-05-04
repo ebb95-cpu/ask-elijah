@@ -7,15 +7,31 @@ import { useEffect, useRef, useState } from 'react'
  * dropdown. Click it to jump between the core admin surfaces.
  */
 
-const ITEMS: Array<{ href: string; label: string }> = [
-  { href: '/admin/questions', label: 'Question Queue' },
-  { href: '/admin/access', label: 'Access List' },
-  { href: '/admin/feedback', label: 'Feedback' },
-  { href: '/admin/kb-sources', label: 'Knowledge Base' },
-  { href: '/admin/brain', label: 'Elijah Brain' },
-  { href: '/admin/pain-research', label: 'Pain Research' },
-  { href: '/admin/launch', label: 'Launch Readiness' },
-  { href: '/admin/simulate', label: 'Student Simulator' },
+const SECTIONS: Array<{ title: string; items: Array<{ href: string; label: string }> }> = [
+  {
+    title: 'V1',
+    items: [
+      { href: '/admin/questions', label: 'Queue' },
+      { href: '/admin/test-chat', label: 'Test Chat' },
+      { href: '/admin/access', label: 'Players' },
+      { href: '/admin/kb-sources', label: 'Knowledge' },
+      { href: '/admin/launch', label: 'Launch' },
+    ],
+  },
+  {
+    title: 'Signals',
+    items: [
+      { href: '/admin/feedback', label: 'Feedback' },
+      { href: '/admin/pain-research', label: 'Pain Research' },
+    ],
+  },
+  {
+    title: 'Lab',
+    items: [
+      { href: '/admin/brain', label: 'Elijah Brain' },
+      { href: '/admin/simulate', label: 'App Preview' },
+    ],
+  },
 ]
 
 export default function AdminNav() {
@@ -80,39 +96,62 @@ export default function AdminNav() {
             position: 'absolute',
             top: 'calc(100% + 6px)',
             left: 0,
-            minWidth: 200,
+            minWidth: 220,
             background: '#0a0a0a',
             border: '1px solid #1f1f1f',
-            borderRadius: 8,
+            borderRadius: 12,
             boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
-            padding: 4,
+            padding: 6,
             zIndex: 50,
           }}
         >
-          {ITEMS.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              onClick={() => setOpen(false)}
+          {SECTIONS.map((section, sectionIndex) => (
+            <div
+              key={section.title}
               style={{
-                display: 'block',
-                padding: '8px 12px',
-                borderRadius: 4,
-                textDecoration: 'none',
-                fontSize: 13,
-                color: '#cccccc',
-              }}
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLAnchorElement).style.background = '#1a1a1a'
-                ;(e.currentTarget as HTMLAnchorElement).style.color = '#ffffff'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLAnchorElement).style.background = 'transparent'
-                ;(e.currentTarget as HTMLAnchorElement).style.color = '#cccccc'
+                borderTop: sectionIndex === 0 ? 'none' : '1px solid #1a1a1a',
+                marginTop: sectionIndex === 0 ? 0 : 6,
+                paddingTop: sectionIndex === 0 ? 0 : 6,
               }}
             >
-              {item.label}
-            </a>
+              <p
+                style={{
+                  color: '#555',
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: '0.12em',
+                  margin: '4px 10px 5px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {section.title}
+              </p>
+              {section.items.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  style={{
+                    display: 'block',
+                    padding: '9px 12px',
+                    borderRadius: 7,
+                    textDecoration: 'none',
+                    fontSize: 14,
+                    color: '#cccccc',
+                  }}
+                  onMouseEnter={(e) => {
+                    ;(e.currentTarget as HTMLAnchorElement).style.background = '#1a1a1a'
+                    ;(e.currentTarget as HTMLAnchorElement).style.color = '#ffffff'
+                  }}
+                  onMouseLeave={(e) => {
+                    ;(e.currentTarget as HTMLAnchorElement).style.background = 'transparent'
+                    ;(e.currentTarget as HTMLAnchorElement).style.color = '#cccccc'
+                  }}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
           ))}
         </div>
       )}
