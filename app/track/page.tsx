@@ -58,6 +58,19 @@ function possessiveName(name: string | null): string {
   return `${name}${name.toLowerCase().endsWith('s') ? '\'' : '\'s'}`
 }
 
+function trialDaysLeftLabel(trialEndsAt: string | null): string | null {
+  if (!trialEndsAt) return null
+  const end = new Date(trialEndsAt).getTime()
+  if (Number.isNaN(end)) return null
+
+  const msLeft = end - Date.now()
+  if (msLeft <= 0) return 'Trial ended'
+
+  const daysLeft = Math.ceil(msLeft / 86400000)
+  if (daysLeft <= 1) return 'Trial ends today'
+  return `Trial: ${daysLeft} days left`
+}
+
 function Logo() {
   return (
     <svg width="52" height="8" viewBox="0 0 52 8" fill="none" aria-hidden="true">
@@ -177,6 +190,8 @@ type PlayerProfile = {
   level: string | null
   challenge: string | null
   isFoundingMember: boolean
+  subscriptionStatus: string | null
+  trialEndsAt: string | null
 }
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -201,7 +216,7 @@ async function fetchProfile(email: string): Promise<PlayerProfile> {
     const [profileResult, waitlistResult] = await Promise.all([
       supabase
         .from('profiles')
-        .select('first_name, name, position, level, challenge, is_founding_member')
+        .select('first_name, name, position, level, challenge, is_founding_member, subscription_status, trial_ends_at')
         .eq('email', email)
         .maybeSingle(),
       supabase
@@ -222,9 +237,11 @@ async function fetchProfile(email: string): Promise<PlayerProfile> {
       level: data?.level || null,
       challenge: data?.challenge || waitlist?.challenge || null,
       isFoundingMember: data?.is_founding_member === true,
+      subscriptionStatus: data?.subscription_status || null,
+      trialEndsAt: data?.trial_ends_at || null,
     }
   } catch {
-    return { firstName: null, position: null, level: null, challenge: null, isFoundingMember: false }
+    return { firstName: null, position: null, level: null, challenge: null, isFoundingMember: false, subscriptionStatus: null, trialEndsAt: null }
   }
 }
 
@@ -266,6 +283,7 @@ async function SignedInState({ email }: { email: string }) {
   const profileLine = [prettyLevel(profile.level), profile.position].filter(Boolean).join(' · ')
   const profileComplete = Boolean(profile.firstName && profile.level && profile.position && profile.challenge)
   const nextRep = firstActionStep(freshAnswer)
+  const trialLabel = profile.subscriptionStatus === 'trialing' ? trialDaysLeftLabel(profile.trialEndsAt) : null
 
   if (questions.length === 0) {
     return (
@@ -300,6 +318,11 @@ async function SignedInState({ email }: { email: string }) {
         {profile.isFoundingMember && (
           <p className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold text-amber-400 mb-1">
             <span aria-hidden="true">★</span>Founding member
+          </p>
+        )}
+        {trialLabel && (
+          <p className="inline-flex items-center rounded-full border border-amber-400/25 bg-amber-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-300 mb-2">
+            {trialLabel}
           </p>
         )}
         {profileLine && (
