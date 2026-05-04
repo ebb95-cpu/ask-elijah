@@ -184,25 +184,39 @@ export default function AdminTestChatPage() {
 
           <aside style={sideStyle}>
             <section style={panelStyle}>
-              <p style={eyebrow}>Student</p>
-              <div style={{ display: 'grid', gap: 10 }}>
+              <p style={eyebrow}>Asker</p>
+              <div style={{ display: 'grid', gap: 12 }}>
                 <Field label="First name" value={firstName} onChange={setFirstName} />
-                <label style={labelStyle}>
-                  Asker
-                  <select value={askerType} onChange={(e) => setAskerType(e.target.value as 'player' | 'parent')} style={inputStyle}>
-                    <option value="player">Student</option>
-                    <option value="parent">Parent</option>
-                  </select>
-                </label>
-                <Field label="Age" value={age} onChange={setAge} />
-                <label style={labelStyle}>
-                  Level
-                  <select value={level} onChange={(e) => setLevel(e.target.value)} style={inputStyle}>
-                    {LEVELS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                  </select>
-                </label>
-                <Field label="Position" value={position} onChange={setPosition} />
-                <Field label="Challenge" value={challenge} onChange={setChallenge} />
+                <div style={segmentStyle}>
+                  <button
+                    type="button"
+                    onClick={() => setAskerType('player')}
+                    style={segmentButtonStyle(askerType === 'player')}
+                  >
+                    Student
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAskerType('parent')}
+                    style={segmentButtonStyle(askerType === 'parent')}
+                  >
+                    Parent
+                  </button>
+                </div>
+                <details>
+                  <summary style={detailsSummaryStyle}>Context</summary>
+                  <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+                    <Field label="Age" value={age} onChange={setAge} />
+                    <label style={labelStyle}>
+                      Level
+                      <select value={level} onChange={(e) => setLevel(e.target.value)} style={inputStyle}>
+                        {LEVELS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                      </select>
+                    </label>
+                    <Field label="Position" value={position} onChange={setPosition} />
+                    <Field label="Challenge" value={challenge} onChange={setChallenge} />
+                  </div>
+                </details>
               </div>
             </section>
 
@@ -331,6 +345,40 @@ const secondaryButton: React.CSSProperties = {
   fontWeight: 800,
   minHeight: 38,
   padding: '9px 14px',
+}
+
+const segmentStyle: React.CSSProperties = {
+  background: '#000',
+  border: '1px solid #242424',
+  borderRadius: 999,
+  display: 'grid',
+  gap: 3,
+  gridTemplateColumns: '1fr 1fr',
+  padding: 3,
+}
+
+function segmentButtonStyle(active: boolean): React.CSSProperties {
+  return {
+    background: active ? '#fff' : 'transparent',
+    border: 'none',
+    borderRadius: 999,
+    color: active ? '#000' : '#777',
+    cursor: 'pointer',
+    fontFamily: '-apple-system, sans-serif',
+    fontSize: 13,
+    fontWeight: 900,
+    minHeight: 34,
+  }
+}
+
+const detailsSummaryStyle: React.CSSProperties = {
+  color: '#777',
+  cursor: 'pointer',
+  fontSize: 11,
+  fontWeight: 900,
+  letterSpacing: '0.1em',
+  listStyle: 'none',
+  textTransform: 'uppercase',
 }
 
 const sideStyle: React.CSSProperties = {
