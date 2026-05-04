@@ -23,7 +23,7 @@ export type IngestMetadata = {
 
 /**
  * Split text into overlapping chunks by sentence where possible.
- * ~600 words per chunk with ~80 word overlap — tuned for Voyage 3 lite
+ * ~600 words per chunk with ~80 word overlap . tuned for Voyage 3 lite
  * and Claude retrieval quality.
  */
 export function chunkText(text: string, opts?: { targetWords?: number; overlapWords?: number }): string[] {
@@ -34,7 +34,7 @@ export function chunkText(text: string, opts?: { targetWords?: number; overlapWo
   const clean = text.replace(/\r\n/g, '\n').replace(/\s+/g, ' ').trim()
   if (!clean) return []
 
-  // Split into sentences (rough — good enough for transcripts + articles)
+  // Split into sentences (rough . good enough for transcripts + articles)
   const sentences = clean.split(/(?<=[.!?])\s+(?=[A-Z"'])/)
 
   const chunks: string[] = []
@@ -196,7 +196,7 @@ export function extractYouTubeId(url: string): string | null {
 
 /**
  * Transcribe any audio-or-video URL via AssemblyAI. Same mechanism the
- * nightly YouTube ingestion cron uses — AssemblyAI can ingest YouTube URLs,
+ * nightly YouTube ingestion cron uses . AssemblyAI can ingest YouTube URLs,
  * podcast MP3 URLs, or any direct media URL. Polls for up to ~5 minutes.
  */
 export async function transcribeAudioUrl(audioUrl: string): Promise<string> {
@@ -244,7 +244,7 @@ export async function transcribeAudioUrl(audioUrl: string): Promise<string> {
 export async function fetchUrlText(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: {
-      // Identify ourselves — some sites block headless UAs
+      // Identify ourselves . some sites block headless UAs
       'User-Agent': 'Mozilla/5.0 (compatible; AskElijah/1.0; +https://elijahbryant.pro)',
     },
   })

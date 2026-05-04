@@ -10,7 +10,7 @@ import { getSupabase } from '@/lib/supabase-server'
  * so discovery + rich-snippet eligibility come for free once the URLs are
  * in the sitemap.
  *
- * This is the silent compounding SEO engine — it runs in the background
+ * This is the silent compounding SEO engine . it runs in the background
  * and every new approved answer becomes a long-tail-searchable URL.
  */
 
@@ -23,6 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const statics: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/`, lastModified: new Date(), changeFrequency: 'daily', priority: 1.0 },
     { url: `${BASE_URL}/browse`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+    { url: `${BASE_URL}/founders`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
   ]
 
   try {

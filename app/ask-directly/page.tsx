@@ -55,7 +55,7 @@ export default function AskDirectlyPage() {
             <p className="text-xs text-gray-400 tracking-widest uppercase mb-6">Voice Review</p>
             <p className="text-4xl font-bold mb-2">$25</p>
             <p className="text-gray-400 text-sm mb-8 leading-relaxed">
-              Record a voice note. Elijah listens and responds with a personal audio message — not a script, not a template.
+              Record a voice note. Elijah listens and responds with a personal audio message . not a script, not a template.
             </p>
             <ul className="space-y-2 text-sm text-gray-500 mb-10 flex-1">
               <li>Up to 3 min voice note</li>
@@ -63,7 +63,7 @@ export default function AskDirectlyPage() {
               <li>Delivered within 48h</li>
             </ul>
             <button className="bg-black text-white px-6 py-3 text-sm font-semibold text-center hover:opacity-80 transition-opacity">
-              Book voice review — $25
+              Book voice review . $25
             </button>
           </div>
 
@@ -72,7 +72,7 @@ export default function AskDirectlyPage() {
             <p className="text-xs text-gray-400 tracking-widest uppercase mb-6">Video / Film Review</p>
             <p className="text-4xl font-bold mb-2">$50</p>
             <p className="text-gray-400 text-sm mb-8 leading-relaxed">
-              Upload your film. Elijah watches it and breaks it down — shot selection, positioning, decision-making. Real feedback.
+              Upload your film. Elijah watches it and breaks it down . shot selection, positioning, decision-making. Real feedback.
             </p>
             <ul className="space-y-2 text-sm text-gray-500 mb-10 flex-1">
               <li>Up to 10 min of film</li>
@@ -80,7 +80,7 @@ export default function AskDirectlyPage() {
               <li>Delivered within 48h</li>
             </ul>
             <button className="bg-black text-white px-6 py-3 text-sm font-semibold text-center hover:opacity-80 transition-opacity">
-              Book film review — $50
+              Book film review . $50
             </button>
           </div>
         </div>

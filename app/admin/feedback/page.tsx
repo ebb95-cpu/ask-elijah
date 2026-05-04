@@ -8,10 +8,10 @@ import LoadingDots from '@/components/ui/LoadingDots'
  * Health dashboard.
  *
  * One admin surface for three signals:
- *   1. Thumbs up/down on answers — "which answers land"
- *   2. Bug reports — user-submitted, one-click resolve
- *   3. Client crashes — auto-captured by ErrorCatcher, read-only
- *   4. Platform issues — unresolved production issues from Sentry
+ *   1. Thumbs up/down on answers . "which answers land"
+ *   2. Bug reports . user-submitted, one-click resolve
+ *   3. Client crashes . auto-captured by ErrorCatcher, read-only
+ *   4. Platform issues . unresolved production issues from Sentry
  *
  * Tabs at the top toggle the active feed; summary stats stay visible on
  * all tabs so the overall health of the product is always in frame.
@@ -227,7 +227,7 @@ export default function FeedbackPage() {
           <Stat label="Answers rated" value={String(summary.total_feedback)} />
           <Stat
             label="Helpful rate"
-            value={summary.up_ratio === null ? '—' : `${Math.round(summary.up_ratio * 100)}%`}
+            value={summary.up_ratio === null ? '.' : `${Math.round(summary.up_ratio * 100)}%`}
             color={summary.up_ratio === null ? '#666' : summary.up_ratio > 0.7 ? '#34d399' : summary.up_ratio > 0.4 ? '#f59e0b' : '#ef4444'}
           />
           <Stat label="👍" value={String(summary.thumbs_up)} color="#34d399" />
@@ -236,7 +236,7 @@ export default function FeedbackPage() {
           <Stat label="Recent crashes" value={String(summary.recent_crashes)} color={summary.recent_crashes > 0 ? '#ef4444' : '#666'} />
           <Stat
             label="Health issues"
-            value={summary.sentry_configured ? String(summary.sentry_issues) : '—'}
+            value={summary.sentry_configured ? String(summary.sentry_issues) : '.'}
             color={summary.sentry_issues > 0 ? '#ef4444' : '#666'}
           />
         </div>

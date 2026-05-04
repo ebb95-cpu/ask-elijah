@@ -93,7 +93,7 @@ function Stat({ value, label }: { value: number | string; label: string }) {
 }
 
 /**
- * "Your locker room" — the player's home, not a tracker.
+ * "Your locker room" . the player's home, not a tracker.
  *
  * Reframed from the earlier /track "status page" identity. The URL stays
  * `/track` (email links, the verify cookie, and the homepage CTA all point
@@ -267,7 +267,7 @@ async function SignedInState({ email }: { email: string }) {
 
   // First approved question is the "freshest reward" and gets the celebratory
   // glow treatment. Older approved ones render as the accumulating library
-  // below — retention lives in the stacked collection, not endless glow.
+  // below . retention lives in the stacked collection, not endless glow.
   const freshAnswer = approved[0] || null
   const libraryAnswers = approved.slice(1)
 
@@ -349,7 +349,7 @@ async function SignedInState({ email }: { email: string }) {
         )}
       </div>
 
-      {/* Hidden syncer + banner — no visual footprint */}
+      {/* Hidden syncer + banner . no visual footprint */}
       <ProfileSyncer />
       <LockerRoomWelcomeBanner struggle={profile.challenge} />
 
@@ -398,7 +398,7 @@ async function SignedInState({ email }: { email: string }) {
         </section>
       )}
 
-      {/* ── Ask composer — Hooked loop: reward fires, then immediately
+      {/* ── Ask composer . Hooked loop: reward fires, then immediately
           surfaces the next trigger ───────────────────────────────────── */}
       <div className="mb-12">
         <InlineAskComposer />
@@ -422,7 +422,7 @@ async function SignedInState({ email }: { email: string }) {
             </p>
           )}
           <div className="flex items-center justify-between mt-6">
-            <p className="text-xs text-gray-700">— Elijah</p>
+            <p className="text-xs text-gray-700">. Elijah</p>
             <ShareAnswerButton questionId={freshAnswer.id} question={freshAnswer.question} />
           </div>
         </div>

@@ -1,5 +1,5 @@
 /**
- * Ask Elijah — Google Drive Lead Magnet Ingestion
+ * Ask Elijah . Google Drive Lead Magnet Ingestion
  *
  * Scans the lead magnets Google Drive folder, downloads all PDFs,
  * extracts text, and ingests into Pinecone as source_type: 'lead_magnet'.
@@ -107,7 +107,7 @@ async function listPdfsInFolder(drive, folderId, folderName = 'Root') {
 
     for (const file of res.data.files || []) {
       if (file.mimeType === 'application/vnd.google-apps.folder') {
-        // Recurse into subfolder — use folder name as category
+        // Recurse into subfolder . use folder name as category
         const subFiles = await listPdfsInFolder(drive, file.id, file.name)
         files.push(...subFiles)
       } else if (file.mimeType === 'application/pdf') {
@@ -192,7 +192,7 @@ async function upsertVectors(vectors) {
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
-console.log('\n📚 Ask Elijah — Google Drive Lead Magnet Ingestion\n')
+console.log('\n📚 Ask Elijah . Google Drive Lead Magnet Ingestion\n')
 
 let auth
 try {

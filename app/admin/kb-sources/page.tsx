@@ -140,7 +140,7 @@ export default function AdminKbSourcesPage() {
   }, [data])
 
   // Silent auto-heal: runs at most once per page load when data shows
-  // anything that needs fixing. User never sees a button for these — the
+  // anything that needs fixing. User never sees a button for these . the
   // weekly ingest cron handles steady-state, this just repairs one-time
   // historical gaps (old "Video <id>" titles, missing publish dates,
   // zero newsletters because the archive never got pulled).

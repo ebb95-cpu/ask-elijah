@@ -12,7 +12,7 @@ import { useEffect } from 'react'
 export default function ErrorCatcher() {
   useEffect(() => {
     function report(msg: string, extra?: string) {
-      // Fire and forget — best effort
+      // Fire and forget . best effort
       fetch('/api/admin/error-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

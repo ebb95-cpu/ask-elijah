@@ -11,11 +11,11 @@ function getResend() {
 // Pain-point follow-up questions to drive them back
 const FOLLOW_UPS = [
   "What's the last situation where you let your emotions cost you playing time?",
-  "When was the last time you performed your best under pressure — what was different?",
+  "When was the last time you performed your best under pressure . what was different?",
   "What's the one thing your coach keeps telling you that you haven't actually fixed yet?",
   "When you lose confidence mid-game, what's the first thing that goes wrong?",
   "What does your body feel like the night before a game you're scared to play?",
-  "Who on your team has the mental edge you want — and what do they do differently?",
+  "Who on your team has the mental edge you want . and what do they do differently?",
   "What would your game look like if you stopped worrying about what coaches think?",
   "What's the habit you know is holding your game back but haven't changed?",
 ]

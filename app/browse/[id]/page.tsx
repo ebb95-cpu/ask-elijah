@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const description = q.answer.length > 160 ? q.answer.slice(0, 160) + '...' : q.answer
 
   return {
-    title: `${title} — Ask Elijah`,
+    title: `${title} . Ask Elijah`,
     description,
     openGraph: {
       title,
@@ -53,7 +53,7 @@ export default async function BrowseAnswerPage({ params }: { params: Params }) {
     month: 'long', day: 'numeric', year: 'numeric',
   })
 
-  // JSON-LD for rich snippets — Google QAPage schema
+  // JSON-LD for rich snippets . Google QAPage schema
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'QAPage',
@@ -68,7 +68,7 @@ export default async function BrowseAnswerPage({ params }: { params: Params }) {
         author: {
           '@type': 'Person',
           name: 'Elijah Bryant',
-          description: 'Professional basketball player — NBA (Utah Jazz), EuroLeague Champion',
+          description: 'Professional basketball player . NBA (Utah Jazz), EuroLeague Champion',
         },
       },
     },
@@ -126,12 +126,18 @@ export default async function BrowseAnswerPage({ params }: { params: Params }) {
         )}
 
         <div className="border-t border-gray-900 pt-8 mt-12">
-          <p className="text-sm text-gray-500 mb-4">Got a different situation on your mind?</p>
+          <p className="mb-3 text-[10px] font-black uppercase tracking-[0.22em] text-gray-600">YOUR TURN</p>
+          <p className="max-w-xl text-sm leading-relaxed text-gray-500 mb-5">
+            If this is you, the answer is in the room. Apply for a Founders 200 seat or join the Locker Room waitlist.
+          </p>
           <Link
-            href="/ask"
-            className="inline-block bg-white text-black px-6 py-3 text-sm font-bold hover:opacity-80 transition-opacity"
+            href="/pricing"
+            className="inline-block rounded-full bg-white px-6 py-3 text-sm font-bold text-black hover:opacity-80 transition-opacity"
           >
-            Ask Elijah →
+            Apply for a founding seat →
+          </Link>
+          <Link href="/pricing#locker-room" className="mt-4 block text-sm font-semibold text-gray-500 hover:text-white transition-colors">
+            Or join the Locker Room waitlist →
           </Link>
         </div>
       </article>

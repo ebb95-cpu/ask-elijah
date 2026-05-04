@@ -778,7 +778,7 @@ function isSubscriber(entry: AccessEntry) {
   if (status === 'trialing') {
     return !entry.trial_ends_at || new Date(entry.trial_ends_at) > new Date()
   }
-  return ['active', 'past_due', 'priority_paid'].includes(status)
+  return ['active', 'past_due'].includes(status)
 }
 
 function providerLabel(provider: 'beehiiv' | 'resend') {

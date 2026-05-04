@@ -9,7 +9,7 @@
  * is 10,000, so we have headroom.
  *
  * Requires YOUTUBE_API_KEY (a Google Cloud API key with YouTube Data v3
- * enabled). Fails soft — returns [] on any error so one dead source
+ * enabled). Fails soft . returns [] on any error so one dead source
  * doesn't sink the whole run.
  */
 

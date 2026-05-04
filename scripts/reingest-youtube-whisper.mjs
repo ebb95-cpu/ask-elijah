@@ -1,5 +1,5 @@
 /**
- * Ask Elijah — Re-ingest YouTube with AssemblyAI
+ * Ask Elijah . Re-ingest YouTube with AssemblyAI
  *
  * Replaces all existing YouTube vectors in Pinecone with accurate
  * AssemblyAI transcriptions. Overwrites old auto-caption chunks by using
@@ -52,7 +52,7 @@ function chunkText(text, chunkSize = 600, overlap = 100) {
 // ── AssemblyAI ───────────────────────────────────────────────────────────────
 
 async function transcribeWithAssemblyAI(videoId) {
-  // Submit YouTube URL — AssemblyAI downloads it directly
+  // Submit YouTube URL . AssemblyAI downloads it directly
   const submitRes = await fetch('https://api.assemblyai.com/v2/transcript', {
     method: 'POST',
     headers: {
@@ -125,7 +125,7 @@ function getChannelVideos(handle) {
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
-console.log('\n🚀 Ask Elijah — Re-ingest YouTube with AssemblyAI\n')
+console.log('\n🚀 Ask Elijah . Re-ingest YouTube with AssemblyAI\n')
 console.log('  Submits each video to AssemblyAI, transcribes word-for-word,')
 console.log('  and overwrites the existing Pinecone vectors with accurate text.\n')
 
@@ -177,7 +177,7 @@ for (const channel of YOUTUBE_CHANNELS) {
       try {
         const values = await embed(chunks[j])
         vectors.push({
-          id: `yt_${videoId}_${j}`,  // Same ID as original — overwrites old auto-caption vector
+          id: `yt_${videoId}_${j}`,  // Same ID as original . overwrites old auto-caption vector
           values,
           metadata: {
             text: chunks[j],

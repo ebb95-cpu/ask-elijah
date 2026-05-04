@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 // Admin endpoint: add Elijah's personal stories to the Pinecone knowledge base.
 // Usage: POST /api/add-story with header x-token: CRON_SECRET
 // Body: { text: string, title: string, id?: string }
-// The id field is optional — if omitted, a slug is generated from the title.
+// The id field is optional . if omitted, a slug is generated from the title.
 
 async function embedText(text: string): Promise<number[]> {
   const res = await fetch('https://api.voyageai.com/v1/embeddings', {

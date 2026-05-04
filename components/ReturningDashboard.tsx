@@ -85,7 +85,7 @@ export default function ReturningDashboard({
 }: {
   email: string
   // Real first name from the student's profile. Null when we don't have
-  // one — in that case we skip the "Welcome back, X" pattern rather than
+  // one . in that case we skip the "Welcome back, X" pattern rather than
   // faking a name from the email prefix.
   firstName: string | null
   trending: TrendingQuestion[]

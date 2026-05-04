@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
     if (email && uv.email === email.toLowerCase()) userSet.add(uv.question_id)
   }
 
-  // Deduplicate by question text — keep the one with more upvotes
+  // Deduplicate by question text . keep the one with more upvotes
   const seenQuestions = new Map<string, typeof questions[number]>()
   for (const q of questions) {
     const key = q.question.toLowerCase().trim()
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
   }
   const deduped = Array.from(seenQuestions.values())
 
-  // Everything is free — no truncation. Full answers for all.
+  // Everything is free . no truncation. Full answers for all.
   const result = deduped.map(q => ({
     id: q.id,
     question: q.question,

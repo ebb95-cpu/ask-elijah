@@ -6,11 +6,11 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 /**
- * GET  — latest question-discovery run + a trailing history list for the
+ * GET  . latest question-discovery run + a trailing history list for the
  *        admin dashboard. Returns the synthesis JSON
  *        directly, plus run timestamps and counts.
  *
- * POST — admin-initiated manual run. Calls the cron endpoint with the
+ * POST . admin-initiated manual run. Calls the cron endpoint with the
  *        CRON_SECRET so the admin can trigger discovery without waiting
  *        for the nightly schedule. Useful when you want fresh
  *        data before a content-planning session.

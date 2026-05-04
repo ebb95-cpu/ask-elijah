@@ -22,7 +22,7 @@ function passwordsMatch(got: string, expected: string): boolean {
  *   - HTML form (application/x-www-form-urlencoded): password=... →
  *     returns a 303 redirect to `next` (or /admin/questions) with
  *     Set-Cookie. This is the no-JS fallback that works even if mobile
- *     Safari is serving a stale JS bundle — the browser submits the
+ *     Safari is serving a stale JS bundle . the browser submits the
  *     form natively and follows the server redirect.
  *
  * Either path produces the same httpOnly cookie with a 30-day lifetime.
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       password = body?.password || ''
       if (typeof body?.next === 'string' && body.next.startsWith('/admin')) next = body.next
     } catch {
-      /* ignore — handled below */
+      /* ignore . handled below */
     }
   }
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   // navigate.
   const redirectTarget = new URL(next, req.url)
   const res = isForm ? NextResponse.redirect(redirectTarget, 303) : NextResponse.json({ ok: true })
-  // Stateless HMAC-signed session token — the cookie is NOT the password.
+  // Stateless HMAC-signed session token . the cookie is NOT the password.
   // Rotating ADMIN_PASSWORD on Vercel invalidates all existing sessions.
   res.cookies.set(ADMIN_COOKIE, await issueAdminSession(), {
     httpOnly: true,

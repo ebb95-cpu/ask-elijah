@@ -125,9 +125,9 @@ export default function HomePage() {
         <div className="bg-black text-white p-8 mb-6">
           <p className="text-xs text-gray-500 tracking-widest uppercase mb-3">This week&apos;s pro tip</p>
           <p className="font-semibold leading-relaxed">
-            The night before a game, stop reviewing film after 8pm. Let your brain consolidate. Your preparation is done — trust it.
+            The night before a game, stop reviewing film after 8pm. Let your brain consolidate. Your preparation is done . trust it.
           </p>
-          <p className="text-xs text-gray-500 mt-4">— Elijah</p>
+          <p className="text-xs text-gray-500 mt-4">. Elijah</p>
         </div>
 
         {/* Quick links */}
@@ -144,7 +144,7 @@ export default function HomePage() {
       </main>
 
       {/* Mobile bottom nav is provided globally via <MobileBottomNav /> in
-          app/layout.tsx — no duplicate bar needed here. */}
+          app/layout.tsx . no duplicate bar needed here. */}
     </div>
   )
 }

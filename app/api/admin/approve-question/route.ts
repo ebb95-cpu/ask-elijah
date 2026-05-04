@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Call the shared approve pipeline directly in-process. No more HTTP
-  // proxy — that pattern was the source of the double-timeout and the
+  // proxy . that pattern was the source of the double-timeout and the
   // trailing-newline-in-env-var URL bugs.
   const result = await approveAnswer({
     questionId,

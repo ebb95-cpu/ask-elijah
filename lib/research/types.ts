@@ -18,13 +18,13 @@ export type RawInsight = {
 export type SynthesizedPainPoint = {
   title: string          // e.g. "Freezing up in big games"
   summary: string        // 1–2 sentence explanation of the pain in the student's voice
-  score: number          // 0-100 — how strong / how many mentions
+  score: number          // 0-100 . how strong / how many mentions
   quotes: Array<{ text: string; source_url: string | null }>
 }
 
 export type SynthesizedQuestion = {
   question: string
-  score: number          // 0-100 — how frequently this is being asked
+  score: number          // 0-100 . how frequently this is being asked
 }
 
 export type SynthesisOutput = {

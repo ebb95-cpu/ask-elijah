@@ -190,13 +190,13 @@ async function generateDraftAnswer(cleanedQuestion: string, kbSources: KbSource[
 
 async function sendSummaryEmail(pendingCount: number, autoAnsweredCount: number) {
   const resend = new Resend(process.env.RESEND_API_KEY)
-  // Env var has sometimes had a trailing newline in the past — trim defensively.
+  // Env var has sometimes had a trailing newline in the past . trim defensively.
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro').trim()
 
   await resend.emails.send({
     from: 'Ask Elijah <elijah@elijahbryant.pro>',
     to: (process.env.ADMIN_EMAIL || '').trim(),
-    subject: `${pendingCount} new question${pendingCount !== 1 ? 's' : ''} from Reddit — ready to review`,
+    subject: `${pendingCount} new question${pendingCount !== 1 ? 's' : ''} from Reddit . ready to review`,
     html: `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -364,7 +364,7 @@ export async function runDailyResearch(): Promise<
     }
 
     console.log(
-      `Daily research complete — pending: ${newPendingCount}, auto-answered: ${autoAnsweredCount}, duplicates: ${skippedDuplicates}`
+      `Daily research complete . pending: ${newPendingCount}, auto-answered: ${autoAnsweredCount}, duplicates: ${skippedDuplicates}`
     )
 
     return {

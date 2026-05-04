@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
           // path does this in /api/sign-up; OAuth users land here without
           // going through that route, so we insert here. Uses the provider's
           // display name (from user_metadata) as first_name when available.
-          // Fire-and-forget — if the insert fails we'd rather not block the
+          // Fire-and-forget . if the insert fails we'd rather not block the
           // redirect, and /track has a fallback "finish your profile" nudge.
           const meta = (user.user_metadata || {}) as Record<string, unknown>
           const rawName = (meta.full_name as string)
@@ -128,6 +128,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Auth failed — redirect to sign-in with error
+  // Auth failed . redirect to sign-in with error
   return NextResponse.redirect(`${origin}/sign-in?error=link_expired`)
 }

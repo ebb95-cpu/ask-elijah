@@ -6,7 +6,7 @@
  * structured JSON the admin dashboard reads.
  *
  * We hard-cap the input payload so a single run can't blow the context
- * window. If there are too many insights, we sample down — prioritising
+ * window. If there are too many insights, we sample down . prioritising
  * high-signal sources (reddit posts with upvotes, high-like youtube
  * comments) over autocomplete noise.
  */
@@ -102,7 +102,7 @@ Rules:
 - Each pain_point should have 2-4 real quotes from the data, not paraphrased.
 - Never invent pains or quotes. If a pattern isn't visible in the data, don't include it.
 - Skip pains that aren't actionable by a mental-game product (e.g. "my shoes are too small").
-- Output JSON only — no prose, no code fences.`
+- Output JSON only . no prose, no code fences.`
 }
 
 export async function synthesize(insights: RawInsight[]): Promise<SynthesisOutput> {

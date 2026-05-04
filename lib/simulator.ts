@@ -5,7 +5,7 @@
  * pretend environment: real endpoints that mutate state (submitting a
  * question, paying through Stripe, saving a profile, upvoting) must NOT
  * actually fire. Read endpoints (browse, my-questions, journal) can go
- * through normally — they only return existing data.
+ * through normally . they only return existing data.
  *
  * Usage:
  *   import { isInSimulator, simFetch } from '@/lib/simulator'

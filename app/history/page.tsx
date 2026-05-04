@@ -68,7 +68,7 @@ export default function HistoryPage() {
       setUserEmail(user.email || '')
       if (user.email) posthog?.identify(user.email, { email: user.email })
       // Kick off the popular-questions fetch in parallel with the user's own
-      // history — it isn't render-critical for the top of the page so it can
+      // history . it isn't render-critical for the top of the page so it can
       // finish whenever.
       void fetch(`/api/browse?email=${encodeURIComponent(user.email || '')}`)
         .then((r) => r.ok ? r.json() : { questions: [] })
@@ -117,13 +117,13 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {/* Nav — minimal */}
+      {/* Nav . minimal */}
       <nav className="flex items-center justify-between px-5 py-4 shrink-0">
         <Link href="/ask" className="text-gray-500 hover:text-white transition-colors text-sm">← Ask</Link>
         <SignOutButton className="text-xs text-gray-600 hover:text-white transition-colors" />
       </nav>
 
-      {/* Header — retention anchor. Totals + prominent Ask CTA up top so
+      {/* Header . retention anchor. Totals + prominent Ask CTA up top so
           returning users are one tap from asking the next question instead
           of having to scroll past their grid to find it. */}
       <div className="px-5 pb-5 shrink-0">
@@ -214,7 +214,7 @@ export default function HistoryPage() {
                         </span>
                       </div>
 
-                      {/* Question preview — up to 4 lines */}
+                      {/* Question preview . up to 4 lines */}
                       <p
                         className="text-sm font-semibold leading-snug text-white"
                         style={{
@@ -235,7 +235,7 @@ export default function HistoryPage() {
               })}
             </div>
 
-            {/* Ask another — below the grid */}
+            {/* Ask another . below the grid */}
             <div className="mt-8 text-center">
               <Link
                 href="/ask"
@@ -324,7 +324,7 @@ export default function HistoryPage() {
               <p className="text-base leading-relaxed text-gray-200 whitespace-pre-wrap">
                 {openQuestion.answer}
               </p>
-              {/* Answer feedback — only for approved answers. Silent thumbs-up,
+              {/* Answer feedback . only for approved answers. Silent thumbs-up,
                   thumbs-down prompts for a comment that emails Elijah.
                   Share button next to it points to the public /browse/[id]
                   page for that answer. */}
@@ -336,7 +336,7 @@ export default function HistoryPage() {
               )}
             </div>
 
-            {/* Post-answer profile capture — Hooked Investment phase. Only
+            {/* Post-answer profile capture . Hooked Investment phase. Only
                 shown after Elijah's approved answer; hides itself once the
                 user completes both stages. */}
             {openQuestion.status === 'approved' && userEmail && (

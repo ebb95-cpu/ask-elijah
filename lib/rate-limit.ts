@@ -27,7 +27,7 @@ function getLimiter(prefix: string, limit: number, window: `${number} ${'s' | 'm
 }
 
 /**
- * Check a rate limit. Returns { success } — always resolves.
+ * Check a rate limit. Returns { success } . always resolves.
  * If Upstash isn't configured or fails, the request is ALLOWED (fail-open)
  * so we don't break prod if Redis goes down.
  */

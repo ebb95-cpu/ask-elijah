@@ -6,7 +6,7 @@
  * add-kb-sources.sql migration has been applied, run this script once to
  * populate the admin inventory from the Pinecone vectors.
  *
- * Idempotent — uses upsert on id_prefix.
+ * Idempotent . uses upsert on id_prefix.
  *
  * Usage: node scripts/backfill-craig-manning-sources.mjs
  */

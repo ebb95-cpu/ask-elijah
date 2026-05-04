@@ -124,7 +124,7 @@ function ApprovePageInner() {
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-2xl mx-auto px-6 py-12">
 
-        <p className="text-xs text-gray-600 tracking-widest uppercase mb-8">Ask Elijah — Review</p>
+        <p className="text-xs text-gray-600 tracking-widest uppercase mb-8">Ask Elijah . Review</p>
 
         {/* Question */}
         <div className="border-l-2 border-gray-800 pl-4 mb-10">
@@ -132,7 +132,7 @@ function ApprovePageInner() {
           <p className="text-lg font-semibold leading-snug">{record?.question}</p>
         </div>
 
-        {/* Answer — editable */}
+        {/* Answer . editable */}
         <div className="mb-2">
           <p className="text-xs text-gray-600 tracking-widest uppercase mb-3">Answer</p>
           <textarea
@@ -152,7 +152,7 @@ function ApprovePageInner() {
             value={additions}
             onChange={(e) => setAdditions(e.target.value)}
             rows={5}
-            placeholder={"What do you actually want to say?\n\n\"I remember when I was in EuroLeague and...\"\n\"The AI missed it — the real issue is...\"\n\"I'd add that the key is...\""}
+            placeholder={"What do you actually want to say?\n\n\"I remember when I was in EuroLeague and...\"\n\"The AI missed it . the real issue is...\"\n\"I'd add that the key is...\""}
             className="w-full bg-transparent border border-gray-800 focus:border-gray-600 text-white text-sm leading-relaxed p-5 outline-none resize-none transition-colors placeholder-gray-800"
           />
         </div>

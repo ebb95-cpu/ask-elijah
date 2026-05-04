@@ -6,12 +6,12 @@
  * in one admin surface.
  *
  * Requires:
- *   SENTRY_AUTH_TOKEN   — https://sentry.io/settings/account/api/auth-tokens/
+ *   SENTRY_AUTH_TOKEN   . https://sentry.io/settings/account/api/auth-tokens/
  *                         needs `project:read` + `event:read` scopes
- *   SENTRY_ORG_SLUG     — e.g. "askelijah"
- *   SENTRY_PROJECT_SLUG — e.g. "javascript-nextjs" (whatever was created)
+ *   SENTRY_ORG_SLUG     . e.g. "askelijah"
+ *   SENTRY_PROJECT_SLUG . e.g. "javascript-nextjs" (whatever was created)
  *
- * Silent no-op if any of these is missing — the dashboard just hides the
+ * Silent no-op if any of these is missing . the dashboard just hides the
  * Sentry tab when the integration isn't configured.
  */
 

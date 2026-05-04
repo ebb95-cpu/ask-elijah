@@ -14,7 +14,8 @@ export default function Footer() {
           <div className="flex items-center gap-6">
             <Link href="/privacy" className="text-xs text-gray-500 hover:text-white transition-colors">Privacy</Link>
             <Link href="/terms" className="text-xs text-gray-500 hover:text-white transition-colors">Terms</Link>
-            <Link href="mailto:hello@consistencyclub.com" className="text-xs text-gray-500 hover:text-white transition-colors">Contact</Link>
+            <Link href="/founders" className="text-xs text-gray-500 hover:text-white transition-colors">Founders</Link>
+            <Link href="mailto:hello@elijahbryant.pro" className="text-xs text-gray-500 hover:text-white transition-colors">Contact</Link>
           </div>
 
           <p className="text-xs text-gray-600">© Consistency Club</p>

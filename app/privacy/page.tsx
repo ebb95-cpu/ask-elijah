@@ -13,18 +13,18 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-bold text-black mb-3">Who we are</h2>
             <p>
               Ask Elijah is operated by Elijah Bryant under Consistency Club. We built this platform so young basketball players can get real, experience-backed answers to their game questions. If you have questions about this policy, contact us at{' '}
-              <a href="mailto:hello@consistencyclub.com" className="underline hover:text-black transition-colors">
-                hello@consistencyclub.com
+              <a href="mailto:hello@elijahbryant.pro" className="underline hover:text-black transition-colors">
+                hello@elijahbryant.pro
               </a>.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-black mb-3">Children under 13 — COPPA</h2>
+            <h2 className="text-lg font-bold text-black mb-3">Children under 13. COPPA.</h2>
             <p>
               Ask Elijah is intended for users who are 13 years of age or older. We do not knowingly collect personal information from children under 13. Our platform requires users to confirm they are at least 13 before submitting an email address or creating an account. If we learn that we have collected personal information from a child under 13 without parental consent, we will delete that information as quickly as possible. If you believe we may have any information from or about a child under 13, please contact us at{' '}
-              <a href="mailto:hello@consistencyclub.com" className="underline hover:text-black transition-colors">
-                hello@consistencyclub.com
+              <a href="mailto:hello@elijahbryant.pro" className="underline hover:text-black transition-colors">
+                hello@elijahbryant.pro
               </a>.
             </p>
           </section>
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
             <ul className="space-y-2 pl-4 border-l-2 border-gray-100">
               <li><span className="font-semibold text-black">Questions you ask.</span> Stored so we can send you your answer recap and improve the product.</li>
               <li><span className="font-semibold text-black">Email address.</span> Collected when you choose to receive your answer by email or sign in. Used to send your daily recap and authenticate your account.</li>
-              <li><span className="font-semibold text-black">Profile information.</span> Name, age, position, level, goals, and struggles — collected optionally to personalize your experience. You can skip all of it.</li>
+              <li><span className="font-semibold text-black">Profile information.</span> Name, age, position, level, goals, and struggles . collected optionally to personalize your experience. You can skip all of it.</li>
               <li><span className="font-semibold text-black">Locker room memory.</span> We may remember details you share, such as your goals, recent setbacks, position, level, and what you are working on, so future answers can understand your context.</li>
               <li><span className="font-semibold text-black">Reflections and feedback.</span> If you tell us whether an answer helped or what happened after trying it, we save that to improve future answers and product quality.</li>
               <li><span className="font-semibold text-black">IP address.</span> Collected for rate limiting and abuse prevention only.</li>
@@ -74,11 +74,11 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-bold text-black mb-3">Third-party services</h2>
             <p className="mb-4">We use the following services to operate Ask Elijah. Each has its own privacy policy.</p>
             <ul className="space-y-2 pl-4 border-l-2 border-gray-100">
-              <li><span className="font-semibold text-black">Supabase</span> — stores your questions, email, and profile securely.</li>
-              <li><span className="font-semibold text-black">Anthropic (Claude)</span> — powers the AI answers. Your question is sent to Anthropic to generate a response.</li>
-              <li><span className="font-semibold text-black">Resend</span> — sends your daily recap email.</li>
-              <li><span className="font-semibold text-black">Pinecone / Voyage AI</span> — used to search Elijah&apos;s content for relevant context. Your question is sent to these services in anonymized form.</li>
-              <li><span className="font-semibold text-black">Vercel</span> — hosts the application.</li>
+              <li><span className="font-semibold text-black">Supabase</span> . stores your questions, email, and profile securely.</li>
+              <li><span className="font-semibold text-black">Anthropic (Claude)</span> . powers the AI answers. Your question is sent to Anthropic to generate a response.</li>
+              <li><span className="font-semibold text-black">Resend</span> . sends your daily recap email.</li>
+              <li><span className="font-semibold text-black">Pinecone / Voyage AI</span> . used to search Elijah&apos;s content for relevant context. Your question is sent to these services in anonymized form.</li>
+              <li><span className="font-semibold text-black">Vercel</span> . hosts the application.</li>
             </ul>
           </section>
 
@@ -93,8 +93,8 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-bold text-black mb-3">Data retention</h2>
             <p>
               We keep your questions, profile, locker room memory, reflections, and feedback for as long as your account is active or as long as needed to operate the service. If you want your data deleted, email us at{' '}
-              <a href="mailto:hello@consistencyclub.com" className="underline hover:text-black transition-colors">
-                hello@consistencyclub.com
+              <a href="mailto:hello@elijahbryant.pro" className="underline hover:text-black transition-colors">
+                hello@elijahbryant.pro
               </a>{' '}
               from the email address connected to your account and we will remove personal data within 30 days unless we need to keep limited records for legal, security, or abuse-prevention reasons.
             </p>
@@ -104,8 +104,8 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-bold text-black mb-3">Your rights</h2>
             <p>
               You have the right to access, correct, export, or delete your personal data at any time. If you are in the European Union or California, you have additional rights under GDPR and CCPA respectively. To exercise any of these rights, contact us at{' '}
-              <a href="mailto:hello@consistencyclub.com" className="underline hover:text-black transition-colors">
-                hello@consistencyclub.com
+              <a href="mailto:hello@elijahbryant.pro" className="underline hover:text-black transition-colors">
+                hello@elijahbryant.pro
               </a>.
             </p>
           </section>
@@ -128,8 +128,8 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-bold text-black mb-3">Contact</h2>
             <p>
               Questions about this policy? Email us at{' '}
-              <a href="mailto:hello@consistencyclub.com" className="underline hover:text-black transition-colors">
-                hello@consistencyclub.com
+              <a href="mailto:hello@elijahbryant.pro" className="underline hover:text-black transition-colors">
+                hello@elijahbryant.pro
               </a>.
             </p>
           </section>

@@ -13,7 +13,7 @@ export const maxDuration = 60
  * would resurrect the row since Pinecone still holds the vectors.
  *
  * Pinecone has no "delete by metadata kb_source_id" because vectors weren't
- * written with that field. Instead we use the id_prefix — all vectors for
+ * written with that field. Instead we use the id_prefix . all vectors for
  * a source share the prefix (e.g. `upload_1738_abc_0`, `upload_1738_abc_1`).
  * The /vectors/list endpoint supports prefix filtering; we paginate to get
  * every matching id, then batch-delete in chunks of 1000 (Pinecone's limit).
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       return NextResponse.json(
         {
-          error: `Pinecone delete failed — kb_sources row NOT removed. ${err instanceof Error ? err.message : 'unknown'}`,
+          error: `Pinecone delete failed . kb_sources row NOT removed. ${err instanceof Error ? err.message : 'unknown'}`,
         },
         { status: 500 },
       )

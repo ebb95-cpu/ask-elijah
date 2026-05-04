@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       timestamp: body.timestamp,
     })
   } catch {
-    // Best effort — don't fail
+    // Best effort . don't fail
   }
   return NextResponse.json({ ok: true })
 }

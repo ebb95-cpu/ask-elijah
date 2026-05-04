@@ -2,7 +2,7 @@ import { getSupabase } from './supabase-server'
 
 /**
  * Log a non-fatal error to Supabase `error_log` so we can see what's breaking.
- * Always resolves — never throws. Safe to use inside `.catch()`.
+ * Always resolves . never throws. Safe to use inside `.catch()`.
  */
 export async function logError(
   source: string,
@@ -27,7 +27,7 @@ export async function logError(
       context: context ?? null,
     })
   } catch (logErr) {
-    // If even logging fails, just warn — do not throw
+    // If even logging fails, just warn . do not throw
     console.warn(`[log-error:failed] ${source}:`, logErr)
   }
 }

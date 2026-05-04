@@ -341,7 +341,7 @@ function AskPageInner() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [topQuestions, setTopQuestions] = useState<{ id: string; question: string; upvote_count: number }[]>([])
   const [returnEntry, setReturnEntry] = useState<JournalEntry | null>(null)
-  // Most-recent journal entry — drives the decision to land on the
+  // Most-recent journal entry . drives the decision to land on the
   // returning-user dashboard vs the cold input chip-picker.
   const [lastEntry, setLastEntry] = useState<JournalEntry | null>(null)
   // Student's actual first name, pulled from the profile so the welcome
@@ -368,7 +368,7 @@ function AskPageInner() {
   type EntryMode = 'bad_game' | 'coach' | 'playing_time' | 'parent' | null
   const [entryMode, setEntryMode] = useState<EntryMode>(null)
 
-  // Level on the asker — drives level-filtered RAG retrieval. Persisted to
+  // Level on the asker . drives level-filtered RAG retrieval. Persisted to
   // profile on submit so it's remembered for next time.
   type Level = string | null
   const [askerLevel, setAskerLevel] = useState<Level>(null)
@@ -397,7 +397,7 @@ function AskPageInner() {
   // Mobile bottom-sheet state for "what others are asking"
   const [communitySheetOpen, setCommunitySheetOpen] = useState(false)
 
-  // Voice input — integrated via the existing useVoiceInput hook. On mobile
+  // Voice input . integrated via the existing useVoiceInput hook. On mobile
   // typing a real question is a huge barrier; voice is how you catch a kid
   // who's still in their feelings post-game.
   const voicePartialRef = useRef('')
@@ -570,7 +570,7 @@ function AskPageInner() {
     posthog?.identify(userEmail, { email: userEmail })
 
     // Check if we need clarification before submitting.
-    // If clarify API fails, we proceed without it — but track the event so we
+    // If clarify API fails, we proceed without it . but track the event so we
     // know when answer quality is dropping because the classifier is down.
     try {
       const clarRes = await simFetch(
@@ -683,7 +683,7 @@ function AskPageInner() {
     setLocal('profile_done', '1')
     if (!skip && (onboardName || onboardPosition || onboardLevel || onboardChallenge)) {
       const pendingProfile = {
-        // Canonical field is first_name — used by crons, home, ask API,
+        // Canonical field is first_name . used by crons, home, ask API,
         // and the returning-user welcome modes. Legacy `name` column
         // still works but first_name is the source of truth.
         first_name: onboardName || null,
@@ -801,7 +801,7 @@ function AskPageInner() {
         setClarifyLoading(false)
         setTimeout(() => clarifyInputRef.current?.focus(), 100)
       } else {
-        // Done — submit to API with full context
+        // Done . submit to API with full context
         setMode('loading')
         incrementQuestionCount()
         setSession('user_email', email.trim().toLowerCase())
@@ -838,7 +838,7 @@ function AskPageInner() {
     } catch { /* fail silently */ }
   }
 
-  // Clarifying — Elijah asks follow-up questions before submitting
+  // Clarifying . Elijah asks follow-up questions before submitting
   if (mode === 'clarifying') {
     const roundNum = clarifyConversation.length + 1
     return (
@@ -869,7 +869,7 @@ function AskPageInner() {
               ))}
             </div>
 
-            {/* Their original question — small, above the card */}
+            {/* Their original question . small, above the card */}
             <div className="border-l-2 border-white/15 pl-4 mb-5">
               <p className="text-gray-500 text-sm italic leading-relaxed">&ldquo;{question}&rdquo;</p>
             </div>
@@ -939,7 +939,7 @@ function AskPageInner() {
     )
   }
 
-  // Beta full — waitlist screen
+  // Beta full . waitlist screen
   if (mode === 'beta_full') {
     const handleWaitlist = async () => {
       if (!waitlistEmail.trim() || !waitlistName.trim()) return
@@ -1037,7 +1037,7 @@ function AskPageInner() {
     )
   }
 
-  // Return visit — reflection prompt
+  // Return visit . reflection prompt
   if (mode === 'returning' && returnEntry) {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col">
@@ -1064,7 +1064,7 @@ function AskPageInner() {
             )}
 
             <p className="text-white font-semibold text-xl mb-2">Did you try the steps?</p>
-            <p className="text-gray-500 text-sm mb-6">Tell Elijah what happened. This goes into your journal — yours to keep.</p>
+            <p className="text-gray-500 text-sm mb-6">Tell Elijah what happened. This goes into your journal . yours to keep.</p>
 
             <textarea
               autoFocus
@@ -1093,7 +1093,7 @@ function AskPageInner() {
     )
   }
 
-  // Return visit — upvote prompt
+  // Return visit . upvote prompt
   if (mode === 'upvote_prompt') {
     const upvoteCandidates = topQuestions.slice(0, 5)
     return (
@@ -1157,12 +1157,12 @@ function AskPageInner() {
 
   // Second-visit edge case: they signed in before but never actually asked
   // a question. The default "Ask anything" screen would be identical to what
-  // they saw on visit 1 — which breaks habit formation (app has amnesia).
+  // they saw on visit 1 . which breaks habit formation (app has amnesia).
   // Show a tight welcome that acknowledges them and points at trending peer
   // questions as the nudge to actually ask this time.
   if (mode === 'welcome_back') {
     // Prefer the real name from their profile. If missing, show a clean
-    // "Welcome back." without a fake name — the email-prefix guess ("Ebb95")
+    // "Welcome back." without a fake name . the email-prefix guess ("Ebb95")
     // felt robotic and undercut the warmth the greeting is supposed to land.
     const greeting = profileFirstName
       ? `Welcome back, ${profileFirstName}.`
@@ -1220,7 +1220,7 @@ function AskPageInner() {
     )
   }
 
-  // State 1 — the Hooked payoff. Returning user has a fresh approved answer
+  // State 1 . the Hooked payoff. Returning user has a fresh approved answer
   // they haven't tapped yet. Show it full-screen as the first thing they
   // see on sign-in: the reward precedes the next investment ask.
   if (mode === 'unread_hero' && returnEntry) {
@@ -1280,7 +1280,7 @@ function AskPageInner() {
               {returnEntry.action_steps && !returnEntry.reflection && (
                 <button
                   onClick={() => {
-                    // Investment step — reflection UI already exists in mode='returning'.
+                    // Investment step . reflection UI already exists in mode='returning'.
                     setMode('returning')
                   }}
                   className="bg-white text-black text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-80 transition-opacity"
@@ -1290,7 +1290,7 @@ function AskPageInner() {
               )}
               <button
                 onClick={() => {
-                  setQuestion(`Going deeper on this — ${returnEntry.question.replace(/\?$/, '')}. `)
+                  setQuestion(`Going deeper on this . ${returnEntry.question.replace(/\?$/, '')}. `)
                   setShowSuggestions(false)
                   try {
                     const raw = getLocal('ask_elijah_viewed_question_ids')
@@ -1316,7 +1316,7 @@ function AskPageInner() {
     )
   }
 
-  // State 2 — pending question, nothing new yet. Set expectation ("Elijah
+  // State 2 . pending question, nothing new yet. Set expectation ("Elijah
   // writes back within 24h") so the student doesn't refresh anxiously, then
   // offer variable-reward filler via the trending list.
   if (mode === 'pending_wait' && returnEntry) {
@@ -1354,7 +1354,7 @@ function AskPageInner() {
             {topQuestions.length > 0 && (
               <div className="border-t border-gray-900 pt-8">
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-4">
-                  While you wait — what other players are asking
+                  While you wait . what other players are asking
                 </p>
                 <ul className="flex flex-col gap-1 mb-8">
                   {topQuestions.slice(0, 4).map((t) => (
@@ -1388,7 +1388,7 @@ function AskPageInner() {
     )
   }
 
-  // State 3 — has history, nothing pending, nothing unread. The personal
+  // State 3 . has history, nothing pending, nothing unread. The personal
   // dashboard with a Craig Manning quote rotating in as the variable reward.
   if (mode === 'dashboard') {
     return (
@@ -1412,7 +1412,7 @@ function AskPageInner() {
               setTimeout(() => textareaRef.current?.focus(), 50)
             }}
             onContinueThread={(prior) => {
-              setQuestion(`Going deeper on this — ${prior.replace(/\?$/, '')}. `)
+              setQuestion(`Going deeper on this . ${prior.replace(/\?$/, '')}. `)
               setShowSuggestions(false)
               setMode('input')
               setTimeout(() => textareaRef.current?.focus(), 50)
@@ -1502,7 +1502,7 @@ function AskPageInner() {
 
     return (
       <div className="min-h-[100dvh] bg-black text-white flex flex-col">
-        {/* Top nav — compact on mobile */}
+        {/* Top nav . compact on mobile */}
         <nav className="flex items-center justify-between px-5 py-4 md:px-6 md:py-5 shrink-0">
           <button onClick={() => router.back()} className="text-gray-500 hover:text-white transition-colors text-sm">
             ← Back
@@ -1537,7 +1537,7 @@ function AskPageInner() {
             />
           </div>
 
-          {/* Sticky bottom action row — thumb zone, above home indicator */}
+          {/* Sticky bottom action row . thumb zone, above home indicator */}
           <div
             className="shrink-0 border-t border-gray-900 bg-black px-4 pt-3 pb-safe-plus-16 flex items-center gap-3"
           >
@@ -1582,7 +1582,7 @@ function AskPageInner() {
                 </div>
                 <div className="overflow-y-auto pb-safe-plus-16">
                   {topQuestions.length === 0 ? (
-                    <p className="text-sm text-gray-600 px-5 py-8 text-center">Nothing yet — be the first.</p>
+                    <p className="text-sm text-gray-600 px-5 py-8 text-center">Nothing yet . be the first.</p>
                   ) : (
                     topQuestions.map((q) => (
                       <button
@@ -1695,7 +1695,7 @@ function AskPageInner() {
     )
   }
 
-  // Onboarding — fires after email submit, before showing submitted
+  // Onboarding . fires after email submit, before showing submitted
   if (mode === 'onboarding') {
     const CHALLENGES = [
       'Confidence & mental game',
@@ -1724,7 +1724,7 @@ function AskPageInner() {
 
         <div className="flex-1 flex flex-col items-center justify-center px-8 max-w-lg mx-auto w-full">
 
-          {/* Step 0 — Name */}
+          {/* Step 0 . Name */}
           {onboardStep === 0 && (
             <div className="w-full text-center">
               <p className="text-xs text-gray-600 tracking-widest uppercase mb-6">While Elijah reads your question</p>
@@ -1749,7 +1749,7 @@ function AskPageInner() {
             </div>
           )}
 
-          {/* Step 1 — Position + Level */}
+          {/* Step 1 . Position + Level */}
           {onboardStep === 1 && (
             <div className="w-full text-center">
               <p className="text-xs text-gray-600 tracking-widest uppercase mb-6">Help him tailor the answer</p>
@@ -1801,7 +1801,7 @@ function AskPageInner() {
             </div>
           )}
 
-          {/* Step 2 — Biggest challenge */}
+          {/* Step 2 . Biggest challenge */}
           {onboardStep === 2 && (
             <div className="w-full text-center">
               <p className="text-xs text-gray-600 tracking-widest uppercase mb-6">One more thing</p>

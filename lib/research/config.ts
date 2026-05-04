@@ -34,7 +34,7 @@ export const RESEARCH_CONFIG = {
     'basketball coach doesnt believe in me',
   ],
 
-  // Subreddits to search. Order by signal quality — top few are gold for
+  // Subreddits to search. Order by signal quality . top few are gold for
   // this demographic, the rest are supporting context.
   subreddits: [
     'basketballtips',
@@ -58,7 +58,7 @@ export const RESEARCH_CONFIG = {
   reddit: {
     postsPerQuery: 8,
     commentsPerPost: 20,
-    // Only pull posts with at least this many upvotes — signal filter.
+    // Only pull posts with at least this many upvotes . signal filter.
     minScore: 3,
   },
 

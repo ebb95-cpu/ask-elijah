@@ -5,6 +5,8 @@ import { useState, useRef, useEffect } from 'react'
 import { getLocal, setLocal } from '@/lib/safe-storage'
 import AccountSetupForm from '@/components/AccountSetupForm'
 import { getSupabaseClient } from '@/lib/supabase-client'
+import FoundingSeatCounter from '@/components/marketing/FoundingSeatCounter'
+import { MathReveal, RiskReversal, ValueStack } from '@/components/marketing/ValueStack'
 
 function Logo({ dark = false }: { dark?: boolean }) {
   const c = dark ? '#fff' : '#000'
@@ -126,11 +128,12 @@ const ALL_SUGGESTIONS = [
   "I lost my passion for the game",
   "How do I handle being moved to a new position?",
   "My teammates don't believe in me",
+  "My parents are paying for trainers and I am still not getting better",
 ]
 
 // Rotation used to depend on `new Date().getDate()` at module load, which
 // evaluates once at SSR build time and again on client, causing hydration
-// mismatches at day-rollover and crashing mobile Safari. Static list now —
+// mismatches at day-rollover and crashing mobile Safari. Static list now .
 // the page is pre-rendered, so date-based rotation never worked in prod
 // anyway (the value was frozen to the deploy date).
 const SUGGESTIONS = ALL_SUGGESTIONS
@@ -183,7 +186,7 @@ function ReturningView({
         </div>
       </nav>
 
-      {/* Previous Q&A — slides in when toggled */}
+      {/* Previous Q&A . slides in when toggled */}
       {showPrev && (
         <div className="px-5 py-6 max-w-xl mx-auto w-full border-b border-gray-900 overflow-y-auto max-h-[45vh]">
           <p className="text-gray-600 text-xs italic mb-3">&ldquo;{prevQuestion}&rdquo;</p>
@@ -193,7 +196,7 @@ function ReturningView({
 
       <div className="flex-1 flex flex-col items-center justify-center px-5 max-w-xl mx-auto w-full gap-10">
 
-        {/* Reflection prompt — show once, before ask box */}
+        {/* Reflection prompt . show once, before ask box */}
         {!reflectionDone && prevQuestion && (
           <div className="w-full">
             <p className="text-gray-600 text-xs uppercase tracking-widest mb-3">How did it go?</p>
@@ -298,7 +301,7 @@ export default function HomePage() {
 
   // Capture UTM params once on landing and persist them. Safari throws
   // SecurityError on storage access when cookies are blocked or in some
-  // private-browsing states — the safe-storage helper swallows that so it
+  // private-browsing states . the safe-storage helper swallows that so it
   // can't crash the page.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -328,16 +331,16 @@ export default function HomePage() {
         const supabase = getSupabaseClient()
         const { data: { session } } = await supabase.auth.getSession()
         if (session) {
-          // Already logged in — skip everything and go straight to the reward.
+          // Already logged in . skip everything and go straight to the reward.
           window.location.href = '/track'
           return
         }
       } catch {
-        /* Supabase unavailable — fall through to localStorage check */
+        /* Supabase unavailable . fall through to localStorage check */
       }
 
       const stored = getLocal('ask_elijah_email')
-      if (!stored) return // new user — stay idle
+      if (!stored) return // new user . stay idle
 
       userEmailRef.current = stored
 
@@ -366,7 +369,7 @@ export default function HomePage() {
           setMode('returning')
         }
       } catch {
-        // API unreachable — fall back to returning mode so they can still ask.
+        // API unreachable . fall back to returning mode so they can still ask.
         setMode('returning')
       }
     }
@@ -389,7 +392,7 @@ export default function HomePage() {
     setStreamedText('')
     fullAnswerRef.current = ''
 
-    // Gatekeeper — semantic classifier that blocks abuse, gibberish, and
+    // Gatekeeper . semantic classifier that blocks abuse, gibberish, and
     // off-topic questions before we spend tokens on a preview. Fails open on
     // network/service errors (returns legit) so a classifier outage never
     // blocks real players.
@@ -408,7 +411,7 @@ export default function HomePage() {
         }
       }
     } catch {
-      // Fail open — proceed to preview if gatekeep itself errored.
+      // Fail open . proceed to preview if gatekeep itself errored.
     }
 
     try {
@@ -456,7 +459,7 @@ export default function HomePage() {
     try {
       // Verify the email is real BEFORE we commit the question to the DB
       // and notify Elijah. Kickbox-backed syntax + disposable + MX + mailbox
-      // check. Fails open on upstream errors — see lib/email-verify.ts.
+      // check. Fails open on upstream errors . see lib/email-verify.ts.
       const verifyRes = await fetch('/api/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -473,7 +476,7 @@ export default function HomePage() {
       try {
         utm = JSON.parse(getLocal('ask_elijah_utm') || '{}')
       } catch {
-        // Bad JSON — fine, just no UTM.
+        // Bad JSON . fine, just no UTM.
       }
       const askRes = await fetch('/api/ask', {
         method: 'POST',
@@ -504,7 +507,7 @@ export default function HomePage() {
       // Investment phase: before handing off to /track, ask them to set up
       // an account (name + challenge + password OR Apple/Google OAuth).
       // The question is already saved + the first-take is already rendered
-      // above — the reward has been delivered. This is textbook Hooked
+      // above . the reward has been delivered. This is textbook Hooked
       // Investment: ask for commitment after the reward, not before.
       //
       // Fallback: if /api/ask failed, unblur in place so the player isn't
@@ -515,7 +518,7 @@ export default function HomePage() {
       }
       setRevealed(true)
     } catch {
-      // Network error after verification passed — still reveal so they see
+      // Network error after verification passed . still reveal so they see
       // what they paid for with their email. Elijah-notify will retry via
       // whatever mechanism eventually catches the failure.
       setRevealed(true)
@@ -588,7 +591,7 @@ export default function HomePage() {
   // profile capture, and auth.
   //
   // Navigation uses a single Back button that lives inside each step
-  // (component-level). The outer nav only shows the logo — no page-level
+  // (component-level). The outer nav only shows the logo . no page-level
   // Back button to avoid duplicating controls. Step 1's Back calls onExit
   // which drops us back to the preview view.
   if (mode === 'account_setup') {
@@ -658,7 +661,7 @@ export default function HomePage() {
                   {!isDone && <span className="inline-block w-1 h-4 bg-white ml-1 animate-pulse" />}
                 </div>
 
-                {/* Blurred fade — no overlay, just visual hint there's more */}
+                {/* Blurred fade . no overlay, just visual hint there's more */}
                 {hiddenText && (
                   <div
                     className="text-white text-[17px] leading-8 sm:text-base sm:leading-relaxed select-none pointer-events-none mb-6"
@@ -676,7 +679,7 @@ export default function HomePage() {
               </>
             )}
 
-            {/* Onboarding CTA — stacked below. Hidden once revealed. Replaces
+            {/* Onboarding CTA . stacked below. Hidden once revealed. Replaces
                 the old inline email gate because email + profile + account
                 now collect inside the Endel-style AccountSetupForm, opened
                 on click. Peak-investment moment: they've just seen the first
@@ -694,10 +697,10 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Post-reveal confirmation — the answer above IS the answer.
+            {/* Post-reveal confirmation . the answer above IS the answer.
                 No follow-up promise, no "first take" framing. If Elijah
                 refines it later in the admin queue, the update silently
-                replaces what's on /track — the player just sees the
+                replaces what's on /track . the player just sees the
                 current best answer whenever they come back. */}
             {revealed && (
               <div className="w-full border-t border-gray-800 pt-6 flex flex-col gap-3">
@@ -716,7 +719,7 @@ export default function HomePage() {
 
   // ── Welcome back ─────────────────────────────────────────────────────────
   // Shown when localStorage has their email AND they have a full account.
-  // One-tap sign-in — no homepage, no onboarding, straight to the reward.
+  // One-tap sign-in . no homepage, no onboarding, straight to the reward.
   if (mode === 'welcome_back') {
     const wbEmail = userEmailRef.current
     const wbName = welcomeBackName
@@ -788,7 +791,7 @@ export default function HomePage() {
     )
   }
 
-  // ── Returning (ask again — clean, no distractions) ────────────────────────
+  // ── Returning (ask again . clean, no distractions) ────────────────────────
   if (mode === 'returning') {
     return (
       <ReturningView
@@ -1005,7 +1008,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Fixed live ticker — bottom left, smaller on mobile */}
+      {/* Fixed live ticker . bottom left, smaller on mobile */}
       <div className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)]">
         <LiveTicker />
       </div>
@@ -1032,61 +1035,22 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Grand Slam Offer stack — what you actually get, framed by Hormozi's
-          value equation (reduce time delay, stack outcomes, raise perceived likelihood).
-          Kept in Elijah's voice: short sentences, no fluff, first-person. */}
       <section className="bg-black px-5 py-16 border-t border-gray-900">
         <div className="max-w-xl mx-auto">
-          <p className="text-xs text-gray-600 uppercase tracking-widest mb-10">What you get</p>
-
-          <div className="space-y-8">
-            <div className="flex items-start gap-5">
-              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0 tabular-nums">30s</span>
-              <div>
-                <p className="text-white text-lg font-semibold leading-tight mb-1">A real first take on your screen.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">The first thing I&apos;d tell you if you asked me in person.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-5">
-              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0 tabular-nums">24-48h</span>
-              <div>
-                <p className="text-white text-lg font-semibold leading-tight mb-1">A reviewed answer in your locker room.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">While this is in beta, final answers are reviewed before they go out.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-5">
-              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0">Forever</span>
-              <div>
-                <p className="text-white text-lg font-semibold leading-tight mb-1">Every answer saved to your locker room.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">Go back any time. Track what you tried. Ask better follow-ups.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-5">
-              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0">Sources</span>
-              <div>
-                <p className="text-white text-lg font-semibold leading-tight mb-1">Receipts when they matter.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">If the answer uses my videos, newsletters, guides, or current research, you&apos;ll see where to go deeper.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-5">
-              <span className="text-white text-2xl font-bold tracking-tight w-24 shrink-0">Access</span>
-              <div>
-                <p className="text-white text-lg font-semibold leading-tight mb-1">Free to read. Paid to ask.</p>
-                <p className="text-gray-500 text-sm leading-relaxed">Browse public answers. Join the locker room when you want Elijah to answer your situation.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-12 flex flex-col gap-4">
-            <Link href="/pricing" className="text-xs text-gray-500 hover:text-white transition-colors uppercase tracking-widest">
-              Join the locker room →
+          <p className="text-xs text-gray-600 uppercase tracking-widest mb-6">WHAT YOU GET WHEN YOU GET IN</p>
+          <h2 className="mb-10 text-4xl font-black leading-tight tracking-tight text-white sm:text-5xl">
+            Less than one trainer session. Every month. Forever.
+          </h2>
+          <ValueStack />
+          <MathReveal />
+          <RiskReversal />
+          <div className="mt-10 flex flex-col items-start gap-4">
+            <FoundingSeatCounter className="text-[10px] font-black uppercase tracking-[0.22em] text-[#F7F5F0]" />
+            <Link href="/pricing" className="rounded-full bg-white px-7 py-4 text-sm font-black text-black transition-opacity hover:opacity-80">
+              Apply for a Founders 200 seat →
             </Link>
-            <Link href="/parents" className="text-xs text-gray-700 hover:text-gray-300 transition-colors">
-              Are you a parent and want to put this in your son&apos;s hands? Read this.
+            <Link href="/pricing#locker-room" className="text-sm font-semibold text-gray-500 hover:text-white transition-colors">
+              Or join the Locker Room waitlist →
             </Link>
           </div>
         </div>
@@ -1161,7 +1125,7 @@ export default function HomePage() {
         <div className="max-w-3xl mx-auto">
           <p className="text-xs text-gray-600 uppercase tracking-widest mb-8">Questions Elijah has answered →</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {SUGGESTIONS.slice(0, 3).map(s => (
+            {SUGGESTIONS.slice(0, 4).map(s => (
               <Link key={s} href="/browse" className="border border-gray-800 p-5 hover:border-gray-600 transition-colors block">
                 <p className="text-gray-400 text-sm italic">&ldquo;{s}&rdquo;</p>
               </Link>
@@ -1183,6 +1147,7 @@ export default function HomePage() {
           <div className="flex items-center gap-6">
             <Link href="/privacy" className="text-xs text-gray-600 hover:text-white transition-colors">Privacy</Link>
             <Link href="/terms" className="text-xs text-gray-600 hover:text-white transition-colors">Terms</Link>
+            <Link href="/founders" className="text-xs text-gray-600 hover:text-white transition-colors">Founders</Link>
             <Link href="mailto:hello@elijahbryant.pro" className="text-xs text-gray-600 hover:text-white transition-colors">Contact</Link>
           </div>
           <p className="text-xs text-gray-700">© Ask Elijah</p>

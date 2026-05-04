@@ -10,7 +10,7 @@ export const maxDuration = 300
 
 /**
  * 7 days after Elijah approves an answer, email the user asking how it went.
- * This is the follow-through loop that no competitor closes — turns a one-shot
+ * This is the follow-through loop that no competitor closes . turns a one-shot
  * Q&A into a relationship.
  */
 export async function GET(req: NextRequest) {
@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
           </div>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-            Did what we talked about help? What actually happened? Hit reply and tell me. Or send me a new question — whatever's on your mind now.
+            Did what we talked about help? What actually happened? Hit reply and tell me. Or send me a new question . whatever's on your mind now.
           </p>
 
           <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">

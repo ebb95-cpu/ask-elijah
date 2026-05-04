@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 /**
- * Fixed bottom tab bar for student pages — always visible on mobile, hidden
+ * Fixed bottom tab bar for student pages . always visible on mobile, hidden
  * on desktop (md+). This is the persistent external trigger infrastructure:
  * no matter where the student is in the app, the four core loops are one
  * thumb-tap away.

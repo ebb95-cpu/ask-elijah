@@ -1,5 +1,5 @@
 /**
- * Ask Elijah — Pinecone Backup to Supabase Storage
+ * Ask Elijah . Pinecone Backup to Supabase Storage
  *
  * Exports all vectors from Pinecone and uploads the JSON backup
  * to Supabase Storage bucket 'pinecone-backups'.
@@ -118,7 +118,7 @@ async function uploadToSupabase(filename, content) {
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
-console.log('\n🔒 Ask Elijah — Pinecone Backup\n')
+console.log('\n🔒 Ask Elijah . Pinecone Backup\n')
 
 // Get stats
 const stats = await getIndexStats()

@@ -211,7 +211,7 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Stats — only when there's data */}
+            {/* Stats . only when there's data */}
             {journal.length > 0 && (
               <div className="grid grid-cols-3 border border-gray-900 mb-8">
                 <div className="p-5 border-r border-gray-900">
@@ -237,7 +237,7 @@ export default function ProfilePage() {
               Ask Elijah →
             </Link>
 
-            {/* Journal — only show when there are entries */}
+            {/* Journal . only show when there are entries */}
             {!journalLoading && journal.length > 0 && (
               <div>
                 <p className="text-xs text-gray-600 uppercase tracking-widest mb-1">Your Journal</p>

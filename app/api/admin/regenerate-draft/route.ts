@@ -202,7 +202,7 @@ ${remixInstruction || 'General remix: make the answer cleaner, more cohesive, an
 
 Treat the remix direction as an editing instruction, not as part of the answer. If it asks for shorter, the new answer must be meaningfully shorter than Elijah's current notes/draft and should target 140-180 words unless that would remove the core point. If it asks for more practical, add concrete steps without bloating. If it asks for more Elijah, make the voice more direct and lived-in without adding fake personal stories.
 
-You have web_search and web_fetch. USE THEM proactively. Before stating any mechanism claim (how the brain works under pressure, sleep, nervous-system regulation, HRV, visualization, confidence, recovery — any physiological or psychological "why this works"), verify it with a lookup. Two to four searches is the norm, not the exception.
+You have web_search and web_fetch. USE THEM proactively. Before stating any mechanism claim (how the brain works under pressure, sleep, nervous-system regulation, HRV, visualization, confidence, recovery . any physiological or psychological "why this works"), verify it with a lookup. Two to four searches is the norm, not the exception.
 
 Ground the answer in real neuroscience, psychology, sports psychology, physiology, or performance research when a mechanism is being explained. But the voice always wins. Never say "studies show" or use footnote-style citations inside the answer. Phrase research in first-person Elijah voice: "the reason this works is your nervous system..." or "I read something from a Stanford lab that said...". The science makes the mechanism credible; Elijah's voice keeps it human. Make it simple, not simplistic. Weave, don't stack.
 

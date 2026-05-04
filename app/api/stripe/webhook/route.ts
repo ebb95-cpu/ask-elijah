@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
         const email = session.metadata?.email?.toLowerCase()
-        const tier = session.metadata?.tier || (session.mode === 'payment' ? 'priority' : 'locker_room')
+        const tier = session.metadata?.tier || 'locker_room'
         const isFoundingMember = session.metadata?.is_founding_member === 'true'
         const trialPromoCode = session.metadata?.trial_promo_code || null
         const trialSource = session.metadata?.trial_source || null
@@ -92,23 +92,14 @@ export async function POST(req: NextRequest) {
 
         if (!email) break
 
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('priority_credits')
-          .eq('email', email)
-          .maybeSingle()
-
         await supabase
           .from('profiles')
           .upsert({
             email,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
-            subscription_status: session.mode === 'payment' ? 'priority_paid' : subscriptionStatus,
+            subscription_status: subscriptionStatus,
             subscription_tier: tier,
-            priority_credits: session.mode === 'payment'
-              ? (Number(existingProfile?.priority_credits) || 0) + 1
-              : (Number(existingProfile?.priority_credits) || 0),
             is_founding_member: isFoundingMember,
             subscription_started_at: new Date().toISOString(),
             trial_started_at: trialPromoCode ? new Date().toISOString() : null,

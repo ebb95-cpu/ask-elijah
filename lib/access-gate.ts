@@ -25,7 +25,7 @@ export function profileHasEntitlement(profile: {
 
   const status = (profile.subscription_status || '').toLowerCase()
   if (status === 'trialing') return isTrialStillValid(profile.trial_ends_at)
-  return ['active', 'past_due', 'priority_paid'].includes(status)
+  return ['active', 'past_due'].includes(status)
 }
 
 export async function hasPlayerAccess(email: string): Promise<boolean> {

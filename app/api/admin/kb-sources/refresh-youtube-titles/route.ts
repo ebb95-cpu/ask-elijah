@@ -11,7 +11,7 @@ export const maxDuration = 300
  * Pulls the real title from YouTube's public oEmbed endpoint (no auth, no
  * key) and writes it back to kb_sources.source_title.
  *
- * Does NOT touch the Pinecone vector metadata — answers cite from kb_sources
+ * Does NOT touch the Pinecone vector metadata . answers cite from kb_sources
  * titles in admin views, and rewriting vectors would require re-embedding.
  */
 export async function POST(_req: NextRequest) {

@@ -194,14 +194,14 @@ export default function BrowsePage() {
         <Link href="/ask" className="text-xs text-white font-semibold hover:opacity-70 transition-opacity">Ask Elijah →</Link>
       </nav>
 
-      {/* Header — compact on mobile */}
+      {/* Header . compact on mobile */}
       <div className="px-5 pb-4 shrink-0">
         <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Community</p>
         <h1 className="text-2xl font-bold tracking-tight mb-1">What players are asking.</h1>
         <p className="text-xs text-gray-500">{filtered.length} questions · Real answers from Elijah</p>
       </div>
 
-      {/* Category filters — horizontal scroll on mobile */}
+      {/* Category filters . horizontal scroll on mobile */}
       <div className="chip-row flex gap-2 px-5 pb-4 shrink-0">
         {CATEGORIES.map((cat) => (
           <button
@@ -227,10 +227,12 @@ export default function BrowsePage() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-gray-600 text-sm mb-6">
-              {activeCategory === 'All' ? 'No answers loaded yet.' : `No ${activeCategory.toLowerCase()} answers yet.`}
+              {activeCategory === 'All'
+                ? 'No public answers yet. The Founders 200 are starting to ask. Reviewed answers land here as they go out.'
+                : `No ${activeCategory.toLowerCase()} answers yet. The Founders 200 are starting to ask.`}
             </p>
-            <Link href="/ask" className="inline-block bg-white text-black px-6 py-3 text-sm font-bold rounded-full">
-              Ask Elijah →
+            <Link href="/ask" className="text-sm font-bold text-white hover:opacity-70 transition-opacity">
+              Ask the first one →
             </Link>
           </div>
         ) : (

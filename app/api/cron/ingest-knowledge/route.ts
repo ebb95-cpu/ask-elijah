@@ -7,7 +7,7 @@ import { verifyBearer } from '@/lib/admin-auth'
  * Record a source row in kb_sources so it shows up in the admin inventory.
  * Deduped on id_prefix: if a row with the same prefix already exists,
  * update the chunk_count (useful if a re-ingest added chunks).
- * Fire-and-forget — failures are logged but don't stop the cron.
+ * Fire-and-forget . failures are logged but don't stop the cron.
  */
 async function recordKbSource(row: {
   source_title: string
@@ -128,7 +128,7 @@ async function ingestNewsletters(): Promise<number> {
   const data = await res.json()
   const allIssues: any[] = data.data || []
   // Beehiiv's status=confirmed includes scheduled posts whose publish_date
-  // is still in the future. Skip those — only ingest posts that have
+  // is still in the future. Skip those . only ingest posts that have
   // actually gone live to subscribers.
   const nowSeconds = Math.floor(Date.now() / 1000)
   const issues = allIssues.filter((p) => {
@@ -255,7 +255,7 @@ async function ingestLeadMagnets(): Promise<number> {
   return count
 }
 
-// ── YouTube (AssemblyAI + RSS — no yt-dlp or ffmpeg needed) ──────────────────
+// ── YouTube (AssemblyAI + RSS . no yt-dlp or ffmpeg needed) ──────────────────
 
 async function getChannelIdFromHandle(handle: string): Promise<string | null> {
   try {
@@ -327,7 +327,7 @@ async function isAlreadyIngested(videoId: string): Promise<boolean> {
 }
 
 async function transcribeWithAssemblyAI(videoId: string): Promise<string> {
-  // Submit YouTube URL directly — AssemblyAI handles the download
+  // Submit YouTube URL directly . AssemblyAI handles the download
   const submitRes = await fetch('https://api.assemblyai.com/v2/transcript', {
     method: 'POST',
     headers: { Authorization: ASSEMBLYAI_API_KEY, 'Content-Type': 'application/json' },
@@ -413,7 +413,7 @@ async function ingestYouTube(): Promise<number> {
             id_prefix: `yt_${videoId}_`,
             published_at: publishedAt,
           })
-          console.log(`✅ ${title || videoId} — ${vectors.length} chunks`)
+          console.log(`✅ ${title || videoId} . ${vectors.length} chunks`)
         } catch (e) { console.error('YouTube upsert error:', e) }
       }
     }
@@ -577,7 +577,7 @@ export async function GET(req: NextRequest) {
   const videos = await ingestYouTube().catch(e => { console.error(e); return 0 })
   const pdfs = skipPdfs ? 0 : await ingestGoogleDrivePdfs().catch(e => { console.error(e); return 0 })
 
-  console.log(`Knowledge ingest complete — newsletters: ${newsletters}, products: ${products}, videos: ${videos}, pdfs: ${pdfs}${skipPdfs ? ' (PDFs skipped)' : ''}`)
+  console.log(`Knowledge ingest complete . newsletters: ${newsletters}, products: ${products}, videos: ${videos}, pdfs: ${pdfs}${skipPdfs ? ' (PDFs skipped)' : ''}`)
 
   return NextResponse.json({ newsletters, products, videos, pdfs, skippedPdfs: skipPdfs })
 }

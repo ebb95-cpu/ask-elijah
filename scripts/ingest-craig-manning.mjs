@@ -1,12 +1,12 @@
 /**
- * Ask Elijah — Craig Manning (Fearless Mind) Channel Ingestion
+ * Ask Elijah . Craig Manning (Fearless Mind) Channel Ingestion
  *
  * One-off ingestion of Dr. Craig Manning's @FearlessMindGH YouTube channel
  * into the Pinecone KB so Elijah can cite his sports-psychology work.
  *
  * Strategy (accuracy-first):
  *   1. Transcribe every video via AssemblyAI (~$0.015/min, ~95% accuracy)
- *      — skips YouTube auto-captions entirely for consistent quality.
+ *      . skips YouTube auto-captions entirely for consistent quality.
  *   2. Submit transcription jobs in parallel (CONCURRENCY) to save wall clock.
  *   3. Chunk → embed via Voyage → upsert to Pinecone.
  *   4. Record each video as a row in kb_sources for the admin inventory.
@@ -266,7 +266,7 @@ async function ingestOne(video, index, total) {
   return { ok: true, chunks: vectors.length }
 }
 
-// Simple parallel pool — runs up to `limit` tasks concurrently.
+// Simple parallel pool . runs up to `limit` tasks concurrently.
 async function runInPool(items, limit, fn) {
   const results = new Array(items.length)
   let next = 0
@@ -303,7 +303,7 @@ async function main() {
   if (LIMIT) videos = videos.slice(0, LIMIT)
 
   if (DRY_RUN) {
-    console.log('\n  DRY RUN — videos that would be ingested:')
+    console.log('\n  DRY RUN . videos that would be ingested:')
     videos.forEach((v, i) => console.log(`    ${i + 1}. ${v.title} (${v.videoId}, ${v.duration}s)`))
     return
   }

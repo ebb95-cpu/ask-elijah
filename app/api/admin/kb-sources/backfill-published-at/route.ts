@@ -14,7 +14,7 @@ const BEEHIIV_PUB_ID =
  *
  * Newsletters: refetch from Beehiiv by post id (which we have as id_prefix).
  * YouTube: scrape the public watch page for its <meta itemprop="datePublished">
- *   or "uploadDate" JSON-LD — works for any video, not just the 15 most
+ *   or "uploadDate" JSON-LD . works for any video, not just the 15 most
  *   recent from the RSS feed, and doesn't require a YouTube API key.
  *
  * Time-budgeted at 270s with a cursor so bigger KBs can resume.
@@ -132,7 +132,7 @@ async function youtubePublishedAt(sourceUrl: string | null, idPrefix: string | n
     clearTimeout(timeout)
     if (!res.ok) return null
     const html = await res.text()
-    // Try JSON-LD first — most reliable.
+    // Try JSON-LD first . most reliable.
     const ldMatch = html.match(/"uploadDate":"([^"]+)"/)
     if (ldMatch) {
       const d = new Date(ldMatch[1])

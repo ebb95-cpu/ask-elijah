@@ -14,6 +14,9 @@ function isEmail(value: string) {
 
 export default function FoundersBetaForm({ closed }: Props) {
   const [email, setEmail] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [city, setCity] = useState('')
+  const [showOnWall, setShowOnWall] = useState(false)
   const [basketballCost, setBasketballCost] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
@@ -34,6 +37,9 @@ export default function FoundersBetaForm({ closed }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email,
+        firstName,
+        city,
+        showOnWall,
         basketballCost: closed ? undefined : basketballCost,
         waitlistOnly: closed,
       }),
@@ -85,6 +91,23 @@ export default function FoundersBetaForm({ closed }: Props) {
           required
         />
 
+        <div className="grid gap-3 sm:grid-cols-2">
+          <input
+            type="text"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="First name, optional"
+            className="w-full rounded-full border border-black/10 bg-white px-5 py-4 text-sm font-semibold outline-none placeholder:text-gray-400 focus:border-black"
+          />
+          <input
+            type="text"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="City, optional"
+            className="w-full rounded-full border border-black/10 bg-white px-5 py-4 text-sm font-semibold outline-none placeholder:text-gray-400 focus:border-black"
+          />
+        </div>
+
         {!closed && (
           <div>
             <textarea
@@ -101,6 +124,16 @@ export default function FoundersBetaForm({ closed }: Props) {
           </div>
         )}
       </div>
+
+      <label className="mt-5 flex items-start gap-3 text-xs font-semibold leading-relaxed text-gray-600">
+        <input
+          type="checkbox"
+          checked={showOnWall}
+          onChange={(e) => setShowOnWall(e.target.checked)}
+          className="mt-0.5 h-4 w-4 accent-black"
+        />
+        Show my first name and city on the public Founders Wall.
+      </label>
 
       <button
         disabled={!canSubmit}

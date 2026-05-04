@@ -3,7 +3,7 @@
  *
  * For each seed query, searches Reddit inside the configured subreddits and
  * pulls the top posts + top comments. Reddit is the highest signal-to-noise
- * source for this demographic — people vent real pain in threads here.
+ * source for this demographic . people vent real pain in threads here.
  *
  * Uses Reddit's OAuth2 flow via client credentials grant. Requires:
  *   REDDIT_CLIENT_ID

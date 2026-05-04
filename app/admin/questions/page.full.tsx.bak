@@ -100,7 +100,7 @@ function AutoResizeTextarea({
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 
 /**
- * True if the primary input is coarse (finger) — covers iOS + Android, and
+ * True if the primary input is coarse (finger) . covers iOS + Android, and
  * excludes touchscreen laptops that also have a mouse. Used to hide
  * keyboard-shortcut hints on phones.
  */
@@ -174,11 +174,11 @@ function UploadPanel({ onIngested }: { onIngested?: () => void }) {
         body = { ...body, type: 'url', content: url, source_url: url }
       } else if (mode === 'file' && file) {
         if (isPlainTextFile(file)) {
-          // Plain text / markdown — just read as UTF-8 and ship as text
+          // Plain text / markdown . just read as UTF-8 and ship as text
           const plain = await file.text()
           body = { ...body, type: 'text', content: plain }
         } else {
-          // PDF (or anything binary we treat as PDF) — base64, chunked to
+          // PDF (or anything binary we treat as PDF) . base64, chunked to
           // avoid call-stack overflow for large files.
           const buf = new Uint8Array(await file.arrayBuffer())
           let binary = ''
@@ -430,7 +430,7 @@ function UploadPanel({ onIngested }: { onIngested?: () => void }) {
                   boxSizing: 'border-box',
                 }}
               >
-                <option value="">—</option>
+                <option value="">.</option>
                 {['confidence', 'pressure', 'consistency', 'focus', 'slump', 'coaching', 'team', 'mindset', 'motivation', 'identity'].map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
@@ -454,7 +454,7 @@ function UploadPanel({ onIngested }: { onIngested?: () => void }) {
                   boxSizing: 'border-box',
                 }}
               >
-                <option value="">—</option>
+                <option value="">.</option>
                 {['middle_school', 'jv', 'varsity', 'aau', 'college', 'pro', 'rec'].map((l) => (
                   <option key={l} value={l}>{l}</option>
                 ))}
@@ -568,7 +568,7 @@ function KbSourcesPanel({ refreshKey }: { refreshKey: number }) {
       }
     } catch (e) {
       setBackfillMsg(
-        'Request timed out — backfill likely still running. Refresh in 2 min.'
+        'Request timed out . backfill likely still running. Refresh in 2 min.'
       )
     } finally {
       setBackfilling(false)
@@ -649,7 +649,7 @@ function KbSourcesPanel({ refreshKey }: { refreshKey: number }) {
                 ))}
               </div>
 
-              {/* Backfill button — populates inventory from existing Pinecone
+              {/* Backfill button . populates inventory from existing Pinecone
                   content (newsletters + YouTube + Drive PDFs already ingested
                   via cron runs before the kb_sources table existed). */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
@@ -915,7 +915,7 @@ function PainPointCard({
           </div>
         ) : (
           <p style={{ fontSize: '13px', color: '#444', margin: 0, fontStyle: 'italic', fontFamily: '-apple-system, sans-serif' }}>
-            No matches found — answer from scratch
+            No matches found . answer from scratch
           </p>
         )}
       </div>
@@ -1014,7 +1014,7 @@ function PlayerQuestionCard({
   const [refineError, setRefineError] = useState<string | null>(null)
   const [lastPushbacks, setLastPushbacks] = useState<string[] | null>(null)
 
-  // Rubric scorecard — honest grading of voice, specificity, emotional hit,
+  // Rubric scorecard . honest grading of voice, specificity, emotional hit,
   // whether the player will feel heard, action clarity, pushback coverage.
   type ScoreRow = { key: string; label: string; score: number; reason: string }
   const [scores, setScores] = useState<ScoreRow[] | null>(null)
@@ -1049,7 +1049,7 @@ function PlayerQuestionCard({
     }
   }
 
-  // Start a refine round seeded with a specific weakness — clicking a weak
+  // Start a refine round seeded with a specific weakness . clicking a weak
   // row on the scorecard jumps straight into "pull more out of Elijah on
   // this exact dimension."
   const refineTargetedAt = async (dimensionKey: string, dimensionLabel: string) => {
@@ -1185,7 +1185,7 @@ function PlayerQuestionCard({
         body: JSON.stringify({
           questionId: item.id,
           finalAnswer: draft,
-          // Send the scorecard too — only when it's current (not stale) so
+          // Send the scorecard too . only when it's current (not stale) so
           // we persist Claude's grade of the exact answer that shipped.
           scorecard: scores && !scoreStale ? scores : null,
           scorecardOverall: overallScore && !scoreStale ? overallScore : null,
@@ -1207,9 +1207,9 @@ function PlayerQuestionCard({
           // Pre-select all by default
           setSelectedSimilar(new Set(simData.similar.map((q: { id: string }) => q.id)))
           setShowSimilarModal(true)
-          return // Don't auto-dismiss — wait for modal action
+          return // Don't auto-dismiss . wait for modal action
         }
-      } catch { /* fail silently — similarity check is best-effort */ }
+      } catch { /* fail silently . similarity check is best-effort */ }
 
       setApproved(true)
       setTimeout(() => onApproved(item.id), 800)
@@ -1283,7 +1283,7 @@ function PlayerQuestionCard({
         border: '1px solid #1a3a1a', borderRadius: '8px', padding: '20px',
         background: '#0a1a0a', marginBottom: '16px', opacity: 0.5,
       }}>
-        <p style={{ color: '#22c55e', fontSize: '14px', fontWeight: 600, margin: 0 }}>Approved — email sent</p>
+        <p style={{ color: '#22c55e', fontSize: '14px', fontWeight: 600, margin: 0 }}>Approved . email sent</p>
       </div>
     )
   }
@@ -1364,7 +1364,7 @@ function PlayerQuestionCard({
           Source
         </p>
         <p style={{ fontSize: '13px', color: '#444', margin: 0, fontStyle: 'italic', fontFamily: '-apple-system, sans-serif' }}>
-          From your site — Claude draft pre-loaded
+          From your site . Claude draft pre-loaded
         </p>
       </div>
 
@@ -1384,7 +1384,7 @@ function PlayerQuestionCard({
           onBlur={() => setTypingInTextarea(false)}
         />
 
-        {/* Regenerate banner — appears when Elijah adds new context */}
+        {/* Regenerate banner . appears when Elijah adds new context */}
         {showRegenBanner && (
           <div style={{
             marginTop: '10px', background: '#0f1f35', border: '1px solid #1e3a5f',
@@ -1449,7 +1449,7 @@ function PlayerQuestionCard({
           </div>
         )}
 
-        {/* Anticipated pushbacks — shown once after the final is generated, so
+        {/* Anticipated pushbacks . shown once after the final is generated, so
             Elijah can see what objections the AI proactively addressed. */}
         {lastPushbacks && lastPushbacks.length > 0 && (
           <div
@@ -1476,7 +1476,7 @@ function PlayerQuestionCard({
           </div>
         )}
 
-        {/* Refine button — always visible. Starts a multi-turn Q&A where
+        {/* Refine button . always visible. Starts a multi-turn Q&A where
             the AI asks Elijah follow-ups to pull out richer detail. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
           <button
@@ -1559,7 +1559,7 @@ function PlayerQuestionCard({
                   )}
                   {scoreStale && (
                     <span style={{ fontSize: '10px', color: '#f59e0b', fontStyle: 'italic' }}>
-                      draft edited — re-score
+                      draft edited . re-score
                     </span>
                   )}
                 </div>
@@ -1671,7 +1671,7 @@ function PlayerQuestionCard({
                   value={refineAnswer}
                   onChange={(e) => setRefineAnswer(e.target.value)}
                   rows={3}
-                  placeholder="Type your answer — rough is fine, the AI will polish."
+                  placeholder="Type your answer . rough is fine, the AI will polish."
                   style={{
                     width: '100%',
                     background: '#0a0a0a',
@@ -1740,7 +1740,7 @@ function PlayerQuestionCard({
                     minHeight: '40px',
                   }}
                 >
-                  {refineRunning ? 'Finalizing...' : 'Enough — write the final now'}
+                  {refineRunning ? 'Finalizing...' : 'Enough . write the final now'}
                 </button>
               )}
               <button
@@ -1945,7 +1945,7 @@ export default function AdminQuestionsPage() {
   // Bump after each successful KB upload so the inventory refetches
   const [kbRefreshKey, setKbRefreshKey] = useState(0)
 
-  // Mobile tools drawer — on phone the queue is the thing, not the
+  // Mobile tools drawer . on phone the queue is the thing, not the
   // dashboard / upload / inventory. Those are one tap away but not in
   // the way. Desktop shows everything.
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false)
@@ -1984,7 +1984,7 @@ export default function AdminQuestionsPage() {
         data: d,
       }))
 
-    // Deduplicate player questions by question text — keep the most recent per unique (email, question) pair
+    // Deduplicate player questions by question text . keep the most recent per unique (email, question) pair
     const seenPQ = new Map<string, QueueItem>()
     for (const item of playerQuestions) {
       const key = `${(item.data as PlayerQuestion).email}::${(item.data as PlayerQuestion).question.toLowerCase().trim()}`
@@ -2136,7 +2136,7 @@ export default function AdminQuestionsPage() {
       if (!res.ok) {
         setResearchResult(`Error: ${data.error || `${res.status}`}`)
       } else {
-        setResearchResult(`Done — ${data.pending ?? 0} new questions`)
+        setResearchResult(`Done . ${data.pending ?? 0} new questions`)
         if (filter === 'pending') {
           await load('pending')
           await loadCounts()
@@ -2148,7 +2148,7 @@ export default function AdminQuestionsPage() {
       // Research can take >30s on real Reddit volume. The browser gives up
       // on the fetch but the serverless function keeps running up to 300s.
       // Tell the admin the work probably still finished in the background.
-      setResearchResult('Request timed out — research likely still running. Refresh in 2 min.')
+      setResearchResult('Request timed out . research likely still running. Refresh in 2 min.')
     } finally {
       setResearching(false)
     }
@@ -2198,7 +2198,7 @@ export default function AdminQuestionsPage() {
           </a>
         </div>
 
-        {/* Action buttons — hidden on mobile, accessible via the tools drawer.
+        {/* Action buttons . hidden on mobile, accessible via the tools drawer.
             On phone, the queue is what you see; tools are secondary. */}
         <div className="hidden md:flex" style={{ alignItems: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
 
@@ -2271,7 +2271,7 @@ export default function AdminQuestionsPage() {
         </div>{/* end action buttons */}
       </div>
 
-      {/* Mobile-only "Tools" toggle — desktop sees everything inline */}
+      {/* Mobile-only "Tools" toggle . desktop sees everything inline */}
       <div className="md:hidden" style={{ marginBottom: '16px' }}>
         <button
           onClick={() => setMobileToolsOpen((v) => !v)}
@@ -2310,19 +2310,19 @@ export default function AdminQuestionsPage() {
         {[
           {
             label: 'Total Players',
-            value: dashStats ? dashStats.totalPlayers : '—',
+            value: dashStats ? dashStats.totalPlayers : '.',
             sub: 'unique emails',
             onClick: () => setFilter('answered'),
           },
           {
             label: 'This Week',
-            value: dashStats ? dashStats.questionsThisWeek : '—',
+            value: dashStats ? dashStats.questionsThisWeek : '.',
             sub: 'questions submitted',
             onClick: () => setFilter('pending'),
           },
           {
             label: 'Answer Rate',
-            value: dashStats ? `${dashStats.answerRate}%` : '—',
+            value: dashStats ? `${dashStats.answerRate}%` : '.',
             sub: 'questions answered',
             onClick: () => setFilter('answered'),
           },
@@ -2330,17 +2330,17 @@ export default function AdminQuestionsPage() {
             label: 'Avg Response',
             value: dashStats
               ? dashStats.avgResponseHours === null
-                ? '—'
+                ? '.'
                 : dashStats.avgResponseHours < 24
                 ? `${dashStats.avgResponseHours}h`
                 : `${Math.round(dashStats.avgResponseHours / 24)}d`
-              : '—',
+              : '.',
             sub: 'time to answer',
             onClick: null,
           },
           {
             label: 'Waitlist',
-            value: waitlistCount === null ? '—' : waitlistCount,
+            value: waitlistCount === null ? '.' : waitlistCount,
             sub: 'waiting for access',
             onClick: () => {
               setShowWaitlist(true)
@@ -2434,7 +2434,7 @@ export default function AdminQuestionsPage() {
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', margin: '0 0 2px', fontFamily: '-apple-system, sans-serif' }}>
-                      {entry.name || '—'}
+                      {entry.name || '.'}
                     </p>
                     <p style={{ fontSize: '12px', color: '#555', margin: '0 0 4px', fontFamily: '-apple-system, sans-serif' }}>
                       {entry.email}
@@ -2603,7 +2603,7 @@ export default function AdminQuestionsPage() {
                     {q}
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '10px', color: '#555' }}>{email.split('@')[0] || '—'}</span>
+                    <span style={{ fontSize: '10px', color: '#555' }}>{email.split('@')[0] || '.'}</span>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       {status === 'approved' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} />}
                       {status === 'skipped' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />}
@@ -2615,7 +2615,7 @@ export default function AdminQuestionsPage() {
             })}
           </div>
 
-          {/* Detail overlay — full-screen card when a grid item is tapped */}
+          {/* Detail overlay . full-screen card when a grid item is tapped */}
           {detailOpenId && (() => {
             const item = filteredItems.find((i) => i.data.id === detailOpenId)
             if (!item) return null

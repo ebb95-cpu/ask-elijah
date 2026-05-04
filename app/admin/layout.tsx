@@ -3,7 +3,7 @@ import AdminNav from '@/components/AdminNav'
 import { ADMIN_COOKIE, verifyAdminSession } from '@/lib/admin-auth'
 
 /**
- * Auth gating for /admin/* lives in middleware.ts — that runs before any
+ * Auth gating for /admin/* lives in middleware.ts . that runs before any
  * layout/page and can cleanly exempt /admin/login without a redirect loop.
  * This layout just applies the admin chrome to every admin page EXCEPT
  * the login page itself (the login page renders bare).

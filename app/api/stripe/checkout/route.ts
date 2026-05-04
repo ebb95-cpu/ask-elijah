@@ -14,7 +14,7 @@ const PLANS = {
     tier: 'locker_room',
     mode: 'subscription' as const,
     name: 'Ask Elijah Locker Room',
-    description: 'Ask up to 5 questions a month. Every answer Elijah-reviewed.',
+    description: 'Locker Room access. Reviewed answers from Elijah.',
     amount: 1499,
     recurring: { interval: 'month' as const },
   },
@@ -25,36 +25,6 @@ const PLANS = {
     description: 'A full year in the locker room.',
     amount: 12900,
     recurring: { interval: 'year' as const },
-  },
-  priority: {
-    tier: 'priority',
-    mode: 'payment' as const,
-    name: 'Ask Elijah Priority Answer',
-    description: 'Skip the line for one question.',
-    amount: 2900,
-  },
-  inner_circle_monthly: {
-    tier: 'inner_circle',
-    mode: 'subscription' as const,
-    name: 'Ask Elijah Inner Circle',
-    description: 'Priority routing, deeper answer mode, and profile-aware answers.',
-    amount: 2900,
-    recurring: { interval: 'month' as const },
-  },
-  inner_circle_annual: {
-    tier: 'inner_circle_annual',
-    mode: 'subscription' as const,
-    name: 'Ask Elijah Inner Circle Annual',
-    description: 'A full year in the Inner Circle.',
-    amount: 29000,
-    recurring: { interval: 'year' as const },
-  },
-  gift_card_annual: {
-    tier: 'gift_card_annual',
-    mode: 'payment' as const,
-    name: 'Ask Elijah Gift Year',
-    description: 'One year of Locker Room access as a giftable code.',
-    amount: 14900,
   },
 }
 
@@ -120,7 +90,7 @@ export async function POST(req: NextRequest) {
 
     const metadata = {
       email: normalizedEmail,
-      tier: tier || plan?.tier || (mode === 'payment' ? 'priority' : 'locker_room'),
+      tier: tier || plan?.tier || 'locker_room',
       plan: planKey || '',
       is_founding_member: isFoundingMember ? 'true' : 'false',
       trial_source: trialPromo ? 'promo_code' : '',

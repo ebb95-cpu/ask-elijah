@@ -6,7 +6,7 @@ import { getSupabaseClient } from '@/lib/supabase-client'
 import { setLocal } from '@/lib/safe-storage'
 
 /**
- * Endel-style onboarding flow — launched at peak-investment moment, right
+ * Endel-style onboarding flow . launched at peak-investment moment, right
  * after the player has seen the first part of their answer and wants the
  * rest. One question per screen, tap-forward, fade-in transitions.
  *
@@ -16,11 +16,11 @@ import { setLocal } from '@/lib/safe-storage'
  * the next one; per Hormozi Value Equation, effort rises only after
  * they're already invested.
  *
- *   1. Age           — tap
- *   2. Position      — tap
- *   3. Struggle      — tap + optional free-type
- *   4. Name          — type
- *   5. Email + auth  — email + age confirm + Google OAuth or password
+ *   1. Age           . tap
+ *   2. Position      . tap
+ *   3. Struggle      . tap + optional free-type
+ *   4. Name          . type
+ *   5. Email + auth  . email + age confirm + Google OAuth or password
  *
  * Data flow:
  *   - Steps 1-4 are pure UI state.
@@ -122,7 +122,7 @@ export default function AccountSetupForm({
     }
   }
 
-  // Shared email verify + question save — runs at the start of both auth paths.
+  // Shared email verify + question save . runs at the start of both auth paths.
   const verifyAndSaveQuestion = async (cleanEmail: string): Promise<boolean> => {
     const verifyRes = await fetch('/api/verify-email', {
       method: 'POST',
@@ -225,7 +225,7 @@ export default function AccountSetupForm({
     try {
       // If they typed an email, verify it and pre-save the question + profile.
       // If they skipped the email field (using Google as their email provider),
-      // we skip this — /auth/callback provisions the profile using Google's email,
+      // we skip this . /auth/callback provisions the profile using Google's email,
       // and ProfileSyncer on /track writes the onboarding fields afterward.
       if (cleanEmail) {
         const ok = await verifyAndSaveQuestion(cleanEmail)
@@ -265,7 +265,7 @@ export default function AccountSetupForm({
     <div className="w-full max-w-sm mx-auto px-5 py-10 flex flex-col min-h-[560px]">
       <ProgressDots step={step} total={5} />
 
-      {/* Persistent sign-in escape hatch — visible on step 1 so returning
+      {/* Persistent sign-in escape hatch . visible on step 1 so returning
           users on a new device don't have to go through onboarding again. */}
       {step === 1 && (
         <p className="text-center mb-4">
@@ -397,7 +397,7 @@ function StepTapChoice({
       <h1 className="text-3xl font-bold tracking-tight leading-tight mb-3">{title}</h1>
       <p className="text-gray-500 text-sm mb-10">{subtitle}</p>
 
-      {/* 3-column grid, equal width — uniform pills read as "equal choices"
+      {/* 3-column grid, equal width . uniform pills read as "equal choices"
           (Gestalt: similarity + prägnanz). Ragged-edge flex-wrap is
           visually noisy for short fixed labels like ages / positions. */}
       <div className="grid grid-cols-3 gap-3">
@@ -604,7 +604,7 @@ function StepEmailAuth({
   const [existingAccount, setExistingAccount] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Debounced account check — fires 600ms after the user stops typing a
+  // Debounced account check . fires 600ms after the user stops typing a
   // valid-looking email. If an account exists, swap to the sign-in prompt
   // immediately rather than waiting for a submit error.
   useEffect(() => {
@@ -627,7 +627,7 @@ function StepEmailAuth({
         const { exists } = await res.json()
         setExistingAccount(!!exists)
       } catch {
-        /* fail silently — they'll get the error on submit if needed */
+        /* fail silently . they'll get the error on submit if needed */
       }
     }, 600)
 
@@ -636,7 +636,7 @@ function StepEmailAuth({
     }
   }, [email])
 
-  // Google only needs age confirmed — it provides its own email via OAuth.
+  // Google only needs age confirmed . it provides its own email via OAuth.
   // Password path also needs an email typed (it's the account identifier).
   const canGoogle = ageConfirmed
   const canPassword = email.trim().length > 0 && ageConfirmed
@@ -713,7 +713,7 @@ function StepEmailAuth({
         I confirm I am 13 years of age or older
       </label>
 
-      {/* Returning user — swap the whole form for a clean sign-in prompt.
+      {/* Returning user . swap the whole form for a clean sign-in prompt.
           No error, no friction. Just "welcome back." */}
       {existingAccount ? (
         <div className="flex flex-col gap-4">
@@ -739,7 +739,7 @@ function StepEmailAuth({
         </div>
       ) : (
         <>
-          {/* Google OAuth — primary CTA */}
+          {/* Google OAuth . primary CTA */}
           <button
             type="button"
             onClick={onGoogle}

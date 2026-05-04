@@ -65,7 +65,7 @@ function profileLines(p: Profile | undefined): string {
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
 
-  // Cheap guardrail against anonymous abuse — 30 classifications per hour is
+  // Cheap guardrail against anonymous abuse . 30 classifications per hour is
   // plenty for real users (who usually submit once or twice) and kills bots.
   const limit = await checkLimit('rl:gatekeep', ip, 30, '1 h')
   if (!limit.success) {
@@ -116,7 +116,7 @@ Return ONLY valid JSON, no preamble, no code fences:
     try {
       parsed = JSON.parse(clean)
     } catch {
-      // Unparseable model output — let the question through rather than
+      // Unparseable model output . let the question through rather than
       // falsely blocking a real player because Haiku returned something weird.
       return NextResponse.json({ classification: 'legit' as Classification, reason: 'parse-failopen' })
     }
@@ -132,7 +132,7 @@ Return ONLY valid JSON, no preamble, no code fences:
       })
     }
 
-    // Unknown value — fail open.
+    // Unknown value . fail open.
     return NextResponse.json({ classification: 'legit' as Classification, reason: 'unknown-class-failopen' })
   } catch (err) {
     await logError('gatekeep:anthropic', err, { question: question.slice(0, 80) })

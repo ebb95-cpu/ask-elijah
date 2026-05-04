@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Use Claude to cluster the questions into themes. Give Elijah themes not
-    // a flat list — makes it obvious what videos/newsletters to make.
+    // a flat list . makes it obvious what videos/newsletters to make.
     let clustering = ''
     try {
       const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
         messages: [{
           role: 'user',
           content: `Here are basketball player questions that Elijah's knowledge base didn't have good content for. Cluster them into 3-6 CONTENT THEMES he should record this week. For each theme:
-- A specific title for a video or newsletter (not generic — e.g. "What to do the 48 hours after a bad game" not "handling bad games")
+- A specific title for a video or newsletter (not generic . e.g. "What to do the 48 hours after a bad game" not "handling bad games")
 - 1-sentence hook
 - How many of these questions that theme would cover
 
@@ -88,7 +88,7 @@ Return plain text, no preamble.`,
     await resend.emails.send({
       from: 'Ask Elijah <elijah@elijahbryant.pro>',
       to: process.env.ADMIN_EMAIL!,
-      subject: `Content to record this week — ${gaps.length} questions with no good answer in your KB`,
+      subject: `Content to record this week . ${gaps.length} questions with no good answer in your KB`,
       html: `
 <div style="font-family: -apple-system, sans-serif; max-width: 640px; margin: 0 auto; padding: 40px 32px; color: #111;">
   <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #999; margin-bottom: 24px;">Ask Elijah · Weekly content gap report</p>

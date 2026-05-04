@@ -10,7 +10,7 @@ const META_LINE_PATTERNS = [
 ]
 
 const FENCE_PATTERN = /^```(?:\w+)?\s*|\s*```$/g
-const DASH_PUNCTUATION_PATTERN = /[—–―]+|\s-\s/g
+const DASH_PUNCTUATION_PATTERN = /[.–―]+|\s-\s/g
 const WORD_HYPHEN_PATTERN = /(?<=\w)-(?=\w)/g
 
 function isMetaLine(line: string): boolean {

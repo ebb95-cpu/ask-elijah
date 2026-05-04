@@ -13,7 +13,7 @@ export async function POST(_req: NextRequest) {
   // Call the research logic directly in-process. Previously this proxied
   // through an HTTPS request to the cron endpoint, which meant a double
   // timeout (browser + outer function) and a hard dependency on the site
-  // URL being resolvable from inside the function — the main cause of the
+  // URL being resolvable from inside the function . the main cause of the
   // "Network failure" the admin kept seeing.
   const result = await runDailyResearch()
 

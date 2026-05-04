@@ -57,10 +57,10 @@ async function getKnowledgeContext(question: string): Promise<string> {
 }
 
 const MODE_GUIDANCE: Record<string, string> = {
-  bad_game: `This player JUST had a bad game. Your clarifying question should be emotional, not tactical. Ask about what they felt, not what they did. Think: "How bad did it feel after?" or "Was this one game or a pattern?" Never ask "what do you want to work on" — they don't want a drill right now.`,
-  coach: `This is a coach-situation question. Ask what the coach has actually said to them recently, or what the relationship looks like day-to-day. Avoid generic "have you talked to them" — dig into the specific dynamic.`,
+  bad_game: `This player JUST had a bad game. Your clarifying question should be emotional, not tactical. Ask about what they felt, not what they did. Think: "How bad did it feel after?" or "Was this one game or a pattern?" Never ask "what do you want to work on" . they don't want a drill right now.`,
+  coach: `This is a coach-situation question. Ask what the coach has actually said to them recently, or what the relationship looks like day-to-day. Avoid generic "have you talked to them" . dig into the specific dynamic.`,
   playing_time: `This is a playing-time question. Ask either: who's ahead of them on the depth chart, what's their role in practice, or what the coach has specifically told them they need to do. Pick the one that most unlocks the answer.`,
-  parent: `This is from a parent asking about their kid. Ask one question that reveals what the parent is REALLY worried about underneath — is it their kid's happiness, their own disappointment, the coach, college exposure? Don't ask about drills or technique.`,
+  parent: `This is from a parent asking about their kid. Ask one question that reveals what the parent is REALLY worried about underneath . is it their kid's happiness, their own disappointment, the coach, college exposure? Don't ask about drills or technique.`,
 }
 
 async function getFirstName(email?: string, providedName?: string): Promise<string | null> {
@@ -119,16 +119,16 @@ Player's question: "${question}"
 ${firstName ? `Player's first name: ${firstName}\n` : ''}
 ${conversationText ? `\nConversation so far:\n${conversationText}\n` : ''}
 ${knowledgeSection}
-Your job: figure out what specific detail about THEIR situation would let you give the most targeted answer possible. Not general info — the one thing that changes how you'd respond.
+Your job: figure out what specific detail about THEIR situation would let you give the most targeted answer possible. Not general info . the one thing that changes how you'd respond.
 
 Rules:
 - If you have enough context, return done: true
-- If you need one more thing, ask it in your natural voice — short, conversational, like a text
+- If you need one more thing, ask it in your natural voice . short, conversational, like a text
 - If you know their first name, use it naturally in the first sentence
 - Never ask more than one question
 - Ask about their specific situation, not generic things like position or level
 - Ask about: what exactly happened, what they felt, what they tried, what the relationship is like, what "bad" means to them
-- Use your knowledge above to ask smarter questions — if you know your answer branches based on something specific, ask about that thing
+- Use your knowledge above to ask smarter questions . if you know your answer branches based on something specific, ask about that thing
 - After 2 good rounds of answers, lean toward done: true
 - Never use dash punctuation in the follow-up. No em dashes, no en dashes, and no spaced hyphens. Use commas, periods, or new sentences.
 

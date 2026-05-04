@@ -19,7 +19,7 @@ export default function NewAnswerNotification() {
       const count = (data.questions || []).length
 
       if (knownCountRef.current === null) {
-        // First load — store baseline, don't notify
+        // First load . store baseline, don't notify
         knownCountRef.current = count
         const stored = getLocal('ask_elijah_seen_count')
         if (stored && count > parseInt(stored)) {

@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
         // Don't send to the original asker (they already got the personal email)
         const recipients = uniqueEmails.filter(e => e !== q.email)
 
-        // Teaser — first 160 chars of answer
+        // Teaser . first 160 chars of answer
         const teaser = q.answer.slice(0, 160) + (q.answer.length > 160 ? '...' : '')
 
         // Send in batches of 50 to respect rate limits

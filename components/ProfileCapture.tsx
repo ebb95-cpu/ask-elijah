@@ -21,7 +21,7 @@ interface Props {
   email: string
   /**
    * Per-question context. When provided, dismissing the capture only hides it
-   * for that specific question's detail view — the next approved answer will
+   * for that specific question's detail view . the next approved answer will
    * re-show it. Omit for inline usage (e.g. at the top of /history) and pass
    * a stable `dismissScope` instead so skip persists across renders without
    * being tied to a single answer.
@@ -118,7 +118,7 @@ export default function ProfileCapture({ email, questionId, dismissScope }: Prop
     try {
       sessionStorage.setItem(dismissKey, '1')
     } catch {
-      /* sessionStorage blocked — just hide for this render */
+      /* sessionStorage blocked . just hide for this render */
     }
     setDismissed(true)
   }

@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   })
 
   if (error || !data?.properties?.action_link) {
-    // Don't leak whether the email exists — always say "sent".
+    // Don't leak whether the email exists . always say "sent".
     return NextResponse.json({ ok: true })
   }
 

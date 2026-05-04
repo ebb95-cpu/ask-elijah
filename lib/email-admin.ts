@@ -29,7 +29,7 @@ export async function emailAdmin(subject: string, bodyHtml: string): Promise<voi
       html: bodyHtml,
     })
   } catch (err) {
-    // Don't block the original request on email failure — just log.
+    // Don't block the original request on email failure . just log.
     await logError('email-admin:send', err, { subject })
   }
 }

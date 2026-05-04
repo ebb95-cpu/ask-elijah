@@ -11,7 +11,7 @@ import type { NextResponse } from 'next/server'
  *     person's email and read their questions.
  *   - Kickbox only proves the address is deliverable, NOT that the submitter
  *     controls the mailbox. So this cookie is intentionally same-browser only
- *     and expires in 30 days — if someone wants cross-device access, they
+ *     and expires in 30 days . if someone wants cross-device access, they
  *     create an account. That's the upgrade path.
  *   - Signed with HMAC-SHA256 via Web Crypto so it works in both Node route
  *     handlers and Edge middleware.

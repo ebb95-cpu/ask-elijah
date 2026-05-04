@@ -8,7 +8,7 @@ import Link from 'next/link'
  *
  * Renders the real student site inside one or two device frames so the admin
  * can preview phone and desktop UX without leaving admin chrome. Each frame
- * is CSS-transform scaled to fit its slot's WIDTH and HEIGHT — no scroll,
+ * is CSS-transform scaled to fit its slot's WIDTH and HEIGHT . no scroll,
  * no clipping, regardless of monitor size.
  *
  * Three view modes:
@@ -24,7 +24,7 @@ const ROUTES: RouteDef[] = [
   { key: 'signup', label: 'Sign up', href: '/sign-up', note: 'Account creation flow.' },
   { key: 'home', label: 'Home', href: '/', note: 'Landing page.' },
   { key: 'ask', label: 'Ask', href: '/ask', note: 'Main ask-a-question screen.' },
-  { key: 'browse', label: 'Browse', href: '/browse', note: 'Public Q&A gallery — ✓ Elijah badges visible here.' },
+  { key: 'browse', label: 'Browse', href: '/browse', note: 'Public Q&A gallery . ✓ Elijah badges visible here.' },
   { key: 'history', label: 'History', href: '/history', note: "Student's own question history (needs login)." },
   { key: 'library', label: 'Library', href: '/library', note: 'Saved content.' },
   { key: 'profile', label: 'Profile', href: '/profile', note: 'Account settings.' },
@@ -104,7 +104,7 @@ export default function AdminSimulatePage() {
         </span>
       </div>
 
-      {/* Controls — single compact row */}
+      {/* Controls . single compact row */}
       <div
         style={{
           display: 'flex',
@@ -149,7 +149,7 @@ export default function AdminSimulatePage() {
         </button>
       </div>
 
-      {/* Stage — fills remaining vertical space, holds one or two device frames */}
+      {/* Stage . fills remaining vertical space, holds one or two device frames */}
       <div
         style={{
           flex: 1,
@@ -167,7 +167,7 @@ export default function AdminSimulatePage() {
             height={PHONE.height}
             src={src}
             iframeKey={iframeKey}
-            label={`Phone — ${route.label}`}
+            label={`Phone . ${route.label}`}
           />
         )}
         {(view === 'web' || view === 'both') && (
@@ -177,7 +177,7 @@ export default function AdminSimulatePage() {
             height={WEB.height}
             src={src}
             iframeKey={iframeKey}
-            label={`Web — ${route.label}`}
+            label={`Web . ${route.label}`}
           />
         )}
       </div>
@@ -185,7 +185,7 @@ export default function AdminSimulatePage() {
   )
 }
 
-// ── Device slot — measures its container, scales to fit width AND height ──
+// ── Device slot . measures its container, scales to fit width AND height ──
 
 function DeviceSlot({
   kind,
@@ -236,7 +236,7 @@ function DeviceSlot({
   }, [iframeKey])
 
   // Scale = min(widthFit, heightFit) so the frame fits inside the slot
-  // both horizontally and vertically. Capped at 1 — never upscale.
+  // both horizontally and vertically. Capped at 1 . never upscale.
   const padding = kind === 'phone' ? 14 : 10
   const frameW = width + padding * 2
   const frameH = height + CHROME_HEIGHT + padding * 2

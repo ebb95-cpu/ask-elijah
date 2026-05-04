@@ -10,7 +10,7 @@ import LoadingDots from '@/components/ui/LoadingDots'
  *
  * When JS IS loaded, we override the default submit with fetch() so we can
  * show inline error state instead of a full-page redirect on wrong password.
- * Either way the server flow is identical — same endpoint, same cookie.
+ * Either way the server flow is identical . same endpoint, same cookie.
  */
 export default function AdminLoginForm({ initialError }: { initialError: string | null }) {
   const [password, setPassword] = useState('')

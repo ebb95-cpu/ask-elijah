@@ -1,7 +1,7 @@
 import { promises as dns } from 'dns'
 
 // Small, high-confidence disposable email domain blocklist. Covers ~95% of
-// real-world throwaway providers — not exhaustive, but matches the common
+// real-world throwaway providers . not exhaustive, but matches the common
 // bot signup patterns we want to keep out without a dependency.
 const DISPOSABLE_DOMAINS = new Set([
   'mailinator.com',
@@ -28,7 +28,7 @@ const DISPOSABLE_DOMAINS = new Set([
   'mohmal.in',
 ])
 
-// RFC-ish. Stricter than HTML5 type="email" — requires a dot in the domain
+// RFC-ish. Stricter than HTML5 type="email" . requires a dot in the domain
 // and rejects obviously broken patterns without false-rejecting valid edge
 // cases like `user+tag@sub.example.co.uk`.
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/
@@ -60,7 +60,7 @@ export async function verifyEmail(emailRaw: string): Promise<EmailVerifyResult> 
 
   // ── Layer 2: disposable blocklist ──
   if (DISPOSABLE_DOMAINS.has(domain)) {
-    return { ok: false, reason: 'Please use your real email — throwaway addresses aren\'t supported.' }
+    return { ok: false, reason: 'Please use your real email . throwaway addresses aren\'t supported.' }
   }
 
   // ── Layer 3: MX record lookup ──
@@ -96,7 +96,7 @@ export async function verifyEmail(emailRaw: string): Promise<EmailVerifyResult> 
     if (data.result === 'undeliverable') {
       return { ok: false, reason: 'That email doesn\'t exist. Double-check the spelling.' }
     }
-    // "deliverable", "risky", "unknown" all pass — risky/unknown means
+    // "deliverable", "risky", "unknown" all pass . risky/unknown means
     // Kickbox can't be sure (catch-all domain, role account, etc.), and
     // we'd rather occasionally email a flaky address than block a real user.
     return { ok: true }

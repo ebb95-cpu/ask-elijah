@@ -1,4 +1,4 @@
-// Streams a preview answer for the homepage — no DB, no email, just the answer
+// Streams a preview answer for the homepage . no DB, no email, just the answer
 import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
         ragContext = `Here is relevant content from Elijah's YouTube videos and newsletters:\n\n${chunks.join('\n\n---\n\n')}\n\n`
       }
     } catch {
-      // RAG failed — treat as no chunks
+      // RAG failed . treat as no chunks
     }
 
     // If no relevant content found in Elijah's knowledge base, stream a fallback

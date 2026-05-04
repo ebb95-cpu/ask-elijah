@@ -7,24 +7,24 @@ const DISMISS_KEY = 'ae_court_welcome_seen'
 /**
  * First-visit payoff modal shown on /track after onboarding. Structured
  * as pain-mirror → mechanism → proof → transfer/solve. Each card anchors
- * to a real neuroscience study so the claims aren't vibes — Hormozi-style
+ * to a real neuroscience study so the claims aren't vibes . Hormozi-style
  * proof stacking inside a Nir Eyal fast-reward pacing.
  *
- *   Card 1 — PAIN MIRROR. Reflects the struggle they named in onboarding
+ *   Card 1 . PAIN MIRROR. Reflects the struggle they named in onboarding
  *            back at them.
- *   Card 2 — MECHANISM (Harvard Medical School). Mental practice
+ *   Card 2 . MECHANISM (Harvard Medical School). Mental practice
  *            produces the same motor cortex reorganization as physical
  *            practice. Source: Pascual-Leone et al. 1995, "Modulation of
  *            muscle responses evoked by transcranial magnetic stimulation
  *            during the acquisition of new fine motor skills," Journal
  *            of Neurophysiology 74(3).
- *   Card 3 — PROOF (Cleveland Clinic). +35% finger abduction strength
+ *   Card 3 . PROOF (Cleveland Clinic). +35% finger abduction strength
  *            from imagined contractions alone, 0% from physical training
  *            in the control of no-imagery group. Source: Ranganathan,
  *            Siemionow, Liu, Sahgal, Yue 2004, "From mental power to
- *            muscle power — gaining strength by using the mind,"
+ *            muscle power . gaining strength by using the mind,"
  *            Neuropsychologia 42.
- *   Card 4 — TRANSFER + SOLUTION. Executive function training transfers
+ *   Card 4 . TRANSFER + SOLUTION. Executive function training transfers
  *            across domains (Diamond 2013, Annual Review of Psychology).
  *            Brand close: "That's what we train here."
  *
@@ -41,7 +41,7 @@ export default function CourtWelcomeBanner({ struggle }: { struggle?: string | n
     try {
       if (!localStorage.getItem(DISMISS_KEY)) setVisible(true)
     } catch {
-      /* localStorage blocked — skip */
+      /* localStorage blocked . skip */
     }
   }, [])
 

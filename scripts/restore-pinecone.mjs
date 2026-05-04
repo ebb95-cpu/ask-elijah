@@ -1,12 +1,12 @@
 /**
- * Ask Elijah — Restore Pinecone from Supabase Storage
+ * Ask Elijah . Restore Pinecone from Supabase Storage
  *
  * Downloads the latest backup from Supabase and re-upserts
  * all vectors back into Pinecone.
  *
  * Usage:
- *   node scripts/restore-pinecone.mjs              — restores latest.json
- *   node scripts/restore-pinecone.mjs backup-2026-04-14.json  — specific backup
+ *   node scripts/restore-pinecone.mjs              . restores latest.json
+ *   node scripts/restore-pinecone.mjs backup-2026-04-14.json  . specific backup
  */
 
 import { config } from 'dotenv'
@@ -24,7 +24,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 const filename = process.argv[2] || 'latest.json'
 
-console.log(`\n🔄 Ask Elijah — Pinecone Restore\n`)
+console.log(`\n🔄 Ask Elijah . Pinecone Restore\n`)
 console.log(`  Restoring from: ${filename}\n`)
 
 // Download backup from Supabase

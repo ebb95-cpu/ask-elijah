@@ -7,7 +7,7 @@ import { simFetch } from '@/lib/simulator'
 /**
  * One-tap feedback widget attached to an approved answer. Thumbs-up is
  * silent fire-and-forget. Thumbs-down opens a small textarea so the
- * student can optionally say why — that explanation is the highest-signal
+ * student can optionally say why . that explanation is the highest-signal
  * feedback this product can get.
  *
  * Stores the vote in localStorage so the UI reflects prior state on
@@ -15,7 +15,7 @@ import { simFetch } from '@/lib/simulator'
  *
  * Props:
  *   - questionId: approved question UUID
- *   - email: student's email (optional — anonymous feedback still accepted)
+ *   - email: student's email (optional . anonymous feedback still accepted)
  *   - compact: tighter styling for emails or dense lists
  */
 
@@ -83,14 +83,14 @@ export default function ThumbsFeedback({
       writeVote(questionId, rating)
       setVote(rating)
       if (rating === 'down' && !withComment) {
-        // Prompt them for the explanation — it's the real signal.
+        // Prompt them for the explanation . it's the real signal.
         setShowComment(true)
       } else {
         setDone(true)
         setShowComment(false)
       }
     } catch {
-      /* fail silently — we don't want feedback UX to break the page */
+      /* fail silently . we don't want feedback UX to break the page */
     } finally {
       setSending(false)
     }

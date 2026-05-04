@@ -30,7 +30,7 @@ export default async function AdminLoginPage({ searchParams }: Props) {
         padding: '24px',
       }}
     >
-      {/* HTML form as the source of truth. Submits natively — works without
+      {/* HTML form as the source of truth. Submits natively . works without
           any JS loading, so mobile Safari cache issues can't break it.
           The React form below progressively enhances this (same endpoint,
           nicer error handling), but if JS never runs this still works. */}

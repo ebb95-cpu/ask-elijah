@@ -7,10 +7,6 @@ import { getLocal, setLocal } from '@/lib/safe-storage'
 export type CheckoutPlan =
   | 'locker_monthly'
   | 'locker_annual'
-  | 'inner_circle_monthly'
-  | 'inner_circle_annual'
-  | 'priority'
-  | 'gift_card_annual'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const EMAIL_KEYS = ['ask_elijah_email', 'ask-elijah-email', 'playerEmail']

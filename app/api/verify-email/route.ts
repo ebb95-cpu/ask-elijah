@@ -14,7 +14,7 @@ import { logError } from '@/lib/log-error'
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
 
-  // Throttle anonymous abuse — 30/hour is plenty for real users typing an
+  // Throttle anonymous abuse . 30/hour is plenty for real users typing an
   // email once or twice, but stops a bot from hammering Kickbox credits.
   const limit = await checkLimit('rl:verify-email', ip, 30, '1 h')
   if (!limit.success) {
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       await attachTrackCookie(res, email)
     } catch (err) {
       // Most likely JWT_SECRET missing or signing failed. Degrade gracefully
-      // so the request still succeeds, but log so we notice the misconfig —
+      // so the request still succeeds, but log so we notice the misconfig .
       // silently swallowing here is how the cookie-not-set bug hid in prod.
       await logError('verify-email:track-cookie', err, { email: email.slice(0, 60) })
     }

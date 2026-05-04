@@ -18,12 +18,12 @@ export async function POST(req: NextRequest) {
       .update({ email: cleanEmail })
       .eq('id', questionId)
 
-    // Invite the user to Supabase Auth — creates account silently if they don't have one.
+    // Invite the user to Supabase Auth . creates account silently if they don't have one.
     // Uses admin API so no confirmation email is sent here (they'll get the magic link when they sign in).
     await supabase.auth.admin.inviteUserByEmail(cleanEmail, {
       redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/ask`,
     }).catch(() => {
-      // User may already exist — that's fine, ignore the error
+      // User may already exist . that's fine, ignore the error
     })
 
     return NextResponse.json({ ok: true })

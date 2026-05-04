@@ -311,7 +311,7 @@ async function runInPool(items, limit, fn) {
 // ── Main ──────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log(`\n🎙  Ingesting "${SPEAKER}" — prefix: ${PREFIX}\n`)
+  console.log(`\n🎙  Ingesting "${SPEAKER}" . prefix: ${PREFIX}\n`)
 
   let urls = []
   if (URLS_FILE) {
@@ -352,7 +352,7 @@ async function main() {
   if (LIMIT) filtered = filtered.slice(0, LIMIT)
 
   if (DRY_RUN) {
-    console.log('\n  DRY RUN — videos that would be ingested:')
+    console.log('\n  DRY RUN . videos that would be ingested:')
     filtered.forEach((v, i) => console.log(`    ${i + 1}. ${v.title} (${v.videoId}, ${v.duration}s)`))
     return
   }

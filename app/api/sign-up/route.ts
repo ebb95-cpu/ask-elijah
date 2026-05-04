@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     if (cleanAge) upsertRow.age = cleanAge
     if (cleanPosition) upsertRow.position = cleanPosition
     if (cleanLanguage) upsertRow.language = cleanLanguage
-    // Fire-and-forget — if `weaknesses`/`strengths` columns don't exist yet
+    // Fire-and-forget . if `weaknesses`/`strengths` columns don't exist yet
     // in Supabase, the upsert will fail silently and the rest of the row
     // still saves. See scripts/add-profile-columns.sql for the migration.
     await supabase.from('profiles').upsert(upsertRow).then(() => {}, () => {})

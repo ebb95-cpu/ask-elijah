@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
  * POST /api/feedback
  *
  * Student's thumbs-up/down on an approved answer. One vote per
- * (question_id, email) — re-tapping swaps the rating.
+ * (question_id, email) . re-tapping swaps the rating.
  *
  * Body:
  *   { question_id: string, email: string, rating: 'up'|'down', comment?: string }
@@ -78,12 +78,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Auto-notify Elijah when the feedback is negative AND has a comment —
+    // Auto-notify Elijah when the feedback is negative AND has a comment .
     // that's the stuff he needs to see before next week's dashboard review.
     // A bare 👎 with no explanation is still useful in aggregate but not
     // worth an interrupt.
     if (rating === 'down' && comment && comment.trim().length > 0) {
-      // Pull the question so the email has context — fire-and-forget.
+      // Pull the question so the email has context . fire-and-forget.
       supabase
         .from('questions')
         .select('question, answer')

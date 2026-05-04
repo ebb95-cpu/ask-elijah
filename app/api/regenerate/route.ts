@@ -79,10 +79,10 @@ ${freshnessInstruction}
 ${preferenceContext}
 
 Rewrite the final answer weaving Elijah's additions into the draft. Follow this structure every time:
-1. Open by naming the exact pain or feeling they have — make them feel heard immediately
-2. Explain WHY this happens (the real mechanism — brain, body, how pressure works) in Elijah's voice, not as a fact recitation. Use web_search to verify the mechanism claim before stating it — 1-2 lookups is the norm.
+1. Open by naming the exact pain or feeling they have . make them feel heard immediately
+2. Explain WHY this happens (the real mechanism . brain, body, how pressure works) in Elijah's voice, not as a fact recitation. Use web_search to verify the mechanism claim before stating it . 1-2 lookups is the norm.
 3. Give the solution grounded in Elijah's personal experience and what he added above
-4. End with ONE specific action they must take today — concrete enough that there is no excuse not to do it
+4. End with ONE specific action they must take today . concrete enough that there is no excuse not to do it
 
 Use Elijah's real additions as the core. The draft is just scaffolding. His voice and his experience win every time. Research supports the mechanism; it doesn't replace the voice. Weave, don't stack.
 Make the psychology easy enough for a young kid to understand, but backed by credible science. The player should walk away knowing exactly what to do today.

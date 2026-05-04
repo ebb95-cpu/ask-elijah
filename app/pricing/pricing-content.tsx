@@ -1,13 +1,8 @@
 import Link from 'next/link'
-import { unstable_cache } from 'next/cache'
-import type { ReactNode } from 'react'
 import FoundersBetaForm from './founders-beta-form'
-import CheckoutButton from './checkout-button'
-import { getSupabase } from '@/lib/supabase-server'
+import { FOUNDING_SEAT_LIMIT, getFoundingSeatCount, getFoundingSeatsLeft } from '@/lib/founding-seats'
 import type { PricingPhase } from '@/lib/pricing-phase'
-
-const FOUNDING_SEAT_LIMIT = 200
-const INNER_CIRCLE_LIMIT = 200
+import { MathReveal, PRICING_VALUE_ITEMS, RiskReversal, ValueStack } from '@/components/marketing/ValueStack'
 
 function Logo() {
   return (
@@ -21,120 +16,24 @@ function Logo() {
   )
 }
 
-const getFoundingSeatCount = unstable_cache(async () => {
-  try {
-    const { count, error } = await getSupabase()
-      .from('waitlist')
-      .select('id', { count: 'exact', head: true })
-      .eq('approved', true)
-
-    if (error) return null
-    return count || 0
-  } catch {
-    return null
-  }
-}, ['founding-seat-count'], { revalidate: 60 })
-
-const getInnerCircleSeatCount = unstable_cache(async () => {
-  try {
-    const { count, error } = await getSupabase()
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .in('subscription_tier', ['inner_circle', 'founding_inner_circle'])
-      .in('subscription_status', ['active', 'trialing'])
-
-    if (error) return null
-    return count || 0
-  } catch {
-    return null
-  }
-}, ['inner-circle-seat-count'], { revalidate: 60 })
-
-function SeatCounter({ count, limit, label }: { count: number | null; limit: number; label: string }) {
-  if (count === null) {
-    return (
-      <p className="mt-6 inline-flex rounded-full border border-gray-900 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-gray-500">
-        Seats remaining
-      </p>
-    )
-  }
-
-  return (
-    <p className="mt-6 inline-flex rounded-full border border-gray-900 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-gray-400">
-      {count} of {limit} {label} taken
-    </p>
-  )
-}
-
-function FoundingSeatCounter({ count, limit }: { count: number | null; limit: number }) {
-  if (count === null) {
-    return (
-      <p className="mt-6 inline-flex rounded-full border border-gray-900 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-gray-500">
-        Only {limit} founding seats
-      </p>
-    )
-  }
-
-  const remaining = Math.max(limit - count, 0)
-
+function FoundingSeatCounter({ count }: { count: number | null }) {
+  const remaining = getFoundingSeatsLeft(count)
   return (
     <p className="mt-6 inline-flex rounded-full border border-gray-900 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#F7F5F0]">
-      {remaining} founding seats left
+      {remaining === null ? `Only ${FOUNDING_SEAT_LIMIT} founding seats` : `${remaining} founding seats left`}
     </p>
   )
 }
 
-function DisplayCard({ label, price, body, cream = false }: { label: string; price: string; body: string; cream?: boolean }) {
-  return (
-    <div className={cream ? 'rounded-[2rem] bg-[#F7F5F0] p-6 text-black' : 'rounded-[2rem] border border-gray-900 bg-[#050505] p-6'}>
-      <p className={cream ? 'text-xs font-black uppercase tracking-[0.22em] text-gray-500' : 'text-xs font-black uppercase tracking-[0.22em] text-gray-600'}>
-        {label}
-      </p>
-      <p className="mt-4 text-3xl font-black">{price}</p>
-      <p className={cream ? 'mt-3 text-sm font-semibold leading-relaxed text-gray-600' : 'mt-3 text-sm leading-relaxed text-gray-500'}>
-        {body}
-      </p>
-    </div>
-  )
-}
-
-function ValueStack() {
+function ComparisonStack() {
   const rows = [
-    {
-      label: 'AAU and team fees',
-      cost: '$500-$3,000+ / season',
-      body: 'Gets him games. But games alone do not explain why he freezes, why he is losing minutes, or why he stopped talking on the ride home.',
-    },
-    {
-      label: 'Private basketball trainer',
-      cost: '$75-$200+ / session',
-      body: 'Great for skill work. But most trainers are not answering the confidence, role, pressure, and coach problems that follow you home.',
-    },
-    {
-      label: 'Camps and showcases',
-      cost: '$150-$500+ / event',
-      body: 'Useful exposure. But exposure does not help much if he gets tight the moment coaches are watching.',
-    },
-    {
-      label: 'Sport psychologist',
-      cost: '$100-$250+ / session',
-      body: 'Helpful for mental skills. Ask Elijah is different because the answer comes through someone who has lived the bench, the pressure, the slump, and the locker room.',
-    },
-    {
-      label: 'Sports physio',
-      cost: '$100-$300 / visit',
-      body: 'Important when your body needs help. This is for the part nobody can stretch out: fear, doubt, playing time, identity, and what to do next.',
-    },
-    {
-      label: 'Recruiting advice',
-      cost: '$100-$300+ / call',
-      body: 'Helpful for decisions. But players still need help with the pressure, the comparison, and what to actually do this week.',
-    },
-    {
-      label: 'Pro locker-room perspective',
-      cost: 'Usually not available',
-      body: 'NBA and EuroLeague champion context. Coach problems. Role problems. Confidence problems. The stuff players do not always say out loud.',
-    },
+    ['AAU and team fees', '$500-$3,000+ / season', 'Gets him games. It does not explain why he freezes, why he is losing minutes, or why he stopped talking on the ride home.'],
+    ['Private basketball trainer', '$75-$200+ / session', 'Great for skill work. Most trainers are not answering the confidence, role, pressure, and coach problems that follow him home.'],
+    ['Camps and showcases', '$150-$500+ / event', 'Useful exposure. Exposure does not help much if he gets tight the moment coaches are watching.'],
+    ['Sport psychologist', '$100-$250+ / session', 'Helpful for mental skills. Ask Elijah is different because the answer comes through someone who has lived the bench, pressure, slump, and locker room.'],
+    ['Sports physio', '$100-$300 / visit', 'Important when the body needs help. This is for the part nobody can stretch out: fear, doubt, playing time, identity, and what to do next.'],
+    ['Recruiting advice', '$100-$300+ / call', 'Helpful for decisions. Players still need help with the pressure, comparison, and what to actually do this week.'],
+    ['Pro locker-room perspective', 'Usually not available', 'NBA and EuroLeague champion context. Coach problems. Role problems. Confidence problems. The stuff players do not always say out loud.'],
   ]
 
   return (
@@ -150,11 +49,11 @@ function ValueStack() {
           Skill work matters. Exposure matters. Recovery matters. But none of those always answer the question sitting in his head.
         </p>
         <div className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {rows.map((row) => (
-            <div key={row.label} className="rounded-[1.5rem] border border-gray-900 bg-black p-5">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">{row.label}</p>
-              <p className="mt-4 text-2xl font-black text-[#F7F5F0]">{row.cost}</p>
-              <p className="mt-4 text-sm font-semibold leading-relaxed text-gray-500">{row.body}</p>
+          {rows.map(([label, cost, body]) => (
+            <div key={label} className="rounded-[1.5rem] border border-gray-900 bg-black p-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">{label}</p>
+              <p className="mt-4 text-2xl font-black text-[#F7F5F0]">{cost}</p>
+              <p className="mt-4 text-sm font-semibold leading-relaxed text-gray-500">{body}</p>
             </div>
           ))}
         </div>
@@ -170,56 +69,79 @@ function ValueStack() {
   )
 }
 
-function PublicTierCard({
-  label,
-  price,
-  body,
-  cream = false,
-  children,
-}: {
-  label: string
-  price: string
-  body: string
-  cream?: boolean
-  children: ReactNode
-}) {
-  return (
-    <div className={cream ? 'rounded-[2rem] border border-white bg-[#F7F5F0] p-7 text-black shadow-[0_0_80px_rgba(255,255,255,0.12)]' : 'rounded-[2rem] border border-gray-900 bg-[#050505] p-7'}>
-      <p className={cream ? 'text-xs font-black uppercase tracking-[0.22em] text-gray-500' : 'text-xs font-black uppercase tracking-[0.22em] text-gray-600'}>
-        {label}
-      </p>
-      <p className="mt-5 text-4xl font-black">{price}</p>
-      <p className={cream ? 'mt-3 text-sm font-semibold leading-relaxed text-gray-600' : 'mt-3 text-sm leading-relaxed text-gray-500'}>
-        {body}
-      </p>
-      <div className="mt-8 space-y-3">{children}</div>
-    </div>
-  )
-}
+function PricingTiers({ seatsTaken }: { seatsTaken: number | null }) {
+  const seatsLeft = getFoundingSeatsLeft(seatsTaken) ?? 196
 
-function PreviewTiers() {
   return (
-    <section className="mx-auto max-w-6xl px-5 pb-16">
+    <section className="mx-auto max-w-6xl px-5 pb-16" id="locker-room">
       <p className="mb-6 text-xs font-black uppercase tracking-[0.24em] text-gray-600">
-        Preview: post-launch pricing
+        WHAT YOU GET WHEN THE DOOR OPENS
       </p>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <DisplayCard label="Free" price="$0" body="Browse public answers. 1 trial question per month." />
-        <DisplayCard label="Locker Room" price="$14.99/mo" body="$129/year if they want annual. Unlimited questions. Personal archive. Source citations. Reviewed by Elijah's standard." cream />
-        <DisplayCard label="Inner Circle" price="$29/mo" body="$290/year if they want annual. Priority routing, deeper answer mode, and profile-aware answers. Capped at 200." />
-        <DisplayCard label="Skip the Line" price="$29" body="Single fast-routed question for non-members. One per quarter." />
+      <h2 className="text-5xl font-black leading-[0.95] tracking-tight sm:text-7xl">
+        Two doors.
+        <span className="block text-[#555]">That&apos;s it.</span>
+      </h2>
+      <p className="mt-5 max-w-2xl text-base leading-relaxed text-gray-500">
+        The Founders 200 closes when it fills. Everyone after walks through the Locker Room.
+      </p>
+
+      <div className="mt-10 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-[2rem] bg-[#F7F5F0] p-7 text-black">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-gray-500">FOUNDERS 200</p>
+          <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-black/50">{seatsLeft} SEATS LEFT · CLOSES AT 200</p>
+          <p className="mt-6 text-5xl font-black">$9.99/mo</p>
+          <p className="mt-3 text-sm font-black text-black/60">Locked for life. Cancel and lose the rate forever.</p>
+          <p className="mt-6 text-sm font-semibold leading-relaxed text-black/65">
+            The original class. Their questions trained the brain. They keep the rate as long as the membership stays active.
+          </p>
+          <p className="mt-6 text-sm font-black leading-relaxed text-black">
+            Everything in the Locker Room is included. Plus the badge. Plus the rate. Forever.
+          </p>
+          <Link href="#founders-application" className="mt-8 inline-flex rounded-full bg-black px-6 py-4 text-sm font-black text-white">
+            Apply for a founding seat →
+          </Link>
+        </div>
+
+        <div className="rounded-[2rem] border border-[#111] bg-[#050505] p-7 text-white">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-gray-600">LOCKER ROOM · OPENS DAY 90</p>
+          <p className="mt-6 text-5xl font-black">$14.99/mo</p>
+          <p className="mt-3 text-sm font-black text-[#555]">or $129/year</p>
+          <p className="mt-8 text-2xl font-black leading-tight">Less than one trainer session. Every month. Forever.</p>
+          <div className="mt-8">
+            <ValueStack items={PRICING_VALUE_ITEMS} />
+          </div>
+          <MathReveal dark />
+          <Link href="#founders-application" className="mt-8 inline-flex rounded-full bg-white px-6 py-4 text-sm font-black text-black">
+            Join the waitlist →
+          </Link>
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <RiskReversal />
+      </div>
+
+      <div className="mt-6 rounded-[2rem] bg-[#F7F5F0] p-7 text-black">
+        <h3 className="text-3xl font-black leading-tight">The Founders 200 closes at 200 seats.</h3>
+        <p className="mt-4 max-w-3xl text-sm font-semibold leading-relaxed text-black/65">
+          After that, public pricing only. The Founders rate is gone the day the cap fills. If you are in, you keep $9.99/mo locked for life. Cancel and you lose the rate forever.
+        </p>
+        <p className="mt-8 text-4xl font-black tabular-nums">{seatsLeft} / 200 SEATS LEFT</p>
+        <Link href="#founders-application" className="mt-8 inline-flex rounded-full bg-black px-6 py-4 text-sm font-black text-white">
+          Apply for a founding seat →
+        </Link>
       </div>
     </section>
   )
 }
 
-async function BetaPricing() {
+async function PricingBody() {
   const seatsTaken = await getFoundingSeatCount()
   const isClosed = seatsTaken !== null && seatsTaken >= FOUNDING_SEAT_LIMIT
 
   return (
     <>
-      <section className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+      <section className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:items-start" id="founders-application">
         <div>
           <p className="mb-5 text-[10px] font-black uppercase tracking-[0.28em] text-gray-600">
             Founders beta
@@ -231,7 +153,7 @@ async function BetaPricing() {
           <p className="mt-5 text-2xl font-black leading-tight text-[#F7F5F0]">
             Get in now. Keep $9.99/mo for life after launch.
           </p>
-          <FoundingSeatCounter count={seatsTaken} limit={FOUNDING_SEAT_LIMIT} />
+          <FoundingSeatCounter count={seatsTaken} />
           <p className="mt-8 max-w-2xl text-base leading-relaxed text-gray-500">
             This is the build phase. Founding members ask for free while Elijah shapes the brain.
             When the 200 seats are gone, the next group waits and pays public pricing. If you are accepted now,
@@ -240,127 +162,13 @@ async function BetaPricing() {
         </div>
         <FoundersBetaForm closed={isClosed} />
       </section>
-      <ValueStack />
-      <PreviewTiers />
+      <ComparisonStack />
+      <PricingTiers seatsTaken={seatsTaken} />
     </>
   )
 }
 
-async function PublicPricing({ isPreview = false }: { isPreview?: boolean }) {
-  const innerCircleTaken = await getInnerCircleSeatCount()
-  const innerCircleClosed = innerCircleTaken !== null && innerCircleTaken >= INNER_CIRCLE_LIMIT
-
-  return (
-    <>
-      <section className="mx-auto max-w-6xl px-5 py-16 sm:py-24">
-        <p className="mb-5 text-[10px] font-black uppercase tracking-[0.28em] text-gray-600">
-          {isPreview ? 'Pricing preview' : 'Locker room access'}
-        </p>
-        <h1 className="max-w-3xl text-5xl font-black leading-[0.95] tracking-tight sm:text-7xl">
-          Ask better questions.
-          <span className="block text-gray-500">Get real reps.</span>
-        </h1>
-        <p className="mt-6 max-w-xl text-base leading-relaxed text-gray-500">
-          Public answers stay free. Paid plans are for players who want Elijah to answer their situation.
-        </p>
-      </section>
-
-      <ValueStack />
-
-      <section className="mx-auto grid max-w-6xl gap-4 px-5 lg:grid-cols-4">
-        <PublicTierCard label="Free" price="$0" body="Browse public answers. 1 trial question per month.">
-          <Link href="/browse" className="block rounded-full border border-gray-800 px-5 py-4 text-center text-sm font-black text-white hover:border-white">
-            Browse free answers
-          </Link>
-        </PublicTierCard>
-
-        <PublicTierCard
-          label="Locker Room"
-          price="$14.99/mo"
-          body="Unlimited questions. Personal archive. Source citations. Reviewed by Elijah's standard."
-          cream
-        >
-          <CheckoutButton
-            plan="locker_monthly"
-            showPromoCode
-            className="block w-full rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white disabled:opacity-60"
-          >
-            Join monthly
-          </CheckoutButton>
-          <CheckoutButton
-            plan="locker_annual"
-            className="block w-full rounded-full border border-black/20 px-5 py-4 text-center text-sm font-black text-black disabled:opacity-60"
-          >
-            Or $129/year
-          </CheckoutButton>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">15% off annual</p>
-        </PublicTierCard>
-
-        <PublicTierCard
-          label="Inner Circle"
-          price="$29/mo"
-          body="Everything in Locker Room plus priority routing, deeper answer mode, and profile-aware answers. Founding rate locked for life."
-        >
-          <SeatCounter count={innerCircleTaken} limit={INNER_CIRCLE_LIMIT} label="seats" />
-          {innerCircleClosed ? (
-            <div className="rounded-full border border-gray-800 px-5 py-4 text-center text-sm font-black text-gray-500">
-              Closed. Waitlist.
-            </div>
-          ) : (
-            <>
-              <CheckoutButton
-                plan="inner_circle_monthly"
-                className="block w-full rounded-full border border-gray-800 px-5 py-4 text-center text-sm font-black text-white hover:border-white disabled:opacity-60"
-              >
-                Join monthly
-              </CheckoutButton>
-              <CheckoutButton
-                plan="inner_circle_annual"
-                className="block w-full rounded-full border border-gray-800 px-5 py-4 text-center text-sm font-black text-white hover:border-white disabled:opacity-60"
-              >
-                Or $290/year
-              </CheckoutButton>
-            </>
-          )}
-        </PublicTierCard>
-
-        <PublicTierCard label="Skip the Line" price="$29" body="Single fast-routed question for non-members. One per quarter.">
-          <CheckoutButton
-            plan="priority"
-            className="block w-full rounded-full border border-gray-800 px-5 py-4 text-center text-sm font-black text-white hover:border-white disabled:opacity-60"
-          >
-            Ask one question
-          </CheckoutButton>
-        </PublicTierCard>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-5 py-16">
-        <div className="rounded-[2rem] bg-[#F7F5F0] p-7 text-black">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-gray-500">Gift Card</p>
-          <div className="mt-4 grid gap-6 md:grid-cols-[1fr_auto] md:items-end">
-            <div>
-              <h2 className="text-4xl font-black">$149</h2>
-              <p className="mt-3 max-w-xl text-sm font-semibold leading-relaxed text-gray-600">
-                One year of Locker Room as a giftable code.
-              </p>
-            </div>
-            <CheckoutButton
-              plan="gift_card_annual"
-              className="rounded-full bg-black px-6 py-4 text-sm font-black text-white disabled:opacity-60"
-            >
-              Gift one year
-            </CheckoutButton>
-          </div>
-        </div>
-        <p className="mt-6 text-center text-sm font-bold text-gray-600">
-          Founding 200 members keep $9.99/mo for life.
-        </p>
-      </section>
-    </>
-  )
-}
-
-export async function PricingPageContent({ phase, isPreview = false }: { phase: PricingPhase; isPreview?: boolean }) {
+export async function PricingPageContent({ phase: _phase, isPreview: _isPreview = false }: { phase: PricingPhase; isPreview?: boolean }) {
   return (
     <main className="min-h-[100dvh] bg-black text-white">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
@@ -372,7 +180,7 @@ export async function PricingPageContent({ phase, isPreview = false }: { phase: 
         </Link>
       </nav>
 
-      {phase === 'public' ? <PublicPricing isPreview={isPreview} /> : <BetaPricing />}
+      <PricingBody />
     </main>
   )
 }

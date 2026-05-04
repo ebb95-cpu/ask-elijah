@@ -1,5 +1,5 @@
 /**
- * Ask Elijah — Newsletter Ingestion into Pinecone
+ * Ask Elijah . Newsletter Ingestion into Pinecone
  * Ingests all 87 Beehiiv newsletters
  */
 
@@ -84,7 +84,7 @@ async function fetchAllIssues() {
   return all
 }
 
-console.log('\n🚀 Ask Elijah — Newsletter Ingestion\n')
+console.log('\n🚀 Ask Elijah . Newsletter Ingestion\n')
 
 const issues = await fetchAllIssues()
 console.log(`\nFound ${issues.length} total issues\n`)

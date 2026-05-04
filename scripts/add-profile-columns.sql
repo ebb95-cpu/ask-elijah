@@ -4,9 +4,9 @@
 -- silently dropped (the upsert fails and the rest of the row still saves).
 --
 -- Fields used:
---   age         — onboarding step 1 (13 / 14 / 15 / 16 / 17 / 18+)
---   weaknesses  — reserved for a future onboarding expansion
---   strengths   — reserved for a future onboarding expansion
+--   age         . onboarding step 1 (13 / 14 / 15 / 16 / 17 / 18+)
+--   weaknesses  . reserved for a future onboarding expansion
+--   strengths   . reserved for a future onboarding expansion
 --
 -- `position`, `challenge`, `first_name` columns are assumed to already
 -- exist (they've been in the profiles table since day one and the select

@@ -6,7 +6,7 @@ import { normalizePromoCode, recordPromoRedemption, validateTrialPromoCode } fro
 // Only allow reading/writing non-sensitive profile fields.
 // `weaknesses` and `strengths` are captured during the post-verify Endel-style
 // onboarding flow. Make sure the corresponding columns exist in the Supabase
-// `profiles` table — see scripts/add-profile-columns.sql for the migration.
+// `profiles` table . see scripts/add-profile-columns.sql for the migration.
 const ALLOWED_WRITE_FIELDS = ['position', 'level', 'country', 'challenge', 'first_name', 'name', 'age', 'age_range', 'team_school', 'language', 'timeline', 'system', 'weaknesses', 'strengths']
 
 async function getSessionEmail(req: NextRequest): Promise<string | null> {
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   const email = await getSessionEmail(req)
   if (!email) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   const supabase = getSupabase()
-  // Pull both the canonical first_name column AND the legacy `name` column —
+  // Pull both the canonical first_name column AND the legacy `name` column .
   // older onboarding flows wrote to the latter, so we coalesce to whichever
   // is populated and expose a single first_name field to every caller.
   const { data } = await supabase

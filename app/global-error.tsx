@@ -6,7 +6,7 @@ import { useEffect } from 'react'
  * Catches ALL errors including those thrown during render / hydration that
  * window.addEventListener('error') misses because React swallows them in its
  * internal error boundary. This is the Next 14 App Router hook for root-level
- * errors — it receives the Error object directly and can log it before
+ * errors . it receives the Error object directly and can log it before
  * rendering the fallback UI.
  *
  * Reports to /api/admin/error-report as source='global-error' so we can
@@ -20,7 +20,7 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    // Fire-and-forget — we want this to hit the log even if it rejects.
+    // Fire-and-forget . we want this to hit the log even if it rejects.
     try {
       fetch('/api/admin/error-report', {
         method: 'POST',
@@ -51,7 +51,7 @@ export default function GlobalError({
             Something broke
           </p>
           <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 12, lineHeight: 1.2 }}>
-            Hang on — page hit a snag.
+            Hang on . page hit a snag.
           </h1>
           <p style={{ color: '#666', fontSize: 14, lineHeight: 1.6, marginBottom: 32 }}>
             We logged the issue. Try reloading.

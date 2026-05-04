@@ -24,19 +24,19 @@ export async function GET(_req: NextRequest) {
   const cookieValid = await verifyAdminSession(tokenCookie?.value)
 
   return NextResponse.json({
-    // Env status — booleans only, never the values
+    // Env status . booleans only, never the values
     env: {
       ADMIN_PASSWORD_set: adminPasswordSet,
       ADMIN_PASSWORD_length: adminPasswordSet ? process.env.ADMIN_PASSWORD!.length : 0,
       ADMIN_EMAIL_set: adminEmailSet,
       NODE_ENV: process.env.NODE_ENV || 'unknown',
     },
-    // Cookie status — presence only, never value
+    // Cookie status . presence only, never value
     cookie: {
       present: cookiePresent,
       valid: cookieValid,
     },
-    // Deployment marker — tells you which build answered this request
+    // Deployment marker . tells you which build answered this request
     deployment: {
       vercelEnv: process.env.VERCEL_ENV || 'unknown',
       vercelUrl: process.env.VERCEL_URL || 'unknown',

@@ -21,7 +21,7 @@ const MAX_ROUNDS = 20
  *
  * Philosophy: keep going as long as Elijah wants. The AI should default to
  * asking another question when there's anything plausibly useful to pull
- * out — only say "done" when it genuinely can't think of anything richer.
+ * out . only say "done" when it genuinely can't think of anything richer.
  * Elijah decides when to stop by hitting "Write the final now".
  *
  * Final generation also proactively anticipates what the player will push
@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
       .join('\n\n')
 
     if (!shouldFinalize) {
-      // Step 1: decide — ask one more question OR mark done
-      const decidePrompt = `You are helping Elijah Bryant polish an answer he's about to send a basketball player. Your goal is to keep refining with him until the answer would cover every angle a real player would wonder about — so when they read it, they think "he thought of everything."
+      // Step 1: decide . ask one more question OR mark done
+      const decidePrompt = `You are helping Elijah Bryant polish an answer he's about to send a basketball player. Your goal is to keep refining with him until the answer would cover every angle a real player would wonder about . so when they read it, they think "he thought of everything."
 
 You have:
 
@@ -85,7 +85,7 @@ ${notes || '(nothing yet)'}
 
 ${convoText ? `You've already had this clarifying conversation with Elijah:\n\n${convoText}\n\n` : ''}
 
-Your job right now: ask Elijah ONE more specific question that would make the final answer richer. You should almost always ask another one — only stop (done: true) when you genuinely can't think of anything else that would add depth, or when the answer would already cover every reasonable follow-up the player might have.
+Your job right now: ask Elijah ONE more specific question that would make the final answer richer. You should almost always ask another one . only stop (done: true) when you genuinely can't think of anything else that would add depth, or when the answer would already cover every reasonable follow-up the player might have.
 
 Categories of questions that unlock depth (cycle through these as the conversation develops):
 - Concrete stories: "was there a specific game this came up for you?"
@@ -104,8 +104,8 @@ Return JSON only:
 
 Rules:
 - NEVER ask more than one question at a time.
-- Don't repeat a category you've already asked about in this conversation — pull from a different angle.
-- Don't ask about the PLAYER — you can't see them. Ask about Elijah's experience, stories, or what he'd say to push back.
+- Don't repeat a category you've already asked about in this conversation . pull from a different angle.
+- Don't ask about the PLAYER . you can't see them. Ask about Elijah's experience, stories, or what he'd say to push back.
 - If Elijah just gave you a story, follow up on a specific detail from it, not a generic "anything else?"`
 
       const decideRes = await anthropic.messages.create({
@@ -135,7 +135,7 @@ Rules:
       // Fall through to finalize
     }
 
-    // Step 2: finalize — anticipate pushback, then rewrite
+    // Step 2: finalize . anticipate pushback, then rewrite
     // First, have the model imagine what the player would push back with or
     // wonder about after reading the current material. Then feed those
     // anticipated objections into the final write so they get addressed
@@ -157,7 +157,7 @@ ${notes || '(none)'}
 
 ${convoText ? `CONVERSATION WITH ELIJAH:\n${convoText}\n\n` : ''}
 
-Imagine you are the PLAYER reading Elijah's response. List the 2-4 things you would push back on, wonder about, or still feel unsatisfied with. Think: "yeah but what about..." or "I already tried that..." or "easy for him to say, he's a pro..." or "what if X happens..." — the real objections.
+Imagine you are the PLAYER reading Elijah's response. List the 2-4 things you would push back on, wonder about, or still feel unsatisfied with. Think: "yeah but what about..." or "I already tried that..." or "easy for him to say, he's a pro..." or "what if X happens..." . the real objections.
 
 Return JSON only: {"pushbacks": ["first objection in the player's voice", "second", ...]}
 Keep each pushback under 20 words, in the player's voice, specific to what they just read.`
@@ -183,11 +183,11 @@ Keep each pushback under 20 words, in the player's voice, specific to what they 
     const freshnessInstruction = getFreshnessInstruction(`${question}\n${draft}\n${notes || ''}\n${convoText}`)
     const preferenceContext = await getElijahPreferenceContext()
 
-    const finalPrompt = `Write a completely new polished answer to the player's question. Weave in Elijah's notes AND everything he said during the refinement conversation. Do not reference the old draft, do not append — produce ONE cohesive final answer as if you knew all this from the start. Structure: pain → simple science-backed mechanism → Elijah's pro perspective → one concrete action plan today.
+    const finalPrompt = `Write a completely new polished answer to the player's question. Weave in Elijah's notes AND everything he said during the refinement conversation. Do not reference the old draft, do not append . produce ONE cohesive final answer as if you knew all this from the start. Structure: pain → simple science-backed mechanism → Elijah's pro perspective → one concrete action plan today.
 
-You have web_search and web_fetch. USE THEM proactively. Before you state any mechanism claim (how the brain works under pressure, sleep architecture, nervous-system regulation, HRV, visualization, confidence, recovery — any physiological or psychological "why this works"), verify it with a web lookup. Two to four searches is the norm for a good answer, not the exception.
+You have web_search and web_fetch. USE THEM proactively. Before you state any mechanism claim (how the brain works under pressure, sleep architecture, nervous-system regulation, HRV, visualization, confidence, recovery . any physiological or psychological "why this works"), verify it with a web lookup. Two to four searches is the norm for a good answer, not the exception.
 
-But never read like a research paper. Elijah's voice wins every time. Weave the science into first-person phrasing — "the reason this works is your nervous system actually..." or "I read something from a Stanford lab that said...". Never "studies show" or footnote-style citations in the body. The research makes the mechanism credible; the voice keeps it human. Make the psychology easy enough for a young kid to understand, but credible enough for a coach or sports psych person to respect.
+But never read like a research paper. Elijah's voice wins every time. Weave the science into first-person phrasing . "the reason this works is your nervous system actually..." or "I read something from a Stanford lab that said...". Never "studies show" or footnote-style citations in the body. The research makes the mechanism credible; the voice keeps it human. Make the psychology easy enough for a young kid to understand, but credible enough for a coach or sports psych person to respect.
 
 Also use web_fetch when a URL is present in the notes, and verify any specific name, quote, or stat before you put it in Elijah's mouth.
 ${freshnessInstruction}
@@ -210,7 +210,7 @@ ${notes || '(none)'}
 ${convoText ? `Clarifying Q&A with Elijah:\n\n${convoText}\n\n` : ''}${pushbackSection}
 ${preferenceContext}
 
-Write the full answer now. Length: however long it needs to be to cover every angle without padding — typically 8 to 14 sentences when the Q&A was deep. No lists. No em-dashes. First person. Same conversational voice as always.`
+Write the full answer now. Length: however long it needs to be to cover every angle without padding . typically 8 to 14 sentences when the Q&A was deep. No lists. No em-dashes. First person. Same conversational voice as always.`
 
     const finalRes = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',

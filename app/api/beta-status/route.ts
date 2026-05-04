@@ -8,7 +8,7 @@ export async function GET() {
   // BETA_CAP env var here, because production still has the old 30-seat value.
   const cap = parseInt(process.env.FOUNDING_SEAT_LIMIT || '200', 10)
 
-  // 0 means no cap — open to everyone
+  // 0 means no cap . open to everyone
   if (cap === 0) {
     return NextResponse.json({ isCapped: false, spotsLeft: null, cap: 0 })
   }

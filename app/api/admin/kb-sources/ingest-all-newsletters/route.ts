@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     }
     const allPosts = data.data || []
     // status=confirmed in the Beehiiv query includes scheduled posts whose
-    // publish_date is still in the future. Filter those out — only ingest
+    // publish_date is still in the future. Filter those out . only ingest
     // posts that have actually gone live.
     const nowSeconds = Math.floor(Date.now() / 1000)
     const posts = allPosts.filter((p) => {
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Use the unfiltered count for pagination — we don't want the publish-date
+    // Use the unfiltered count for pagination . we don't want the publish-date
     // filter to shortcircuit page traversal and miss later pages.
     hasNextPage = data.total_pages ? page < data.total_pages : allPosts.length === 50
     page++

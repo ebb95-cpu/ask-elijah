@@ -205,7 +205,7 @@ export async function runWatchdog(options: RunOptions = {}): Promise<WatchdogRes
 
     if (options.notify !== false) {
       const rows = checks
-        .map((check) => `<li><strong>${esc(check.name)}</strong>: ${esc(check.status)} — ${esc(check.detail)}</li>`)
+        .map((check) => `<li><strong>${esc(check.name)}</strong>: ${esc(check.status)} . ${esc(check.detail)}</li>`)
         .join('')
       await emailAdmin(
         'Ask Elijah watchdog found a problem',

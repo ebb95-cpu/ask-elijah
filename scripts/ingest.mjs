@@ -1,5 +1,5 @@
 /**
- * Ask Elijah — Knowledge Base Ingestion
+ * Ask Elijah . Knowledge Base Ingestion
  * Ingests YouTube videos + Beehiiv newsletters into Pinecone
  *
  * Filters out:
@@ -7,9 +7,9 @@
  * - Videos with no captions or transcripts under 400 chars
  *
  * Usage:
- *   node scripts/ingest.mjs            — full run
- *   node scripts/ingest.mjs --youtube  — YouTube only
- *   node scripts/ingest.mjs --newsletter — newsletters only
+ *   node scripts/ingest.mjs            . full run
+ *   node scripts/ingest.mjs --youtube  . YouTube only
+ *   node scripts/ingest.mjs --newsletter . newsletters only
  */
 
 import { Innertube } from 'youtubei.js'
@@ -363,7 +363,7 @@ const args = process.argv.slice(2)
 const youtubeOnly = args.includes('--youtube')
 const newsletterOnly = args.includes('--newsletter')
 
-console.log('\n🚀 Ask Elijah — Knowledge Base Ingestion')
+console.log('\n🚀 Ask Elijah . Knowledge Base Ingestion')
 
 if (!newsletterOnly) await ingestYouTube()
 if (!youtubeOnly) await ingestNewsletters()

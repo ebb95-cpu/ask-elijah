@@ -1,13 +1,13 @@
 /**
- * Ask Elijah — Personal Story Extraction (AssemblyAI-powered)
+ * Ask Elijah . Personal Story Extraction (AssemblyAI-powered)
  *
  * Transcribes YouTube videos with AssemblyAI (no download needed), then
  * uses Claude to extract Elijah's personal stories and upserts them to Pinecone.
  *
  * Usage:
- *   node scripts/extract-stories.mjs                 — newsletters + YouTube
- *   node scripts/extract-stories.mjs --newsletters   — newsletters only
- *   node scripts/extract-stories.mjs --youtube       — YouTube only
+ *   node scripts/extract-stories.mjs                 . newsletters + YouTube
+ *   node scripts/extract-stories.mjs --newsletters   . newsletters only
+ *   node scripts/extract-stories.mjs --youtube       . YouTube only
  */
 
 import { execSync } from 'child_process'
@@ -43,7 +43,7 @@ function slugify(text) {
 // ── AssemblyAI Transcription ────────────────────────────────────────────────
 
 async function downloadAndTranscribe(videoId, title) {
-  // Submit to AssemblyAI — no download needed
+  // Submit to AssemblyAI . no download needed
   const submitRes = await fetch('https://api.assemblyai.com/v2/transcript', {
     method: 'POST',
     headers: {
@@ -316,7 +316,7 @@ const args = process.argv.slice(2)
 const newslettersOnly = args.includes('--newsletters')
 const youtubeOnly = args.includes('--youtube')
 
-console.log('\n🚀 Ask Elijah — Personal Story Extraction (AssemblyAI)\n')
+console.log('\n🚀 Ask Elijah . Personal Story Extraction (AssemblyAI)\n')
 
 if (!youtubeOnly) await processNewsletters()
 if (!newslettersOnly) await processYouTube()

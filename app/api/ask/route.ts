@@ -119,7 +119,7 @@ No preamble.`,
     if (parsed.ok === true) return { ok: true, issues: [] }
     return { ok: false, issues: Array.isArray(parsed.issues) ? parsed.issues.slice(0, 3) : [] }
   } catch {
-    // Don't block the draft on a critic failure — just let it through
+    // Don't block the draft on a critic failure . just let it through
     return { ok: true, issues: [] }
   }
 }
@@ -133,13 +133,13 @@ type EntryMode = 'bad_game' | 'coach' | 'playing_time' | 'parent' | 'general' | 
 function modePreamble(mode: EntryMode, askerType: string | null): string {
   switch (mode) {
     case 'bad_game':
-      return `THE PLAYER JUST PLAYED BADLY. They're still in it — maybe on the bus home, maybe in their feelings. Open by naming exactly how they're probably feeling right now before you give them anything else. Don't rush to the fix. Meet them where they are. Then, and only then, give them one thing to hold onto and one specific thing to do tomorrow (not tonight). No drills. No "here's a tip." Real talk.\n\n`
+      return `THE PLAYER JUST PLAYED BADLY. They're still in it . maybe on the bus home, maybe in their feelings. Open by naming exactly how they're probably feeling right now before you give them anything else. Don't rush to the fix. Meet them where they are. Then, and only then, give them one thing to hold onto and one specific thing to do tomorrow (not tonight). No drills. No "here's a tip." Real talk.\n\n`
     case 'coach':
-      return `THIS IS A COACH-SITUATION QUESTION. Don't give generic "communicate with your coach" advice. Name what's actually going on from both sides — what coaches look for, what they don't say out loud, what this player can control vs can't. If there's a conversation they need to have, give them the actual words to use (and the words NOT to use). Short, honest, no bullshit.\n\n`
+      return `THIS IS A COACH-SITUATION QUESTION. Don't give generic "communicate with your coach" advice. Name what's actually going on from both sides . what coaches look for, what they don't say out loud, what this player can control vs can't. If there's a conversation they need to have, give them the actual words to use (and the words NOT to use). Short, honest, no bullshit.\n\n`
     case 'playing_time':
-      return `THIS IS A PLAYING-TIME QUESTION. Cut through the parent-talk and give the real answer: coaches play who they trust, and trust is built in three places — practice habits, the small stuff during games, and how you respond to being benched. Pick the ONE thing that will move the needle for this specific kid based on what they told you, and tell them exactly what to do this week.\n\n`
+      return `THIS IS A PLAYING-TIME QUESTION. Cut through the parent-talk and give the real answer: coaches play who they trust, and trust is built in three places . practice habits, the small stuff during games, and how you respond to being benched. Pick the ONE thing that will move the needle for this specific kid based on what they told you, and tell them exactly what to do this week.\n\n`
     case 'parent':
-      return `THIS QUESTION IS FROM A PARENT asking about their kid. Speak to the parent directly, not the kid. They're worried and they love this kid. Validate that first. Then be honest about what parents can and can't control in basketball — and what the research actually says about when parents hurt vs help. End with one specific thing they can do this week that ISN'T "talk to the coach."\n\n`
+      return `THIS QUESTION IS FROM A PARENT asking about their kid. Speak to the parent directly, not the kid. They're worried and they love this kid. Validate that first. Then be honest about what parents can and can't control in basketball . and what the research actually says about when parents hurt vs help. End with one specific thing they can do this week that ISN'T "talk to the coach."\n\n`
     default:
       return askerType === 'parent'
         ? `This question is from a parent asking about their kid. Address the parent, not the kid.\n\n`
@@ -231,7 +231,7 @@ async function extractMemories(question: string): Promise<{ fact_type: string; f
       max_tokens: 256,
       messages: [{
         role: 'user',
-        content: `Extract memorable facts about this basketball player from their question. Return a JSON array of objects with keys: fact_type (one of: event, context, goal, setback), fact_text (one short sentence), expires_days (null for permanent facts, or number of days for time-sensitive things like upcoming games — use 14 for events).
+        content: `Extract memorable facts about this basketball player from their question. Return a JSON array of objects with keys: fact_type (one of: event, context, goal, setback), fact_text (one short sentence), expires_days (null for permanent facts, or number of days for time-sensitive things like upcoming games . use 14 for events).
 
 Return [] if nothing notable to remember.
 
@@ -252,7 +252,7 @@ Return only valid JSON array, nothing else.`
  * Fetch 2 of Elijah's highest-quality approved answers to use as voice anchors
  * in the prompt. Quality signal: approved AND edit_count is low (Elijah barely
  * edited the AI draft, meaning the voice was already right) AND a matching
- * topic. These get pasted in as few-shot examples — anchors the output to
+ * topic. These get pasted in as few-shot examples . anchors the output to
  * Elijah's real voice better than any description can.
  *
  * Returns formatted text ready to drop into the user message, or '' if none.
@@ -281,8 +281,8 @@ async function getVoiceAnchors(topic: string | null): Promise<string> {
 
     // Take up to 2
     const picks = candidates.slice(0, 2)
-    const lines = picks.map((p, i) => `EXAMPLE ${i + 1} — a real answer Elijah approved:\nQuestion: "${p.question}"\nElijah's answer: ${p.answer}`).join('\n\n')
-    return `Here are real approved answers showing Elijah's voice. Match this tone, cadence, and sentence structure — NOT a generic helpful-assistant voice:\n\n${lines}\n\n---\n\n`
+    const lines = picks.map((p, i) => `EXAMPLE ${i + 1} . a real answer Elijah approved:\nQuestion: "${p.question}"\nElijah's answer: ${p.answer}`).join('\n\n')
+    return `Here are real approved answers showing Elijah's voice. Match this tone, cadence, and sentence structure . NOT a generic helpful-assistant voice:\n\n${lines}\n\n---\n\n`
   } catch {
     return ''
   }
@@ -304,7 +304,7 @@ async function getPlayerContext(email: string): Promise<string> {
 
   const p = profileRes.data as { first_name?: string; name?: string; age?: string; position?: string; level?: string; country?: string; challenge?: string; language?: string } | null
   if (p) {
-    // Age first — it's the single most context-shaping detail (you'd
+    // Age first . it's the single most context-shaping detail (you'd
     // write to a 14-year-old very differently than a 22-year-old), so it
     // leads the player-context line Elijah sees when reviewing drafts.
     const parts = [
@@ -408,7 +408,7 @@ function normalizeLanguagePreference(input: unknown): string {
  *   - keyword: bare nouns/phrases (acts like a sparse-ish match)
  *
  * This is a pragmatic substitute for true Pinecone hybrid sparse-dense
- * retrieval — three semantic queries merged catches most of what a
+ * retrieval . three semantic queries merged catches most of what a
  * sparse keyword index would add, without reindexing everything.
  */
 async function rewriteQueryMulti(question: string): Promise<{ narrow: string; broad: string; keyword: string }> {
@@ -484,7 +484,7 @@ async function searchPinecone(
       body: JSON.stringify(body),
     })
 
-  // Run every query across every embedding in parallel — topic + level + unfiltered
+  // Run every query across every embedding in parallel . topic + level + unfiltered
   // for each of narrow/broad/keyword. ~9 small Pinecone calls, all concurrent.
   const queryPromises: Promise<{ bucket: 'filtered' | 'unfiltered' | 'level'; res: Response }>[] = []
   for (const embedding of embeddings) {
@@ -522,7 +522,7 @@ async function searchPinecone(
   }
 
   // De-dupe each bucket by vector id (or text fallback), keeping the highest
-  // score. This is the "merge" step of multi-query retrieval — without it,
+  // score. This is the "merge" step of multi-query retrieval . without it,
   // the same chunk would appear 3 times from 3 queries.
   const dedupe = (matches: PineconeMatch[]): PineconeMatch[] => {
     const best = new Map<string, PineconeMatch>()
@@ -620,7 +620,7 @@ async function notifyElijah(
           ⚠️ <strong>Flagged claims below need your review.</strong> Highlighted in yellow. Edit or confirm before sending.
         </div>` : ''}
 
-        <p style="font-size: 13px; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">AI Draft — click above to edit before sending</p>
+        <p style="font-size: 13px; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">AI Draft . click above to edit before sending</p>
         <div style="background: #f9f9f9; border-left: 3px solid #ccc; padding: 20px; margin-bottom: 32px; font-size: 15px; line-height: 1.7; color: #555;">
           ${highlightVerifyMarkers(draft).replace(/\n/g, '<br>')}
         </div>
@@ -731,7 +731,7 @@ export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
 
-    // Throttle 1: IP-based — protect against anonymous floods (5/day)
+    // Throttle 1: IP-based . protect against anonymous floods (5/day)
     const ipLimit = await checkLimit('rl:ask:ip', ip, 5, '1 d')
     if (!ipLimit.success) {
       return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 })
@@ -775,7 +775,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Throttle 2: Email-based — protect our API budget (10/day per email).
+    // Throttle 2: Email-based . protect our API budget (10/day per email).
     // This is the real cost guard: even behind rotating IPs, a single user
     // can't drain Claude/Voyage/Pinecone spend for a whole day.
     const emailLimit = await checkLimit('rl:ask:email', cleanEmailEarly, 10, '1 d')
@@ -800,7 +800,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: DAILY_LIMIT_MESSAGE }, { status: 429 })
     }
 
-    // Duplicate submission guard — same email within 2 minutes
+    // Duplicate submission guard . same email within 2 minutes
     const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString()
     const { data: recentQ } = await supabaseLimitCheck
       .from('questions')
@@ -965,7 +965,7 @@ export async function POST(req: NextRequest) {
     const playerContext = await playerContextPromise
 
     const playerContextBlock = playerContext
-      ? `CONTEXT ABOUT THIS PLAYER — use this to personalize your answer:\n${playerContext}\n\n---\n\n`
+      ? `CONTEXT ABOUT THIS PLAYER . use this to personalize your answer:\n${playerContext}\n\n---\n\n`
       : ''
 
     const freshnessInstruction = getFreshnessInstruction(question)
@@ -1001,7 +1001,7 @@ export async function POST(req: NextRequest) {
             webSources: harvestWebSources(response.content),
           }
         } catch {
-          // Fallback without web tools if Sonnet fails — better an un-sourced
+          // Fallback without web tools if Sonnet fails . better an un-sourced
           // answer than no answer.
           const response = await getAnthropic().messages.create({
             model: 'claude-haiku-4-5',
@@ -1027,7 +1027,7 @@ export async function POST(req: NextRequest) {
         const critique = await critiqueDraft(stripVerifyMarkers(draft), question, hasChunks)
         if (!critique.ok && critique.issues.length > 0) {
           const issuesText = critique.issues.map((i) => `- ${i}`).join('\n')
-          const retry = await generate(`\n\nYour first attempt had these specific issues — fix them in the rewrite:\n${issuesText}\n\nWrite the answer again addressing each.`)
+          const retry = await generate(`\n\nYour first attempt had these specific issues . fix them in the rewrite:\n${issuesText}\n\nWrite the answer again addressing each.`)
           if (retry.text.trim() && retry.text.trim().length >= 30) {
             draft = retry.text
             webSources = retry.webSources
@@ -1053,7 +1053,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Save to Supabase as pending — strip verify markers from stored answer
+    // Save to Supabase as pending . strip verify markers from stored answer
     const supabase = getSupabase()
     const cleanDraft = sanitizeAnswerText(stripVerifyMarkers(draft))
     const { data: record, error: insertError } = await supabase

@@ -36,7 +36,7 @@ export default function BugReportButton() {
         if (parentPath.startsWith('/admin/simulate')) setHideSelf(true)
       }
     } catch {
-      /* cross-origin — keep showing */
+      /* cross-origin . keep showing */
     }
   }, [])
 

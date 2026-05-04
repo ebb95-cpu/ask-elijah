@@ -41,7 +41,7 @@ export async function GET() {
       .order('created_at', { ascending: false })
       .limit(50),
     // Pull unresolved issues from Sentry if the integration is configured.
-    // Fails soft — returns [] on any error so the rest of the dashboard
+    // Fails soft . returns [] on any error so the rest of the dashboard
     // still loads when Sentry is down or creds are missing.
     fetchSentryIssues(20),
   ])

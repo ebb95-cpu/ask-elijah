@@ -205,7 +205,7 @@ export async function GET(req: NextRequest) {
 
     const rawAll = [...reddit, ...youtube, ...autocomplete]
 
-    // Store at most 500 raw samples — enough for spot-checking, not
+    // Store at most 500 raw samples . enough for spot-checking, not
     // enough to bloat JSONB and hit Postgres TOAST limits.
     const rawSamples = rawAll.slice(0, 500)
 

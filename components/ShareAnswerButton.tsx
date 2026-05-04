@@ -27,7 +27,7 @@ export default function ShareAnswerButton({
         await navigator.share({ title: 'Ask Elijah', text: shareText, url })
         return
       } catch {
-        // User cancelled or share failed — fall through to clipboard.
+        // User cancelled or share failed . fall through to clipboard.
       }
     }
     try {

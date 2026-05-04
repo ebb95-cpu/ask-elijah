@@ -12,11 +12,17 @@ function validEmail(value: string) {
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null) as {
     email?: string
+    firstName?: string
+    city?: string
+    showOnWall?: boolean
     basketballCost?: string
     waitlistOnly?: boolean
   } | null
 
   const email = body?.email?.trim().toLowerCase() || ''
+  const firstName = body?.firstName?.trim() || ''
+  const city = body?.city?.trim() || ''
+  const showOnWall = body?.showOnWall === true
   const basketballCost = body?.basketballCost?.trim() || ''
   const waitlistOnly = body?.waitlistOnly === true
 
@@ -47,12 +53,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Tell Elijah what is actually costing you. Minimum 30 characters.' }, { status: 400 })
   }
 
-  const payload: { email: string; confirmed: boolean; approved: boolean; challenge?: string; archived_at?: null } = {
+  const payload: {
+    email: string
+    confirmed: boolean
+    approved: boolean
+    challenge?: string
+    name?: string
+    city?: string
+    founders_wall_opt_in?: boolean
+    archived_at?: null
+  } = {
     email,
     confirmed: true,
     approved: false,
     archived_at: null,
   }
+
+  if (firstName) payload.name = firstName
+  if (city) payload.city = city
+  payload.founders_wall_opt_in = showOnWall
 
   if (!isFull && !waitlistOnly) {
     payload.challenge = basketballCost
@@ -62,9 +81,11 @@ export async function POST(req: NextRequest) {
     .from('waitlist')
     .upsert(payload, { onConflict: 'email' })
 
-  if (result.error && /archived_at/.test(result.error.message || '')) {
+  if (result.error && /archived_at|city|founders_wall_opt_in/.test(result.error.message || '')) {
     const fallbackPayload = { ...payload }
     delete fallbackPayload.archived_at
+    delete fallbackPayload.city
+    delete fallbackPayload.founders_wall_opt_in
     result = await supabase
       .from('waitlist')
       .upsert(fallbackPayload, { onConflict: 'email' })

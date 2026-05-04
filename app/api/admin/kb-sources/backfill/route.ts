@@ -43,8 +43,8 @@ export async function POST(_req: NextRequest) {
     //    yt_<videoId>_<chunkIdx>
     //    gdrive_<fileId>_<chunkIdx>
     //    lead-magnet_<productId>_chunk_<chunkIdx>
-    //    upload_<ts>_<rand>_<chunkIdx>  (uploads — already in kb_sources)
-    //    approved_<questionId>           (approved answers — not a "source")
+    //    upload_<ts>_<rand>_<chunkIdx>  (uploads . already in kb_sources)
+    //    approved_<questionId>           (approved answers . not a "source")
     const prefixCounts = new Map<string, { count: number; type: string | null; sampleId: string }>()
 
     for (const id of allIds) {

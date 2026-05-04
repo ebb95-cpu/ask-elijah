@@ -7,14 +7,14 @@ import { getLocal } from '@/lib/safe-storage'
 
 /**
  * Inline ask composer on "Your court". Skips the homepage round-trip for
- * returning users — they already have the signed `ae_track` cookie + the
+ * returning users . they already have the signed `ae_track` cookie + the
  * email in localStorage, so a new question just needs the text. Pipeline:
  *
- *   1. /api/gatekeep — semantic classifier blocks abuse/gibberish/off-topic
+ *   1. /api/gatekeep . semantic classifier blocks abuse/gibberish/off-topic
  *      before we burn an /api/ask call on trash input.
- *   2. /api/ask — saves the question, runs the full RAG + web_search draft
+ *   2. /api/ask . saves the question, runs the full RAG + web_search draft
  *      pipeline, and notifies Elijah. Returns the first-take draft.
- *   3. router.refresh() — re-renders the /track server component so the
+ *   3. router.refresh() . re-renders the /track server component so the
  *      new pending card shows up at the top of "What I'm working on".
  *
  * UX keeps the auto-grow textarea pattern from the homepage so long
@@ -41,7 +41,7 @@ export default function InlineAskComposer() {
 
     const email = getLocal('ask_elijah_email')
     if (!email) {
-      // No email stored — the user got here via an edge case (email link
+      // No email stored . the user got here via an edge case (email link
       // from another browser, cleared localStorage, etc.). Kick them back
       // to the homepage to go through the full verify flow.
       setError("Something went wrong. Ask from the home page and I'll set it up.")
@@ -66,7 +66,7 @@ export default function InlineAskComposer() {
           return
         }
       }
-      // If gatekeep errors out, fall through — we'd rather let a real
+      // If gatekeep errors out, fall through . we'd rather let a real
       // question through than block on a classifier outage.
     } catch {
       /* fall through */

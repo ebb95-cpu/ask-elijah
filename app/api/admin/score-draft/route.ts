@@ -6,11 +6,11 @@ import { requireAdmin } from '@/lib/admin-auth'
 export const dynamic = 'force-dynamic'
 
 /**
- * Rubric-based scoring. Single number scores are noise — a rubric forces
+ * Rubric-based scoring. Single number scores are noise . a rubric forces
  * Claude to say WHY each dimension is strong or weak, which is actionable.
  *
  * The five dimensions are chosen to mirror how a real player reads an
- * answer from Elijah — does it sound like him, is it specific to me,
+ * answer from Elijah . does it sound like him, is it specific to me,
  * does it hit emotionally, can I actually do something with it, and does
  * it cover what I'd push back with.
  */
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     const rubricText = DIMENSIONS.map((d) => `- ${d.key}: ${d.label}. ${d.rubric}`).join('\n')
 
-    const prompt = `You are grading a draft answer that professional basketball player Elijah Bryant is about to send to a player who asked him a question. Be honest — an 8 means genuinely strong, not "good enough to ship." Reserve 9-10 for answers that would make the player feel truly seen.
+    const prompt = `You are grading a draft answer that professional basketball player Elijah Bryant is about to send to a player who asked him a question. Be honest . an 8 means genuinely strong, not "good enough to ship." Reserve 9-10 for answers that would make the player feel truly seen.
 
 Player's question:
 "${question}"
@@ -71,7 +71,7 @@ Draft answer:
 ${draft}
 """
 
-Grade each dimension from 1 to 10 and explain in ONE short sentence what specifically is good or missing. Be concrete — quote exact phrases when pointing out weakness. Don't hedge.
+Grade each dimension from 1 to 10 and explain in ONE short sentence what specifically is good or missing. Be concrete . quote exact phrases when pointing out weakness. Don't hedge.
 
 Dimensions:
 ${rubricText}

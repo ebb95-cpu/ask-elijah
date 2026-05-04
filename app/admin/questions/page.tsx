@@ -296,7 +296,7 @@ export default function AdminQuestionsPage() {
         setToast(
           data.failed
             ? `Approved ${data.succeeded ?? 0}; ${data.failed} need a retry`
-            : `Approved ${data.succeeded ?? allIds.length} — emails sent`
+            : `Approved ${data.succeeded ?? allIds.length} . emails sent`
         )
       } else {
         const res = await fetch('/api/admin/approve-question', {
@@ -317,7 +317,7 @@ export default function AdminQuestionsPage() {
           const data = await res.json().catch(() => ({}))
           throw new Error(data.error || `${res.status}`)
         }
-        setToast('Approved — email sent')
+        setToast('Approved . email sent')
       }
       setTimeout(() => setToast(null), 3000)
       setItems((prev) => prev.filter((q) => q.id !== questionId))
@@ -377,7 +377,7 @@ export default function AdminQuestionsPage() {
       setRemixNotice({ at: new Date(), beforeWords, afterWords, changed })
       setToast(
         changed
-          ? `New remix generated — ${beforeWords} → ${afterWords} words`
+          ? `New remix generated . ${beforeWords} → ${afterWords} words`
           : 'Remix finished, but the draft came back unchanged. Add a stronger note and try again.'
       )
       setTimeout(() => setToast(null), 3000)
@@ -531,7 +531,7 @@ export default function AdminQuestionsPage() {
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 8 }}>
                 <p style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
-                  {openItem.status === 'approved' ? 'Answer (editable — saves a new version)' : 'Your answer (editable)'}
+                  {openItem.status === 'approved' ? 'Answer (editable . saves a new version)' : 'Your answer (editable)'}
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {remixNotice && (
@@ -736,7 +736,7 @@ export default function AdminQuestionsPage() {
                 }}
               >
                 <p style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0, marginBottom: 8 }}>
-                  Resources for this answer ({sources.length}) — verify before approving
+                  Resources for this answer ({sources.length}) . verify before approving
                 </p>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {sources.map((s, i) => (
@@ -767,7 +767,7 @@ export default function AdminQuestionsPage() {
               <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>
             )}
 
-            {/* Actions. Remix sits between Approve and Skip — edit the draft
+            {/* Actions. Remix sits between Approve and Skip . edit the draft
                 inline (add notes, rewrites, whatever), hit Remix, and it writes
                 a fresh cohesive answer from what's currently in the textarea. */}
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -859,7 +859,7 @@ export default function AdminQuestionsPage() {
               </InfoCard>
             )}
 
-            {/* Dupes list — everyone else who asked this same question (different
+            {/* Dupes list . everyone else who asked this same question (different
                 wording). Approving sends the same answer to all of them. */}
             {openItem.dupes && openItem.dupes.length > 0 && (
               <details style={{ padding: 14, border: '1px solid #2a2015', borderRadius: 10, background: '#15100a' }}>
@@ -1083,7 +1083,7 @@ export default function AdminQuestionsPage() {
                     marginBottom: 12,
                     userSelect: 'none',
                   }}>
-                    Backlog ({backlogItems.length}) — open when you want more
+                    Backlog ({backlogItems.length}) . open when you want more
                   </summary>
                   <QueueSection title="More questions" subtitle="Lower priority for now, but still available." />
                   <div style={{

@@ -62,8 +62,8 @@ export default function TermsPage() {
             <h2 className="text-lg font-bold text-black mb-3">Contact</h2>
             <p>
               Questions about these terms? Email{' '}
-              <a href="mailto:hello@consistencyclub.com" className="underline hover:text-black transition-colors">
-                hello@consistencyclub.com
+              <a href="mailto:hello@elijahbryant.pro" className="underline hover:text-black transition-colors">
+                hello@elijahbryant.pro
               </a>.
             </p>
           </section>

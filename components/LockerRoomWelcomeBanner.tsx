@@ -9,17 +9,17 @@ const DISMISS_KEY = 'ae_locker_welcome_seen'
  *
  * Placement in the Hooked loop: the player just finished Investment
  * (onboarding). The Variable Reward (their answer) is one tap away.
- * This screen is a 5-second bridge — not a lecture. Its only job is to
+ * This screen is a 5-second bridge . not a lecture. Its only job is to
  * prime them so the answer lands harder.
  *
  * Structure (Hormozi pain-mirror → reframe → proof → reward):
- *   1. Pain mirror   — their exact struggle reflected back (personalised).
- *   2. Reframe       — "that's a brain problem, not a skill problem."
+ *   1. Pain mirror   . their exact struggle reflected back (personalised).
+ *   2. Reframe       . "that's a brain problem, not a skill problem."
  *                      Shifts blame from them to something trainable.
- *   3. Proof line    — one Harvard sentence. Enough. No stacking.
- *   4. CTA           — "Read my answer →" delivers the reward immediately.
+ *   3. Proof line    . one Harvard sentence. Enough. No stacking.
+ *   4. CTA           . "Read my answer →" delivers the reward immediately.
  *
- * Fallback (no struggle captured — OAuth path): acknowledges the action
+ * Fallback (no struggle captured . OAuth path): acknowledges the action
  * they took and creates positive tribe distinction ("most players never").
  */
 export default function LockerRoomWelcomeBanner({ struggle }: { struggle?: string | null }) {
@@ -29,7 +29,7 @@ export default function LockerRoomWelcomeBanner({ struggle }: { struggle?: strin
     try {
       if (!localStorage.getItem(DISMISS_KEY)) setVisible(true)
     } catch {
-      /* localStorage blocked — skip */
+      /* localStorage blocked . skip */
     }
   }, [])
 
@@ -45,13 +45,13 @@ export default function LockerRoomWelcomeBanner({ struggle }: { struggle?: strin
   const hasStruggle = !!struggle?.trim()
   const struggleText = struggle?.trim().toLowerCase() ?? ''
 
-  // Pain mirror — reflects their exact onboarding answer back.
+  // Pain mirror . reflects their exact onboarding answer back.
   // Fallback validates the act of asking when struggle isn't known.
   const headline = hasStruggle
     ? `You told me it\u2019s ${struggleText}.`
     : 'You asked. That already puts you ahead.'
 
-  // Reframe — shifts the problem from a character flaw to something trainable.
+  // Reframe . shifts the problem from a character flaw to something trainable.
   const reframe = hasStruggle
     ? `That\u2019s a brain problem, not a skill problem.`
     : 'Most players never address the mental side.'

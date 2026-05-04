@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Get distinct first-time emails in this window
-  // (only nudge if this was their FIRST question — count total questions per email)
+  // (only nudge if this was their FIRST question . count total questions per email)
   const seen = new Set<string>()
   const uniqueEmails = questions.map(q => q.email).filter((e): e is string => !!e && !seen.has(e) && !!seen.add(e))
 

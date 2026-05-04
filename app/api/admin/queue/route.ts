@@ -5,7 +5,7 @@ import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
-// Semantic clustering threshold — cosine similarity. Matches /find-similar.
+// Semantic clustering threshold . cosine similarity. Matches /find-similar.
 // 0.82 is tight enough to catch "How do I stop freezing up?" vs "What
 // happens when I freeze up in a game?" without collapsing unrelated items.
 const DUPE_THRESHOLD = 0.82
@@ -68,7 +68,7 @@ async function embedBatch(texts: string[]): Promise<number[][] | null> {
 /**
  * Greedy single-link clustering: walk the list oldest-first, place each
  * question into the first existing cluster it's >= threshold similar to,
- * else start a new cluster. Oldest question becomes the representative —
+ * else start a new cluster. Oldest question becomes the representative .
  * matches the FIFO-triage ordering already used for the pending tab.
  *
  * Returns an array of representative rows, each augmented with a `dupes`
@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
   const painPoints = ((ppRes.data || []) as PainPoint[]).map(painPointToQuestion)
   let questions = (pqRes.data || []) as Question[]
 
-  // Dedupe pending questions by semantic similarity. Only pending — answered
+  // Dedupe pending questions by semantic similarity. Only pending . answered
   // and skipped stay flat because they're historical records, not triage
   // queues. Fail-soft: on any embedding error, return the flat list so the
   // admin queue never goes down because an embed call hiccupped.

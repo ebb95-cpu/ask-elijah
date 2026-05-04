@@ -82,7 +82,7 @@ export async function issueAdminSession(): Promise<string> {
 
 /**
  * Verify an admin session cookie. Uses Web Crypto's own constant-time HMAC
- * verify under the hood, plus an expiry check (defense in depth — the
+ * verify under the hood, plus an expiry check (defense in depth . the
  * browser should already drop the cookie past maxAge).
  */
 export async function verifyAdminSession(

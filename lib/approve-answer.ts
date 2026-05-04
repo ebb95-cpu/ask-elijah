@@ -50,7 +50,7 @@ async function saveToPinecone(
   const metadata: Record<string, string | number> = {
     text: combined,
     source_type: 'approved_answer',
-    source_title: 'Elijah Bryant — Approved Answer',
+    source_title: 'Elijah Bryant . Approved Answer',
     question,
     helpful_count: opts?.helpful_count ?? 0,
     has_corrections: opts?.has_corrections ? 1 : 0,
@@ -139,7 +139,7 @@ export async function approveAnswer(args: {
 
   const supabase = getSupabase()
 
-  // Select * to be resilient to missing columns — some migrations may not
+  // Select * to be resilient to missing columns . some migrations may not
   // have been run on prod yet. Specific column selects broke approve when
   // `topic` didn't exist.
   const { data: record, error: fetchError } = await supabase
@@ -347,7 +347,7 @@ export async function approveAnswer(args: {
       resendId: response.data?.id || null,
     })
   } catch (err) {
-    // Email failure shouldn't fail the approval — the DB is already updated.
+    // Email failure shouldn't fail the approval . the DB is already updated.
     if (email) {
       const isUpdateEmail = isRevision && liveAnswerChanged
       await logCrmEmailEvent({
@@ -362,7 +362,7 @@ export async function approveAnswer(args: {
     await logError('approve:email', err, { questionId })
   }
 
-  // Pinecone save — best effort, not fatal.
+  // Pinecone save . best effort, not fatal.
   try {
     await saveToPinecone(questionId, record.question, finalAnswer, {
       topic: record.topic,

@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
             // Re-upsert to Pinecone with updated helpful_count
             const existingMeta: Record<string, string | number> = {
               source_type: 'approved_answer',
-              source_title: 'Elijah Bryant — Approved Answer',
+              source_title: 'Elijah Bryant . Approved Answer',
               question: q.question,
             }
             if (q.topic) existingMeta.topic = q.topic

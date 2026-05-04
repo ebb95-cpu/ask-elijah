@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase-server'
 import { getPricingPhase } from '@/lib/pricing-phase'
 import ParentLeadForm from './ParentLeadForm'
+import { RiskReversal } from '@/components/marketing/ValueStack'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,10 +56,10 @@ export default async function ParentsPage() {
   const answers = await getParentAnswers()
   const pricingPhase = getPricingPhase()
   const isBeta = pricingPhase === 'beta'
-  const primaryCta = isBeta ? 'Apply for a Founding 200 seat' : 'Gift one year'
+  const primaryCta = 'Apply for a Founding 200 seat'
   const primarySubcopy = isBeta
-    ? 'Founders Beta is free for 90 days. Accepted players can ask unlimited questions while we build and lock $9.99/mo for life after launch.'
-    : 'Give him one year of Locker Room as a giftable code. He gets the answers. You get billing and engagement signals, not his private questions.'
+    ? 'Founders Beta is free for 90 days. If he is accepted, he locks $9.99/mo for life. Less than one trainer session, every month, forever. Public pricing after launch is $14.99/mo.'
+    : 'The Locker Room gives him reviewed answers, follow-up, and a library that stays with him. Less than one trainer session, every month, forever.'
   const whatHeGets = isBeta
     ? [
         ['A free beta seat.', 'If he is accepted, he can ask unlimited questions during the 90-day beta.'],
@@ -154,18 +155,44 @@ export default async function ParentsPage() {
       )}
 
       <section className="mx-auto max-w-4xl px-5 py-16">
+        <p className="mb-5 text-[10px] font-black uppercase tracking-[0.28em] text-gray-600">
+          WHAT HE ACTUALLY GETS
+        </p>
+        <h2 className="text-4xl font-black leading-tight tracking-tight sm:text-5xl">
+          For less than the price of a single trainer session.
+        </h2>
+        <div className="mt-8 divide-y divide-gray-900 border-y border-gray-900">
+          {[
+            ['Unlimited reviewed questions.', 'Pro answers in 24 to 48 hours.'],
+            ['The Weekly Rep.', 'One mental rep every Sunday. The whole room works on it together.'],
+            ['The Drive Home.', 'Weekly voice note from me on one principle.'],
+            ['Film Notes, Game Day Cards, Pro Reset PDFs.', 'New drops every month.'],
+            ['The Locker Room Library.', 'Every answer he gets, searchable forever.'],
+            ['Wins Wall.', 'Anonymous wins from the rest of the room.'],
+          ].map(([title, body]) => (
+            <div key={title} className="py-5">
+              <p className="text-xl font-black text-white">{title}</p>
+              <p className="mt-2 text-sm font-semibold leading-relaxed text-gray-500">{body}</p>
+            </div>
+          ))}
+        </div>
+        <RiskReversal parent />
+      </section>
+
+      <section className="mx-auto max-w-4xl px-5 py-16">
         <ParentLeadForm />
       </section>
 
       <section className="mx-auto max-w-4xl px-5 py-16 text-center">
+        <p className="mb-5 text-[10px] font-black uppercase tracking-[0.28em] text-gray-600">
+          THE LAST PART
+        </p>
         <h2 className="text-4xl font-black leading-tight tracking-tight">He does not need another trainer.</h2>
         <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-gray-500">
-          {isBeta
-            ? 'If he gets one of the Founding 200 seats, he helps shape this before it opens to everyone.'
-            : 'He needs the inside the arena conversation no AAU coach has time for.'}
+          He needs the conversation that does not happen in the gym. Apply for one of the Founding 200 seats while they are still open.
         </p>
         <Link href="/pricing" className="mt-9 inline-block rounded-full bg-white px-7 py-4 text-sm font-black text-black">
-          {primaryCta}
+          Apply for a Founding 200 seat →
         </Link>
       </section>
     </main>

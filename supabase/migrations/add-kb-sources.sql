@@ -1,5 +1,5 @@
 -- Registry of knowledge-base sources that have been ingested into Pinecone.
--- This is the inventory — one row per upload/ingestion, so we can show
+-- This is the inventory . one row per upload/ingestion, so we can show
 -- Elijah what's already in the KB and let him remove sources if needed.
 -- (Pinecone metadata can be scanned but there's no cheap "list distinct
 -- source_titles" API; a Supabase table is the right place for inventory.)

@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
         text = await transcribeAudioUrl(`https://www.youtube.com/watch?v=${videoId}`)
         inferredType = 'upload_youtube'
       } else if (kind === 'audio') {
-        // Direct audio URL — podcast MP3, Spotify episode audio, etc.
+        // Direct audio URL . podcast MP3, Spotify episode audio, etc.
         text = await transcribeAudioUrl(content)
         inferredType = 'upload_audio'
       } else {
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
     const chunks = await ingestText(text, metadata, idPrefix)
 
     // Record the source in the inventory table so the admin can see what's
-    // already in the KB. Fire-and-forget — if this fails, the ingest still
+    // already in the KB. Fire-and-forget . if this fails, the ingest still
     // succeeded and we just lose a row in the inventory.
     try {
       await getSupabase().from('kb_sources').insert({

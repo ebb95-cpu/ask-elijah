@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
  * POST /api/bug-report
  *
  * Student-submitted bug report via the floating "Something broken?" button.
- * Every submission emails Elijah immediately — bugs should interrupt him.
+ * Every submission emails Elijah immediately . bugs should interrupt him.
  *
  * Body:
  *   { email?: string, page_url?: string, message: string }
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Always email — bug reports are interruptible-signal.
+    // Always email . bug reports are interruptible-signal.
     emailAdmin(
       `🐛 Bug report from ${normalizedEmail || 'anon'}`,
       `

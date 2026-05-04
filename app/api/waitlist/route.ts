@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const supabase = getSupabase()
   const resend = new Resend(process.env.RESEND_API_KEY)
 
-  // Upsert — if they already signed up, just return ok (don't send another confirmation)
+  // Upsert . if they already signed up, just return ok (don't send another confirmation)
   const { data: existing } = await supabase
     .from('waitlist')
     .select('id, confirmed, confirm_token')
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   const firstName = name.trim().split(' ')[0]
 
   if (isSignupClosed) {
-    // Signups closed — collect email and notify when reopening
+    // Signups closed . collect email and notify when reopening
     await resend.emails.send({
       from: 'Elijah Bryant <elijah@elijahbryant.pro>',
       to: cleanEmail,
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
 </html>`,
     }).catch(console.error)
   } else {
-    // Signups open — standard confirmation email
+    // Signups open . standard confirmation email
     const confirmUrl = `${siteUrl}/api/waitlist/confirm?token=${data.confirm_token}`
 
     await resend.emails.send({

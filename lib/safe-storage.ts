@@ -7,7 +7,7 @@
  *   - Content-blockers that wipe storage per page
  *
  * An uncaught throw inside a mount useEffect crashes the whole React tree
- * to the error boundary — which shows up as the white "Application error:
+ * to the error boundary . which shows up as the white "Application error:
  * a client-side exception has occurred" screen.
  *
  * Every storage call in the app routes through here instead of touching

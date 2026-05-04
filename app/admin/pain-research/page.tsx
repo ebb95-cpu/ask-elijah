@@ -259,7 +259,7 @@ export default function PainResearchPage() {
               <li key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', fontSize: 12, color: '#888', borderBottom: '1px solid #111' }}>
                 <span style={{ width: 140 }}>{new Date(r.started_at).toLocaleString()}</span>
                 <span style={{ color: r.status === 'completed' ? '#34d399' : r.status === 'failed' ? '#ef4444' : '#f59e0b', width: 80 }}>{r.status}</span>
-                <span>raw {r.raw_count ?? '—'} · pain {r.pain_count ?? '—'} · q {r.question_count ?? '—'}</span>
+                <span>raw {r.raw_count ?? '.'} · pain {r.pain_count ?? '.'} · q {r.question_count ?? '.'}</span>
               </li>
             ))}
           </ul>
