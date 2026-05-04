@@ -22,6 +22,7 @@ export default function PromoCodesPage() {
   const [trialDays, setTrialDays] = useState('30')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deletingCode, setDeletingCode] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
 
@@ -84,6 +85,34 @@ export default function PromoCodesPage() {
     }
   }
 
+  async function deleteCode(code: PromoCode) {
+    if (code.redeemed_count > 0) {
+      setError('This code has already been used. Pause it instead so redemption history stays intact.')
+      return
+    }
+
+    const confirmed = window.confirm(`Delete promo code ${code.code}? This cannot be undone.`)
+    if (!confirmed) return
+
+    setDeletingCode(code.code)
+    setError('')
+    setNotice('')
+    setCodes((prev) => prev.filter((item) => item.code !== code.code))
+    try {
+      const res = await fetch(`/api/admin/promo-codes?code=${encodeURIComponent(code.code)}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Could not delete code')
+      setNotice(`Deleted ${code.code}`)
+    } catch (e) {
+      setCodes((prev) => [code, ...prev])
+      setError(e instanceof Error ? e.message : 'Could not delete code')
+    } finally {
+      setDeletingCode(null)
+    }
+  }
+
   return (
     <main style={{ minHeight: '100vh', background: '#000', color: '#fff', padding: 'clamp(20px, 5vw, 56px)', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
       <div style={{ maxWidth: 980, margin: '0 auto' }}>
@@ -117,7 +146,7 @@ export default function PromoCodesPage() {
           ) : codes.length === 0 ? (
             <p style={{ padding: 24, color: '#666', margin: 0 }}>No admin promo codes yet.</p>
           ) : codes.map((code) => (
-            <div key={code.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 16, alignItems: 'center', borderBottom: '1px solid #111', padding: 16 }}>
+            <div key={code.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 10, alignItems: 'center', borderBottom: '1px solid #111', padding: 16 }}>
               <div>
                 <p style={{ fontSize: 18, fontWeight: 900, letterSpacing: '0.08em', margin: 0 }}>{code.code}</p>
                 <p style={{ color: '#666', fontSize: 12, margin: '6px 0 0' }}>
@@ -129,6 +158,23 @@ export default function PromoCodesPage() {
               </span>
               <button onClick={() => toggleCode(code)} style={{ border: '1px solid #252525', background: '#080808', color: '#ccc', borderRadius: 999, padding: '8px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 800 }}>
                 {code.active ? 'Pause' : 'Reactivate'}
+              </button>
+              <button
+                onClick={() => deleteCode(code)}
+                disabled={deletingCode === code.code || code.redeemed_count > 0}
+                title={code.redeemed_count > 0 ? 'Pause used codes instead so redemption history stays intact.' : 'Delete code'}
+                style={{
+                  border: '1px solid #2a1616',
+                  background: '#0a0505',
+                  color: code.redeemed_count > 0 ? '#555' : '#f87171',
+                  borderRadius: 999,
+                  padding: '8px 12px',
+                  cursor: code.redeemed_count > 0 ? 'not-allowed' : 'pointer',
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                {deletingCode === code.code ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           ))}
