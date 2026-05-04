@@ -40,10 +40,39 @@ function SignUpInner() {
   const [email, setEmail] = useState(prefillEmail)
   const [password, setPassword] = useState('')
   const [promoCode, setPromoCode] = useState(prefillPromoCode)
+  const [promoStatus, setPromoStatus] = useState<{ state: 'idle' | 'checking' | 'applied' | 'error'; message: string }>({ state: 'idle', message: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
   const browserLanguage = typeof navigator !== 'undefined' ? navigator.language || 'en' : 'en'
+
+  const updatePromoCode = (value: string) => {
+    setPromoCode(value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+    setPromoStatus({ state: 'idle', message: '' })
+  }
+
+  const applyPromoCode = async () => {
+    const code = promoCode.trim()
+    if (!code || promoStatus.state === 'checking') return
+    setPromoStatus({ state: 'checking', message: 'Checking...' })
+
+    try {
+      const res = await fetch('/api/promo-codes/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data?.ok !== true) {
+        setPromoStatus({ state: 'error', message: data?.error || 'That promo code is not active.' })
+        return
+      }
+      setPromoCode(data.code || code)
+      setPromoStatus({ state: 'applied', message: `Applied: ${Number(data.trialDays) || 30} days free` })
+    } catch {
+      setPromoStatus({ state: 'error', message: 'Could not check that code. Try again.' })
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -145,14 +174,37 @@ function SignUpInner() {
             className="w-full border border-gray-200 px-4 py-3 text-sm outline-none focus:border-black transition-colors"
             required
           />
-          <input
-            type="text"
-            placeholder="Promo code"
-            value={promoCode}
-            onChange={e => setPromoCode(e.target.value)}
-            className="w-full border border-gray-200 px-4 py-3 text-sm uppercase outline-none transition-colors focus:border-black"
-            autoComplete="off"
-          />
+          <div>
+            <div className="flex border border-gray-200 focus-within:border-black transition-colors">
+              <input
+                type="text"
+                placeholder="Promo code"
+                value={promoCode}
+                onChange={e => updatePromoCode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    applyPromoCode()
+                  }
+                }}
+                className="min-w-0 flex-1 px-4 py-3 text-sm uppercase outline-none"
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                onClick={applyPromoCode}
+                disabled={!promoCode.trim() || promoStatus.state === 'checking' || promoStatus.state === 'applied'}
+                className="px-4 text-xs font-black disabled:text-black/25"
+              >
+                {promoStatus.state === 'checking' ? 'Checking' : promoStatus.state === 'applied' ? 'Applied' : 'Apply'}
+              </button>
+            </div>
+            {promoStatus.message && (
+              <p className={`mt-2 text-xs ${promoStatus.state === 'applied' ? 'text-emerald-700' : promoStatus.state === 'error' ? 'text-red-600' : 'text-black/50'}`}>
+                {promoStatus.message}
+              </p>
+            )}
+          </div>
           <button
             type="submit"
             disabled={loading || !email || !password || !firstName}

@@ -77,6 +77,7 @@ export default function AccountSetupForm({
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const [password, setPassword] = useState('')
   const [promoCode, setPromoCode] = useState('')
+  const [promoStatus, setPromoStatus] = useState<{ state: 'idle' | 'checking' | 'applied' | 'error'; message: string }>({ state: 'idle', message: '' })
   const [loading, setLoading] = useState<null | 'password' | 'google'>(null)
   const [error, setError] = useState('')
   const browserLanguage = typeof navigator !== 'undefined' ? navigator.language || 'en' : 'en'
@@ -90,6 +91,35 @@ export default function AccountSetupForm({
   const advance = () => {
     setError('')
     setStep((s) => Math.min(s + 1, 5) as Step)
+  }
+
+  const updatePromoCode = (value: string) => {
+    setPromoCode(value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+    setPromoStatus({ state: 'idle', message: '' })
+    if (error) setError('')
+  }
+
+  const applyPromoCode = async () => {
+    const code = promoCode.trim()
+    if (!code || promoStatus.state === 'checking') return
+
+    setPromoStatus({ state: 'checking', message: 'Checking...' })
+    try {
+      const res = await fetch('/api/promo-codes/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data?.ok !== true) {
+        setPromoStatus({ state: 'error', message: data?.error || 'That promo code is not active.' })
+        return
+      }
+      setPromoCode(data.code || code)
+      setPromoStatus({ state: 'applied', message: `Applied: ${Number(data.trialDays) || 30} days free` })
+    } catch {
+      setPromoStatus({ state: 'error', message: 'Could not check that code. Try again.' })
+    }
   }
 
   // Shared email verify + question save — runs at the start of both auth paths.
@@ -299,7 +329,9 @@ export default function AccountSetupForm({
             password={password}
             setPassword={(v) => { setPassword(v); if (error) setError('') }}
             promoCode={promoCode}
-            setPromoCode={(v) => { setPromoCode(v); if (error) setError('') }}
+            setPromoCode={updatePromoCode}
+            promoStatus={promoStatus}
+            onApplyPromo={applyPromoCode}
             onPasswordSubmit={handlePasswordSubmit}
             onGoogle={handleOAuth}
             onBack={goBack}
@@ -545,6 +577,8 @@ function StepEmailAuth({
   setPassword,
   promoCode,
   setPromoCode,
+  promoStatus,
+  onApplyPromo,
   onPasswordSubmit,
   onGoogle,
   onBack,
@@ -559,6 +593,8 @@ function StepEmailAuth({
   setPassword: (v: string) => void
   promoCode: string
   setPromoCode: (v: string) => void
+  promoStatus: { state: 'idle' | 'checking' | 'applied' | 'error'; message: string }
+  onApplyPromo: () => void
   onPasswordSubmit: () => void
   onGoogle: () => void
   onBack: () => void
@@ -604,8 +640,14 @@ function StepEmailAuth({
   // Password path also needs an email typed (it's the account identifier).
   const canGoogle = ageConfirmed
   const canPassword = email.trim().length > 0 && ageConfirmed
-  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const onPasswordKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && password.length >= 8 && canPassword && !loading) onPasswordSubmit()
+  }
+  const onPromoKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      onApplyPromo()
+    }
   }
 
   return (
@@ -634,14 +676,32 @@ function StepEmailAuth({
         className="w-full px-0 py-3 bg-transparent border-0 border-b border-gray-700 focus:border-white text-white text-xl placeholder-gray-700 outline-none transition-colors mb-5"
       />
 
-      <input
-        type="text"
-        placeholder="Promo code"
-        value={promoCode}
-        onChange={(e) => setPromoCode(e.target.value)}
-        autoComplete="off"
-        className="mb-5 w-full rounded-full border border-gray-800 bg-transparent px-4 py-3 text-sm font-bold uppercase text-white outline-none transition-colors placeholder:font-normal placeholder:normal-case placeholder:text-gray-700 focus:border-white"
-      />
+      <div className="mb-5">
+        <div className="flex overflow-hidden rounded-full border border-gray-800 focus-within:border-white transition-colors">
+          <input
+            type="text"
+            placeholder="Promo code"
+            value={promoCode}
+            onChange={(e) => setPromoCode(e.target.value)}
+            onKeyDown={onPromoKey}
+            autoComplete="off"
+            className="min-w-0 flex-1 bg-transparent px-4 py-3 text-sm font-bold uppercase text-white outline-none placeholder:font-normal placeholder:normal-case placeholder:text-gray-700"
+          />
+          <button
+            type="button"
+            onClick={onApplyPromo}
+            disabled={!promoCode.trim() || promoStatus.state === 'checking' || promoStatus.state === 'applied'}
+            className="shrink-0 px-4 text-xs font-bold text-white disabled:text-gray-700"
+          >
+            {promoStatus.state === 'checking' ? 'Checking' : promoStatus.state === 'applied' ? 'Applied' : 'Apply'}
+          </button>
+        </div>
+        {promoStatus.message && (
+          <p className={`mt-2 text-xs ${promoStatus.state === 'applied' ? 'text-emerald-400' : promoStatus.state === 'error' ? 'text-red-400' : 'text-gray-500'}`}>
+            {promoStatus.message}
+          </p>
+        )}
+      </div>
 
       <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer mb-8">
         <input
@@ -705,7 +765,7 @@ function StepEmailAuth({
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={onKey}
+            onKeyDown={onPasswordKey}
             placeholder="8+ characters"
             autoComplete="new-password"
             className="w-full px-4 py-3 bg-transparent border border-gray-700 focus:border-white text-white placeholder-gray-600 outline-none transition-colors text-sm rounded-full mb-4"
