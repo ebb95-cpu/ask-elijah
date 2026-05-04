@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getSupabase } from '@/lib/supabase-server'
+import { recordPromoRedemption } from '@/lib/promo-codes'
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY
@@ -115,6 +116,15 @@ export async function POST(req: NextRequest) {
             trial_source: trialSource || null,
             trial_promo_code: trialPromoCode,
           }, { onConflict: 'email' })
+
+        if (trialPromoCode) {
+          await recordPromoRedemption({
+            code: trialPromoCode,
+            email,
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscriptionId,
+          }).catch((err) => console.error('Promo redemption log failed:', err))
+        }
 
         console.log(`Subscription activated for ${email} (founding: ${isFoundingMember})`)
         break

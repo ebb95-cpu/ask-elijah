@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getSupabase } from '@/lib/supabase-server'
+import { normalizePromoCode, validateTrialPromoCode } from '@/lib/promo-codes'
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY
@@ -58,20 +59,6 @@ const PLANS = {
 }
 
 type PlanKey = keyof typeof PLANS
-const DEFAULT_TRIAL_PROMO_CODES = ['ELIJAH30']
-
-function normalizePromoCode(input: unknown) {
-  return typeof input === 'string' ? input.trim().toUpperCase().replace(/\s+/g, '') : ''
-}
-
-function trialPromoCodes() {
-  const configured = process.env.TRIAL_PROMO_CODES
-    ?.split(',')
-    .map((code) => normalizePromoCode(code))
-    .filter(Boolean)
-
-  return configured && configured.length > 0 ? configured : DEFAULT_TRIAL_PROMO_CODES
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -86,14 +73,18 @@ export async function POST(req: NextRequest) {
     const mode: 'subscription' | 'payment' = plan?.mode || (rawMode === 'payment' ? 'payment' : 'subscription')
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
     const promoCode = normalizePromoCode(rawPromoCode)
-    const trialPromo = promoCode && mode === 'subscription' && trialPromoCodes().includes(promoCode)
+    const promoValidation = promoCode && mode === 'subscription'
+      ? await validateTrialPromoCode(promoCode)
+      : null
+    const trialPromo = promoValidation?.ok === true
+    const trialDays = trialPromo ? promoValidation.trialDays : 0
 
     if (!normalizedEmail) {
       return NextResponse.json({ error: 'Email required' }, { status: 400 })
     }
 
     if (promoCode && !trialPromo) {
-      return NextResponse.json({ error: 'That promo code is not active.' }, { status: 400 })
+      return NextResponse.json({ error: promoValidation?.ok === false ? promoValidation.error : 'That promo code only works on monthly access.' }, { status: 400 })
     }
 
     if (!plan && !priceId) {
@@ -134,7 +125,7 @@ export async function POST(req: NextRequest) {
       is_founding_member: isFoundingMember ? 'true' : 'false',
       trial_source: trialPromo ? 'promo_code' : '',
       trial_promo_code: trialPromo ? promoCode : '',
-      trial_days: trialPromo ? '30' : '',
+      trial_days: trialPromo ? String(trialDays) : '',
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -171,7 +162,7 @@ export async function POST(req: NextRequest) {
       metadata,
       subscription_data: mode === 'subscription' ? {
         metadata,
-        trial_period_days: trialPromo ? 30 : undefined,
+        trial_period_days: trialPromo ? trialDays : undefined,
       } : undefined,
       payment_intent_data: mode === 'payment' ? { metadata } : undefined,
     })

@@ -12,6 +12,7 @@ const NAV_ITEMS: Array<{ href: string; label: string }> = [
   { href: '/admin/test-chat', label: 'Test Chat' },
   { href: '/admin/question-discovery', label: 'Discover' },
   { href: '/admin/kb-sources', label: 'Knowledge' },
+  { href: '/admin/promo-codes', label: 'Promos' },
   { href: '/admin/feedback', label: 'Health' },
 ]
 
