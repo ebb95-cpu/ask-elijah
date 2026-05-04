@@ -291,6 +291,13 @@ function SignInInner() {
                     </svg>
                     {loading ? <LoadingDots label="Opening Google" /> : 'Continue with Google'}
                   </button>
+
+                  <Link
+                    href={`/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim().toLowerCase())}` : ''}`}
+                    className="mt-6 block text-center text-xs text-gray-600 hover:text-white transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
                 </>
               )}
             </>
