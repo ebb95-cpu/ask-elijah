@@ -38,27 +38,38 @@ function PromiseSection() {
   return (
     <section className="mx-auto max-w-5xl px-5 py-14">
       <p className="mb-5 text-[10px] font-black uppercase tracking-[0.28em] text-gray-600">
-        What you actually get
+        The missing layer
       </p>
       <h2 className="max-w-3xl text-4xl font-black leading-tight tracking-tight sm:text-6xl">
-        A simpler way to get unstuck.
+        Skill is built in the gym. Access is controlled by the nervous system.
       </h2>
+      <p className="mt-6 max-w-2xl text-base font-semibold leading-relaxed text-gray-500">
+        You can pay for training, teams, camps, and exposure. But when pressure hits, the brain decides how much of that work the player can actually use.
+      </p>
+      <div className="mt-8 rounded-[2rem] border border-gray-900 bg-[#050505] p-6">
+        <p className="text-2xl font-black leading-tight text-[#F7F5F0]">
+          Train the skill. Then train the state.
+        </p>
+        <p className="mt-4 max-w-2xl text-sm font-semibold leading-relaxed text-gray-500">
+          Under stress, attention narrows, breathing changes, muscles tighten, and working memory drops. That is why a player can look ready in practice and frozen in the game.
+        </p>
+      </div>
       <div className="mt-10 border-b border-gray-900">
         <SimpleRow
           title="Ask real questions."
-          body="Confidence, minutes, pressure, coach relationships, slumps, role changes, parents, recruiting, or whatever is sitting in your head."
+          body="Confidence after mistakes, coach pressure, playing time, slumps, fear, parents, recruiting, or whatever is changing the state behind the skill."
         />
         <SimpleRow
           title="Get a reviewed answer."
-          body="Elijah reviews the answer before it reaches you. The goal is one clear next move, not more noise."
+          body="Elijah reviews the answer before it reaches you. The goal is to help the player understand what is happening and what to do next."
         />
         <SimpleRow
           title="Apply it and report back."
-          body="The room is built around follow-through. The most engaged players are the ones showing what they tried and what changed."
+          body="The room is built around follow-through. The most engaged players are the ones showing how they used the answer in real life."
         />
         <SimpleRow
           title="Help build the room."
-          body="Founders shape what comes next. Clip reviews, deeper breakdowns, and bonus drops get added when the room proves what it needs."
+          body="Founders shape what comes next. Clip reviews, deeper breakdowns, and bonus drops get added around what players are actually applying."
         />
       </div>
     </section>
@@ -115,7 +126,7 @@ async function PricingBody() {
             <span className="block text-gray-500">Keep the early rate.</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg font-semibold leading-relaxed text-gray-500">
-            Founders ask for free while the room is being built. If accepted, you keep $9.99/mo for life as long as your membership stays active.
+            Founders ask for free while the room is being built. The work is simple: ask, apply, report back. If accepted, you keep $9.99/mo for life as long as your membership stays active.
           </p>
           <div className="mt-7">
             <FoundingSeatCounter count={seatsTaken} />
