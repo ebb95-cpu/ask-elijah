@@ -80,6 +80,34 @@ async function saveToPinecone(
   })
 }
 
+async function logCrmEmailEvent(args: {
+  email: string
+  action: 'answer_sent' | 'answer_updated'
+  status: 'sent' | 'failed'
+  subject: string
+  questionId: string
+  error?: string | null
+  resendId?: string | null
+}) {
+  try {
+    await getSupabase().from('crm_email_events').insert({
+      email: args.email,
+      provider: 'resend',
+      action: args.action,
+      status: args.status,
+      subject: args.subject,
+      tags: ['transactional', 'answer'],
+      metadata: {
+        question_id: args.questionId,
+        resend_id: args.resendId || null,
+      },
+      error: args.error || null,
+    })
+  } catch (err) {
+    await logError('approve:email-log', err, { questionId: args.questionId, email: args.email })
+  }
+}
+
 function extractCorrections(aiDraft: string): { hadCorrections: boolean; flaggedClaims: string[] } {
   if (!aiDraft) return { hadCorrections: false, flaggedClaims: [] }
   const re = /<<VERIFY:\s*([^>]+)>>/g
@@ -248,11 +276,12 @@ export async function approveAnswer(args: {
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro').trim()
     if (!email) throw new Error('Question has no email recipient')
     const isUpdateEmail = isRevision && liveAnswerChanged
-    await resend.emails.send({
+    const subject = isUpdateEmail ? 'Elijah updated an answer for you.' : 'Elijah wrote back.'
+    const result = await resend.emails.send({
       from: 'Elijah Bryant <elijah@elijahbryant.pro>',
       replyTo: 'ebb95@mac.com',
       to: email,
-      subject: isUpdateEmail ? 'Elijah updated an answer for you.' : 'Elijah wrote back.',
+      subject,
       html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -304,8 +333,32 @@ export async function approveAnswer(args: {
 </html>
       `,
     })
+    const response = result as { data?: { id?: string | null } | null; error?: { message?: string } | string | null }
+    if (response.error) {
+      const message = typeof response.error === 'string' ? response.error : response.error.message || 'Resend rejected the email'
+      throw new Error(message)
+    }
+    await logCrmEmailEvent({
+      email,
+      action: isUpdateEmail ? 'answer_updated' : 'answer_sent',
+      status: 'sent',
+      subject,
+      questionId,
+      resendId: response.data?.id || null,
+    })
   } catch (err) {
     // Email failure shouldn't fail the approval — the DB is already updated.
+    if (email) {
+      const isUpdateEmail = isRevision && liveAnswerChanged
+      await logCrmEmailEvent({
+        email,
+        action: isUpdateEmail ? 'answer_updated' : 'answer_sent',
+        status: 'failed',
+        subject: isUpdateEmail ? 'Elijah updated an answer for you.' : 'Elijah wrote back.',
+        questionId,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
     await logError('approve:email', err, { questionId })
   }
 

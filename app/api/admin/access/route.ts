@@ -333,6 +333,10 @@ export async function GET() {
     last_email_status: 'sent' | 'failed' | null
     last_email_subject: string | null
     last_email_at: string | null
+    answer_email_count: number
+    last_answer_email_status: 'sent' | 'failed' | null
+    last_answer_email_subject: string | null
+    last_answer_email_at: string | null
     has_profile: boolean
     is_founding_member: boolean
     subscription_status: string | null
@@ -385,6 +389,10 @@ export async function GET() {
         last_email_status: null,
         last_email_subject: null,
         last_email_at: null,
+        answer_email_count: 0,
+        last_answer_email_status: null,
+        last_answer_email_subject: null,
+        last_answer_email_at: null,
         has_profile: false,
         is_founding_member: false,
         subscription_status: null,
@@ -503,6 +511,14 @@ export async function GET() {
   if (!crmEmailResult.error) {
     for (const row of (crmEmailResult.data || []) as CrmEmailEventRow[]) {
       const entry = ensureEntry(row.email)
+      if (row.action === 'answer_sent' || row.action === 'answer_updated') {
+        entry.answer_email_count += 1
+        if (!entry.last_answer_email_at) {
+          entry.last_answer_email_status = row.status
+          entry.last_answer_email_subject = row.subject
+          entry.last_answer_email_at = row.created_at
+        }
+      }
       if (entry.last_email_at) continue
       entry.last_email_provider = row.provider
       entry.last_email_action = row.action

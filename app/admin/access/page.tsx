@@ -41,6 +41,10 @@ type AccessEntry = {
   last_email_status: 'sent' | 'failed' | null
   last_email_subject: string | null
   last_email_at: string | null
+  answer_email_count: number
+  last_answer_email_status: 'sent' | 'failed' | null
+  last_answer_email_subject: string | null
+  last_answer_email_at: string | null
   has_profile: boolean
   is_founding_member: boolean
   subscription_status: string | null
@@ -183,6 +187,10 @@ export default function AdminAccessPage() {
                 last_email_status: item.last_email_status,
                 last_email_subject: item.last_email_subject,
                 last_email_at: item.last_email_at,
+                answer_email_count: item.answer_email_count,
+                last_answer_email_status: item.last_answer_email_status,
+                last_answer_email_subject: item.last_answer_email_subject,
+                last_answer_email_at: item.last_answer_email_at,
               }
             : item
         )
@@ -272,6 +280,10 @@ export default function AdminAccessPage() {
                 last_email_status: item.last_email_status,
                 last_email_subject: item.last_email_subject,
                 last_email_at: item.last_email_at,
+                answer_email_count: item.answer_email_count,
+                last_answer_email_status: item.last_answer_email_status,
+                last_answer_email_subject: item.last_answer_email_subject,
+                last_answer_email_at: item.last_answer_email_at,
               }
             : item
         )
@@ -538,6 +550,28 @@ export default function AdminAccessPage() {
                       {getInviteStatus(entry).label}
                     </p>
                   </div>
+                  <div className={`mt-3 rounded-xl border p-3 ${
+                    entry.last_answer_email_status === 'failed'
+                      ? 'border-red-500/20 bg-red-950/10'
+                      : entry.last_answer_email_status === 'sent'
+                        ? 'border-green-500/20 bg-green-950/10'
+                        : 'border-gray-900 bg-[#050505]'
+                  }`}>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gray-700">
+                        Answer delivery
+                      </p>
+                      <p className={`text-[11px] ${
+                        entry.last_answer_email_status === 'failed'
+                          ? 'text-red-300'
+                          : entry.last_answer_email_status === 'sent'
+                            ? 'text-green-300'
+                            : 'text-gray-600'
+                      }`}>
+                        {formatAnswerDelivery(entry)}
+                      </p>
+                    </div>
+                  </div>
                   <textarea
                     value={entry.admin_note || ''}
                     onChange={(e) => {
@@ -746,6 +780,13 @@ function formatEmailTouch(entry: AccessEntry) {
   if (!entry.last_email_provider || !entry.last_email_at) return 'No email sent yet'
   const verb = entry.last_email_status === 'failed' ? 'Failed with' : 'Sent with'
   return `${verb} ${providerLabel(entry.last_email_provider)} · ${emailActionLabel(entry.last_email_action)} · ${formatDate(entry.last_email_at)}`
+}
+
+function formatAnswerDelivery(entry: AccessEntry) {
+  if (!entry.last_answer_email_at) return 'No answer email logged yet'
+  const verb = entry.last_answer_email_status === 'failed' ? 'Failed' : 'Sent'
+  const count = entry.answer_email_count > 1 ? ` · ${entry.answer_email_count} answer emails` : ''
+  return `${verb} · ${formatDate(entry.last_answer_email_at)}${count}`
 }
 
 function getInviteStatus(entry: AccessEntry): {
