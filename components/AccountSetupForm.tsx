@@ -76,6 +76,7 @@ export default function AccountSetupForm({
   const [email, setEmail] = useState('')
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const [password, setPassword] = useState('')
+  const [promoCode, setPromoCode] = useState('')
   const [loading, setLoading] = useState<null | 'password' | 'google'>(null)
   const [error, setError] = useState('')
 
@@ -139,6 +140,7 @@ export default function AccountSetupForm({
           age: age.trim(),
           position: position.trim(),
           challenge: struggle.trim(),
+          promoCode: promoCode.trim(),
           skipEmailVerify: true,
         }),
       })
@@ -155,6 +157,11 @@ export default function AccountSetupForm({
         setLoading(null)
         return
       }
+      await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, email: cleanEmail, newsletterOptIn: true }),
+      }).catch(() => {})
       onDone()
     } catch {
       setError('Could not set up your locker room. Try again.')
@@ -176,6 +183,8 @@ export default function AccountSetupForm({
         age: age.trim() || null,
         position: position.trim() || null,
         challenge: struggle.trim() || null,
+        promo_code: promoCode.trim() || null,
+        pending_question: question || null,
       }))
     } catch { /* ignore */ }
 
@@ -198,6 +207,7 @@ export default function AccountSetupForm({
             age: age.trim(),
             position: position.trim(),
             challenge: struggle.trim(),
+            promo_code: promoCode.trim(),
           }),
         }).catch(() => {})
       }
@@ -284,6 +294,8 @@ export default function AccountSetupForm({
             setAgeConfirmed={setAgeConfirmed}
             password={password}
             setPassword={(v) => { setPassword(v); if (error) setError('') }}
+            promoCode={promoCode}
+            setPromoCode={(v) => { setPromoCode(v); if (error) setError('') }}
             onPasswordSubmit={handlePasswordSubmit}
             onGoogle={handleOAuth}
             onBack={goBack}
@@ -527,6 +539,8 @@ function StepEmailAuth({
   setAgeConfirmed,
   password,
   setPassword,
+  promoCode,
+  setPromoCode,
   onPasswordSubmit,
   onGoogle,
   onBack,
@@ -539,6 +553,8 @@ function StepEmailAuth({
   setAgeConfirmed: (v: boolean) => void
   password: string
   setPassword: (v: string) => void
+  promoCode: string
+  setPromoCode: (v: string) => void
   onPasswordSubmit: () => void
   onGoogle: () => void
   onBack: () => void
@@ -612,6 +628,15 @@ function StepEmailAuth({
         onChange={(e) => { setEmail(e.target.value); setExistingAccount(false) }}
         autoComplete="email"
         className="w-full px-0 py-3 bg-transparent border-0 border-b border-gray-700 focus:border-white text-white text-xl placeholder-gray-700 outline-none transition-colors mb-5"
+      />
+
+      <input
+        type="text"
+        placeholder="Promo code"
+        value={promoCode}
+        onChange={(e) => setPromoCode(e.target.value)}
+        autoComplete="off"
+        className="mb-5 w-full rounded-full border border-gray-800 bg-transparent px-4 py-3 text-sm font-bold uppercase text-white outline-none transition-colors placeholder:font-normal placeholder:normal-case placeholder:text-gray-700 focus:border-white"
       />
 
       <label className="flex items-start gap-2 text-xs text-gray-500 cursor-pointer mb-8">

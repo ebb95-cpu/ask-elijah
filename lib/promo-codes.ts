@@ -65,12 +65,23 @@ export async function recordPromoRedemption(args: {
   if (!code || !email) return
 
   const supabase = getSupabase()
-  const { error: insertError } = await supabase.from('trial_promo_redemptions').upsert({
+  const { data: existing, error: existingError } = await supabase
+    .from('trial_promo_redemptions')
+    .select('id')
+    .eq('code', code)
+    .eq('email', email)
+    .maybeSingle()
+
+  if (existingError && /trial_promo_redemptions|relation|schema cache|42P01/i.test(existingError.message || '')) return
+  if (existingError) throw existingError
+  if (existing?.id) return
+
+  const { error: insertError } = await supabase.from('trial_promo_redemptions').insert({
     code,
     email,
     stripe_customer_id: args.stripeCustomerId || null,
     stripe_subscription_id: args.stripeSubscriptionId || null,
-  }, { onConflict: 'code,email' })
+  })
 
   if (insertError && /trial_promo_redemptions|relation|schema cache|42P01/i.test(insertError.message || '')) return
   if (insertError) throw insertError

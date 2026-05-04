@@ -33,11 +33,13 @@ function SignUpInner() {
   const intent = searchParams?.get('intent') || ''
   const painQuestion = searchParams?.get('q') || ''
   const rawNextUrl = searchParams?.get('next') || ''
+  const prefillPromoCode = searchParams?.get('promo') || searchParams?.get('code') || ''
   const nextUrl = rawNextUrl.startsWith('/') && !rawNextUrl.startsWith('//') ? rawNextUrl : ''
   const isMeTooIntent = intent === 'me-too' && !!painQuestion
   const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState(prefillEmail)
   const [password, setPassword] = useState('')
+  const [promoCode, setPromoCode] = useState(prefillPromoCode)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -52,7 +54,7 @@ function SignUpInner() {
       const res = await fetch('/api/sign-up', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, firstName }),
+        body: JSON.stringify({ email, password, firstName, promoCode }),
       })
       const result = await res.json()
 
@@ -141,6 +143,14 @@ function SignUpInner() {
             onChange={e => setPassword(e.target.value)}
             className="w-full border border-gray-200 px-4 py-3 text-sm outline-none focus:border-black transition-colors"
             required
+          />
+          <input
+            type="text"
+            placeholder="Promo code"
+            value={promoCode}
+            onChange={e => setPromoCode(e.target.value)}
+            className="w-full border border-gray-200 px-4 py-3 text-sm uppercase outline-none transition-colors focus:border-black"
+            autoComplete="off"
           />
           <button
             type="submit"

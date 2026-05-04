@@ -37,8 +37,19 @@ export default function ProfileSyncer() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-        .then((res) => {
+        .then(async (res) => {
           if (res.ok) {
+            if (email && pending.pending_question) {
+              await fetch('/api/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  question: pending.pending_question,
+                  email,
+                  newsletterOptIn: true,
+                }),
+              }).catch(() => {})
+            }
             try { localStorage.removeItem(PENDING_KEY) } catch { /* ignore */ }
           }
         })

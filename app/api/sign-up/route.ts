@@ -3,9 +3,10 @@ import { getSupabase } from '@/lib/supabase-server'
 import { verifyEmail } from '@/lib/email-verify'
 import { Resend } from 'resend'
 import { ACCESS_REQUIRED_MESSAGE, hasPlayerAccess } from '@/lib/access-gate'
+import { normalizePromoCode, recordPromoRedemption, validateTrialPromoCode } from '@/lib/promo-codes'
 
 export async function POST(req: NextRequest) {
-  const { email, password, firstName, challenge, weaknesses, strengths, age, position, skipEmailVerify } = await req.json()
+  const { email, password, firstName, challenge, weaknesses, strengths, age, position, promoCode: rawPromoCode, skipEmailVerify } = await req.json()
 
   if (!email?.trim() || !password || !firstName?.trim()) {
     return NextResponse.json({ error: 'Email, password, and first name are required' }, { status: 400 })
@@ -18,11 +19,13 @@ export async function POST(req: NextRequest) {
   const cleanStrengths = typeof strengths === 'string' ? strengths.trim() : ''
   const cleanAge = typeof age === 'string' ? age.trim() : ''
   const cleanPosition = typeof position === 'string' ? position.trim() : ''
+  const promoCode = normalizePromoCode(rawPromoCode)
+  const promoValidation = promoCode ? await validateTrialPromoCode(promoCode) : null
 
   const hasAccess = await hasPlayerAccess(cleanEmail)
-  if (!hasAccess) {
+  if (!hasAccess && promoValidation?.ok !== true) {
     return NextResponse.json(
-      { error: ACCESS_REQUIRED_MESSAGE, code: 'access_required' },
+      { error: promoValidation?.ok === false ? promoValidation.error : ACCESS_REQUIRED_MESSAGE, code: 'access_required' },
       { status: 403 }
     )
   }
@@ -61,11 +64,23 @@ export async function POST(req: NextRequest) {
   }
 
   if (data.user) {
+    const trialEndsAt = promoValidation?.ok === true
+      ? new Date(Date.now() + promoValidation.trialDays * 24 * 60 * 60 * 1000).toISOString()
+      : null
     const upsertRow: Record<string, unknown> = {
       id: data.user.id,
       first_name: cleanFirstName,
       email: cleanEmail,
       is_founding_member: accessRow?.approved === true,
+    }
+    if (promoValidation?.ok === true) {
+      upsertRow.subscription_status = 'trialing'
+      upsertRow.subscription_tier = 'locker_room'
+      upsertRow.subscription_started_at = new Date().toISOString()
+      upsertRow.trial_started_at = new Date().toISOString()
+      upsertRow.trial_ends_at = trialEndsAt
+      upsertRow.trial_source = 'promo_code'
+      upsertRow.trial_promo_code = promoValidation.code
     }
     if (cleanChallenge) upsertRow.challenge = cleanChallenge
     if (cleanWeaknesses) upsertRow.weaknesses = cleanWeaknesses
@@ -76,6 +91,9 @@ export async function POST(req: NextRequest) {
     // in Supabase, the upsert will fail silently and the rest of the row
     // still saves. See scripts/add-profile-columns.sql for the migration.
     await supabase.from('profiles').upsert(upsertRow).then(() => {}, () => {})
+    if (promoValidation?.ok === true) {
+      await recordPromoRedemption({ code: promoValidation.code, email: cleanEmail }).catch(console.error)
+    }
   }
 
   new Resend(process.env.RESEND_API_KEY).emails.send({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { getSupabase } from '@/lib/supabase-server'
+import { normalizePromoCode, recordPromoRedemption, validateTrialPromoCode } from '@/lib/promo-codes'
 
 // Only allow reading/writing non-sensitive profile fields.
 // `weaknesses` and `strengths` are captured during the post-verify Endel-style
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
     if (!sessionEmail) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
     const body = await req.json()
+    const promoCode = normalizePromoCode(body.promo_code || body.promoCode)
 
     // Strip any fields that shouldn't be user-writable
     const safeUpdate: Record<string, unknown> = { email: sessionEmail, updated_at: new Date().toISOString() }
@@ -57,8 +59,21 @@ export async function POST(req: NextRequest) {
       if (body[field] !== undefined) safeUpdate[field] = body[field]
     }
 
+    if (promoCode) {
+      const promo = await validateTrialPromoCode(promoCode)
+      if (!promo.ok) return NextResponse.json({ error: promo.error }, { status: 400 })
+      safeUpdate.subscription_status = 'trialing'
+      safeUpdate.subscription_tier = 'locker_room'
+      safeUpdate.subscription_started_at = new Date().toISOString()
+      safeUpdate.trial_started_at = new Date().toISOString()
+      safeUpdate.trial_ends_at = new Date(Date.now() + promo.trialDays * 24 * 60 * 60 * 1000).toISOString()
+      safeUpdate.trial_source = 'promo_code'
+      safeUpdate.trial_promo_code = promo.code
+    }
+
     const supabase = getSupabase()
     await supabase.from('profiles').upsert(safeUpdate, { onConflict: 'email' })
+    if (promoCode) await recordPromoRedemption({ code: promoCode, email: sessionEmail })
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ error: 'Failed' }, { status: 500 })
