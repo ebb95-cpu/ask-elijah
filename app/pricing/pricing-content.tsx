@@ -81,7 +81,7 @@ function PriceSection({ seatsTaken }: { seatsTaken: number | null }) {
 
   return (
     <section className="mx-auto max-w-5xl px-5 pb-16" id="locker-room">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid items-start gap-4 md:grid-cols-2">
         <div className="rounded-[2rem] bg-[#F7F5F0] p-7 text-black">
           <p className="text-[10px] font-black uppercase tracking-[0.22em] text-black/50">Founders 200</p>
           <p className="mt-5 text-5xl font-black">$9.99/mo</p>
