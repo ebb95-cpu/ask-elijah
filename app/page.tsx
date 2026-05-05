@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
-import { getLocal, setLocal } from '@/lib/safe-storage'
+import { getLocal, setLocal, setSession } from '@/lib/safe-storage'
 import AccountSetupForm from '@/components/AccountSetupForm'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import FoundingSeatCounter from '@/components/marketing/FoundingSeatCounter'
@@ -387,6 +387,11 @@ export default function HomePage() {
     if (commitmentConfirmed) {
       setHasCommitted(true)
       setShowCommitment(false)
+    }
+    if (mode === 'idle') {
+      setSession('pending_question', question.trim())
+      window.location.assign('/pricing#founders-application')
+      return
     }
     setAskError('')
     setMode('loading')
@@ -959,6 +964,9 @@ export default function HomePage() {
           {askError && (
             <p className="mt-3 text-sm text-red-400 leading-relaxed">{askError}</p>
           )}
+          <p className="mt-3 text-xs text-gray-500">
+            Submitting takes you to the Founders application. You&apos;ll get a real answer when you get in.
+          </p>
         </div>
       </section>
 

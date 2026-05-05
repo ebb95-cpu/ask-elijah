@@ -13,7 +13,7 @@ Built with Next.js 14, Supabase, Anthropic Claude, Pinecone, Resend, and Vercel.
 2. They type their question on `/ask`
 3. They enter their email (age confirmation required)
 4. While Claude generates a draft answer using RAG from Elijah's knowledge base, the player completes a short profile (name, position, level, challenge)
-5. They see "Here's a first take" with the AI draft — clearly marked as pending Elijah's review
+5. They see "Here's a first take" with the AI draft . clearly marked as pending Elijah's review
 6. A confirmation email lands in their inbox
 7. Elijah reviews, edits, and approves the answer from the admin panel or the `/approve/[id]` page
 8. The final answer is emailed to the player
@@ -23,7 +23,7 @@ Built with Next.js 14, Supabase, Anthropic Claude, Pinecone, Resend, and Vercel.
 1. New questions appear in the admin panel at `/admin/questions`
 2. Each card shows the question, a Claude-generated draft, and relevant knowledge base sources
 3. Elijah can edit the draft directly, add his own thoughts ("Add & Remix"), or skip
-4. Click **Approve & Send** — the final answer emails to the player and gets embedded into Pinecone to improve future answers
+4. Click **Approve & Send** . the final answer emails to the player and gets embedded into Pinecone to improve future answers
 5. Daily Reddit research runs automatically, surfaces relevant questions from basketball communities, and adds them to the queue as practice content
 
 ---
@@ -31,30 +31,30 @@ Built with Next.js 14, Supabase, Anthropic Claude, Pinecone, Resend, and Vercel.
 ## Features
 
 ### For Players
-- **Single question format** — one question, one personal answer
-- **Draft preview** — see a first take immediately while Elijah reviews
-- **Player profile** — position, level, country, challenge area used to personalize answers
-- **Question history** — `/history` shows all past questions and answers
-- **Community feed** — `/browse` shows top-voted answered questions
-- **Upvoting** — players can vote on questions they relate to
-- **Multi-language support** — questions detected and answered in the player's language
-- **Memory system** — Claude remembers key facts about each player across sessions
+- **Single question format** . one question, one personal answer
+- **Draft preview** . see a first take immediately while Elijah reviews
+- **Player profile** . position, level, country, challenge area used to personalize answers
+- **Question history** . `/history` shows all past questions and answers
+- **Community feed** . `/browse` shows top-voted answered questions
+- **Upvoting** . players can vote on questions they relate to
+- **Multi-language support** . questions detected and answered in the player's language
+- **Memory system** . Claude remembers key facts about each player across sessions
 
 ### For Elijah (Admin)
-- **Question queue** — pending questions sorted by type (real players first, Reddit research second)
-- **Add & Remix** — type raw thoughts, Claude rewrites them into Elijah's voice using the Hormozi/Nir Eyal framework
-- **Dashboard stats** — total players, questions this week, answer rate, avg response time, waitlist count
-- **Clickable stat cards** — click any stat to drill into the relevant view
-- **Waitlist management** — approve/unapprove confirmed waitlist entries, one-click notify
-- **Run Research** — manually trigger the Reddit scraper from the admin panel
-- **Toast notifications** — confirms when an email has been sent
+- **Question queue** . pending questions sorted by type (real players first, Reddit research second)
+- **Add & Remix** . type raw thoughts, Claude rewrites them into Elijah's voice using the Hormozi/Nir Eyal framework
+- **Dashboard stats** . total players, questions this week, answer rate, avg response time, waitlist count
+- **Clickable stat cards** . click any stat to drill into the relevant view
+- **Waitlist management** . approve/unapprove confirmed waitlist entries, one-click notify
+- **Run Research** . manually trigger the Reddit scraper from the admin panel
+- **Toast notifications** . confirms when an email has been sent
 
 ### Beta & Waitlist
-- **Beta cap** — controlled by `BETA_CAP` env var (default: 30 unique emails)
-- **Waitlist form** — when cap is hit, players see a waitlist form (name, email, challenge)
-- **Double opt-in** — confirmation email with a token link before they're added
-- **Admin approval** — each waitlist entry can be individually approved before notifying
-- **Notify batch** — one button emails all approved+confirmed+un-notified entries
+- **Beta cap** . controlled by `BETA_CAP` env var (default: 30 unique emails)
+- **Waitlist form** . when cap is hit, players see a waitlist form (name, email, challenge)
+- **Double opt-in** . confirmation email with a token link before they're added
+- **Admin approval** . each waitlist entry can be individually approved before notifying
+- **Notify batch** . one button emails all approved+confirmed+un-notified entries
 
 ### Email System (Resend)
 All emails follow Elijah's brand standard: black background, bold two-tone headline, gray text CTA, signature with slogan.
@@ -65,22 +65,22 @@ All emails follow Elijah's brand standard: black background, bold two-tone headl
 | Waitlist confirmation | Player joins waitlist (double opt-in link) |
 | Waitlist access | Elijah notifies waitlist manually |
 | Answer delivery | Elijah approves a question |
-| 48hr accountability | Cron job — follows up after answer sent |
-| Weekly recap | Cron job — Sunday summary of the week's answers |
-| Profile nudge | Cron job — reminds players who haven't completed their profile |
-| Daily research summary | Cron job — tells Elijah how many new questions came in |
+| 48hr accountability | Cron job . follows up after answer sent |
+| Weekly recap | Cron job . Sunday summary of the week's answers |
+| Profile nudge | Cron job . reminds players who haven't completed their profile |
+| Daily research summary | Cron job . tells Elijah how many new questions came in |
 
 ### AI & Knowledge Base
-- **RAG pipeline** — questions are embedded with Voyage AI, matched against Pinecone, and answered using relevant content from Elijah's YouTube videos and newsletters
-- **Answer structure** — Pain → Mechanism → Solution → Investment (Hormozi framework)
-- **Voice rules** — strict system prompt enforces Elijah's voice (no em dashes, no bullet points, no AI-sounding words)
-- **VERIFY flags** — Claude marks uncertain science claims for Elijah to review before sending
-- **Topic + trigger tagging** — each question is tagged (confidence, pressure, slump, etc.) for analytics
-- **Memory extraction** — key facts extracted from each question and stored per player
+- **RAG pipeline** . questions are embedded with Voyage AI, matched against Pinecone, and answered using relevant content from Elijah's YouTube videos and newsletters
+- **Answer structure** . Pain → Mechanism → Solution → Investment (Hormozi framework)
+- **Voice rules** . strict system prompt enforces Elijah's voice (no em dashes, no bullet points, no AI-sounding words)
+- **VERIFY flags** . Claude marks uncertain science claims for Elijah to review before sending
+- **Topic + trigger tagging** . each question is tagged (confidence, pressure, slump, etc.) for analytics
+- **Memory extraction** . key facts extracted from each question and stored per player
 
 ### Analytics
-- **PostHog** — funnel tracking: question drafted → email gate shown → email submitted → question sent → question confirmed
-- **Admin excluded** — PostHog does not track `/admin/*` routes
+- **PostHog** . funnel tracking: question drafted → email gate shown → email submitted → question sent → question confirmed
+- **Admin excluded** . PostHog does not track `/admin/*` routes
 
 ---
 
@@ -147,10 +147,10 @@ npm install
 npm run dev
 ```
 
-Requires a `.env.local` file with the variables above. Upstash Redis is optional locally — rate limiting fails open if not configured.
+Requires a `.env.local` file with the variables above. Upstash Redis is optional locally . rate limiting fails open if not configured.
 
 ---
 
 ## Deployment
 
-Push to `main` — Vercel auto-deploys. All env vars are configured in the Vercel dashboard.
+Push to `main` . Vercel auto-deploys. All env vars are configured in the Vercel dashboard.

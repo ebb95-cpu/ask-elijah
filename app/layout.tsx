@@ -5,8 +5,32 @@ import BugReportButton from "@/components/BugReportButton";
 import PostHogProvider from "@/components/PostHogProvider";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://elijahbryant.pro"),
   title: "Ask Elijah",
   description: "Personal basketball mentorship from Elijah Bryant",
+  openGraph: {
+    title: "Ask Elijah",
+    description: "Personal basketball mentorship from Elijah Bryant",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Ask Elijah: Your body is trained. Your mind isn't.",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Ask Elijah",
+    description: "Personal basketball mentorship from Elijah Bryant",
+    images: [
+      {
+        url: "/opengraph-image",
+        alt: "Ask Elijah: Your body is trained. Your mind isn't.",
+      },
+    ],
+  },
 };
 
 export const viewport: Viewport = {

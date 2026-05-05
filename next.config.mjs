@@ -17,7 +17,7 @@ const nextConfig = {
       // Force HTTPS for two years including subdomains. Once this ships you
       // cannot browse the naked domain over HTTP.
       { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-      // Don't let browsers sniff MIME types — blocks a class of XSS via
+      // Don't let browsers sniff MIME types . blocks a class of XSS via
       // mis-typed uploads.
       { key: 'X-Content-Type-Options', value: 'nosniff' },
       // Clickjacking: we never want this site framed.
@@ -37,7 +37,7 @@ const nextConfig = {
 
 // Wrap the config with Sentry's webpack plugin so the build uploads source
 // maps to Sentry (enabling readable stack traces on production errors).
-// SENTRY_AUTH_TOKEN is only read at build time — never shipped to the client.
+// SENTRY_AUTH_TOKEN is only read at build time . never shipped to the client.
 export default withSentryConfig(nextConfig, {
   org: 'askelijah',
   project: 'ask-elijah-web',

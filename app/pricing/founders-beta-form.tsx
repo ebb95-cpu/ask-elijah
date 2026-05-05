@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import LoadingDots from '@/components/ui/LoadingDots'
+import { getSession, removeSession } from '@/lib/safe-storage'
 
 type Props = {
   closed: boolean
@@ -24,6 +25,14 @@ export default function FoundersBetaForm({ closed }: Props) {
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const pendingQuestion = getSession('pending_question')
+    if (pendingQuestion) {
+      setBasketballCost(pendingQuestion)
+      removeSession('pending_question')
+    }
+  }, [])
 
   const enoughContext = closed || basketballCost.trim().length >= 30
   const profileReady = closed

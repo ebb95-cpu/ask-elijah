@@ -5,7 +5,7 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Daily recap email — runs every morning at 9am ET
+# Daily recap email . runs every morning at 9am ET
 [[crons]]
   schedule = "0 14 * * *"
   path = "/api/cron/recap?secret=${CRON_SECRET}"

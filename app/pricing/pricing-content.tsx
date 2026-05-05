@@ -18,9 +18,10 @@ function Logo() {
 
 function FoundingSeatCounter({ count }: { count: number | null }) {
   const remaining = getFoundingSeatsLeft(count)
+  const closed = remaining !== null && remaining <= 0
   return (
     <p className="inline-flex rounded-full border border-gray-900 px-4 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#F7F5F0]">
-      {remaining === null ? `${FOUNDING_SEAT_LIMIT} founding seats` : `${remaining} seats left`}
+      {closed ? 'Founders 200 closed' : remaining === null ? `${FOUNDING_SEAT_LIMIT} founding seats` : `${remaining} seats left`}
     </p>
   )
 }
@@ -76,8 +77,80 @@ function PromiseSection() {
   )
 }
 
+const COST_CARDS = [
+  {
+    tag: 'AAU AND TEAM FEES',
+    price: '$500 to $3,000+ / season',
+    body: 'Gets him games. But games alone do not explain why he freezes, why he is losing minutes, or why he stopped talking on the ride home.',
+  },
+  {
+    tag: 'PRIVATE BASKETBALL TRAINER',
+    price: '$75 to $200+ / session',
+    body: 'Great for skill work. Most trainers are not answering the confidence, role, pressure, and coach problems that follow you home.',
+  },
+  {
+    tag: 'CAMPS AND SHOWCASES',
+    price: '$150 to $500+ / event',
+    body: 'Useful exposure. Exposure does not help much if he gets tight the moment coaches are watching.',
+  },
+  {
+    tag: 'SPORT PSYCHOLOGIST',
+    price: '$100 to $250+ / session',
+    body: 'Helpful for mental skills. Ask Elijah is different because the answer comes through someone who has lived the bench, the pressure, the slump, and the locker room.',
+  },
+  {
+    tag: 'SPORTS PHYSIO',
+    price: '$100 to $300 / visit',
+    body: 'Important when his body needs help. This is for the part nobody can stretch out: fear, doubt, playing time, identity, and what to do next.',
+  },
+  {
+    tag: 'RECRUITING ADVICE',
+    price: '$100 to $300+ / call',
+    body: 'Helpful for decisions. Players still need help with the pressure, the comparison, and what to actually do this week.',
+  },
+  {
+    tag: 'PRO LOCKER-ROOM PERSPECTIVE',
+    price: 'Usually not available',
+    body: 'NBA and EuroLeague champion context. Coach problems. Role problems. Confidence problems. The stuff players do not always say out loud.',
+  },
+]
+
+function CostComparisonSection() {
+  return (
+    <section className="mx-auto max-w-5xl px-5 pb-14">
+      <p className="mb-5 text-[10px] font-black uppercase tracking-[0.28em] text-gray-600">
+        The things you are already paying for
+      </p>
+      <h2 className="max-w-3xl text-4xl font-black leading-tight tracking-tight sm:text-6xl">
+        This is the part most families miss.
+      </h2>
+      <p className="mt-6 max-w-2xl text-base font-semibold leading-relaxed text-gray-500">
+        Skill, exposure, and recovery matter. None of them answer the question sitting in his head.
+      </p>
+
+      <div className="mt-9 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {COST_CARDS.map((card) => (
+          <div key={card.tag} className="rounded-[2rem] border border-gray-900 bg-[#050505] p-6">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-600">{card.tag}</p>
+            <p className="mt-6 text-3xl font-black leading-tight text-white">{card.price}</p>
+            <p className="mt-5 text-sm font-semibold leading-relaxed text-gray-500">{card.body}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 rounded-[2rem] bg-[#F7F5F0] p-7 text-black">
+        <h3 className="text-3xl font-black leading-tight">Ask Elijah fills the gap.</h3>
+        <p className="mt-4 max-w-3xl text-sm font-semibold leading-relaxed text-black/60">
+          It does not replace a trainer, therapist, doctor, or physio. It gives players the conversation they usually cannot get: a pro who has lived the bench, the pressure, the role changes, the slumps, the injuries, the locker room, and the next rep.
+        </p>
+      </div>
+    </section>
+  )
+}
+
 function PriceSection({ seatsTaken }: { seatsTaken: number | null }) {
   const seatsLeft = getFoundingSeatsLeft(seatsTaken) ?? 196
+  const closed = seatsLeft <= 0
 
   return (
     <section className="mx-auto max-w-5xl px-5 pb-16" id="locker-room">
@@ -86,9 +159,9 @@ function PriceSection({ seatsTaken }: { seatsTaken: number | null }) {
           <p className="text-[10px] font-black uppercase tracking-[0.22em] text-black/50">Founders 200</p>
           <p className="mt-5 text-5xl font-black">$9.99/mo</p>
           <p className="mt-3 text-sm font-black text-black/60">Locked while your membership stays active.</p>
-          <p className="mt-8 text-3xl font-black tabular-nums">{seatsLeft} / 200 seats left</p>
+          <p className="mt-8 text-3xl font-black tabular-nums">{closed ? 'Founders 200 closed' : `${seatsLeft} / 200 seats left`}</p>
           <Link href="#founders-application" className="mt-8 inline-flex rounded-full bg-black px-6 py-4 text-sm font-black text-white">
-            Apply for a founding seat →
+            {closed ? 'Join Locker Room waitlist →' : 'Apply for a founding seat →'}
           </Link>
         </div>
 
@@ -110,8 +183,7 @@ function PriceSection({ seatsTaken }: { seatsTaken: number | null }) {
   )
 }
 
-async function PricingBody() {
-  const seatsTaken = await getFoundingSeatCount()
+function PricingBody({ seatsTaken }: { seatsTaken: number | null }) {
   const isClosed = seatsTaken !== null && seatsTaken >= FOUNDING_SEAT_LIMIT
 
   return (
@@ -135,12 +207,14 @@ async function PricingBody() {
         <FoundersBetaForm closed={isClosed} />
       </section>
       <PromiseSection />
+      <CostComparisonSection />
       <PriceSection seatsTaken={seatsTaken} />
     </>
   )
 }
 
 export async function PricingPageContent({ phase: _phase, isPreview: _isPreview = false }: { phase: PricingPhase; isPreview?: boolean }) {
+  const seatsTaken = await getFoundingSeatCount()
   return (
     <main className="min-h-[100dvh] bg-black text-white">
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5">
@@ -148,8 +222,8 @@ export async function PricingPageContent({ phase: _phase, isPreview: _isPreview 
           <Logo />
         </Link>
         <div className="flex items-center gap-4">
-          <span className="hidden text-[10px] font-black uppercase tracking-[0.18em] text-gray-600 sm:inline">
-            {getFoundingSeatsLeft(await getFoundingSeatCount()) ?? 200} seats left
+          <span className="hidden sm:inline">
+            <FoundingSeatCounter count={seatsTaken} />
           </span>
           <Link href="/browse" className="text-sm text-gray-500 transition-colors hover:text-white">
             Browse answers
@@ -157,7 +231,7 @@ export async function PricingPageContent({ phase: _phase, isPreview: _isPreview 
         </div>
       </nav>
 
-      <PricingBody />
+      <PricingBody seatsTaken={seatsTaken} />
     </main>
   )
 }
