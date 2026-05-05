@@ -180,6 +180,7 @@ export default function AdminQuestionsPage() {
   const [lastGeneratedDraft, setLastGeneratedDraft] = useState('')
   const [remixNotes, setRemixNotes] = useState('')
   const [makeGold, setMakeGold] = useState(false)
+  const [doNotTrain, setDoNotTrain] = useState(false)
   const [approving, setApproving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Remix uses the answer draft plus private Elijah notes, then writes a
@@ -224,6 +225,7 @@ export default function AdminQuestionsPage() {
     setOpenId(null)
     setRemixNotes('')
     setMakeGold(false)
+    setDoNotTrain(false)
     setRemixNotice(null)
     setRevisionNote('')
     setOpinionChanged(false)
@@ -308,6 +310,7 @@ export default function AdminQuestionsPage() {
             sources,
             adminNotes: remixNotes,
             makeGold,
+            doNotTrain,
             revisionNote,
             opinionChanged,
             notifyPlayer: group?.status === 'approved' ? notifyPlayer : true,
@@ -329,6 +332,7 @@ export default function AdminQuestionsPage() {
       setOpinionChanged(false)
       setNotifyPlayer(false)
       setMakeGold(false)
+      setDoNotTrain(false)
       setSources(getInitialSources(nextItem))
       setRemixNotice(null)
     } catch (e) {
@@ -496,7 +500,7 @@ export default function AdminQuestionsPage() {
     return (
       <div style={{ maxWidth: 1120, margin: '0 auto', padding: 'clamp(16px, 4vw, 32px)' }}>
         <button
-          onClick={() => { setOpenId(null); setDraft(''); setLastGeneratedDraft(''); setRemixNotes(''); setRevisionNote(''); setOpinionChanged(false); setNotifyPlayer(false); setMakeGold(false); setError(null); setSources([]); setRemixNotice(null); setAnswerVersions([]) }}
+          onClick={() => { setOpenId(null); setDraft(''); setLastGeneratedDraft(''); setRemixNotes(''); setRevisionNote(''); setOpinionChanged(false); setNotifyPlayer(false); setMakeGold(false); setDoNotTrain(false); setError(null); setSources([]); setRemixNotice(null); setAnswerVersions([]) }}
           style={{
             background: 'none', border: '1px solid #333', borderRadius: 6,
             color: '#888', fontSize: 13, padding: '8px 16px', cursor: 'pointer',
@@ -721,6 +725,28 @@ export default function AdminQuestionsPage() {
                 onChange={(e) => setMakeGold(e.target.checked)}
               />
               Save as gold answer
+            </label>
+            <label style={{
+              alignItems: 'center',
+              background: doNotTrain ? '#1a0808' : '#050505',
+              border: doNotTrain ? '1px solid #7f1d1d' : '1px solid #1f1f1f',
+              borderRadius: 999,
+              color: doNotTrain ? '#fca5a5' : '#888',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              fontSize: 12,
+              fontWeight: 900,
+              gap: 8,
+              marginBottom: 18,
+              marginLeft: 8,
+              padding: '9px 12px',
+            }}>
+              <input
+                type="checkbox"
+                checked={doNotTrain}
+                onChange={(e) => setDoNotTrain(e.target.checked)}
+              />
+              Do not train on this
             </label>
 
             {/* Sources consulted by the LLM during Remix. Review each before
@@ -1026,6 +1052,7 @@ export default function AdminQuestionsPage() {
                         setOpinionChanged(false)
                         setNotifyPlayer(false)
                         setMakeGold(false)
+                        setDoNotTrain(false)
                         setError(null)
                         setSources(getInitialSources(nextFocus))
                         setRemixNotice(null)
@@ -1063,6 +1090,7 @@ export default function AdminQuestionsPage() {
                         setOpinionChanged(false)
                         setNotifyPlayer(false)
                         setMakeGold(false)
+                        setDoNotTrain(false)
                         setError(null)
                         setSources(getInitialSources(q))
                         setRemixNotice(null)
@@ -1104,6 +1132,7 @@ export default function AdminQuestionsPage() {
                           setOpinionChanged(false)
                           setNotifyPlayer(false)
                           setMakeGold(false)
+                          setDoNotTrain(false)
                           setError(null)
                           setSources(getInitialSources(q))
                           setRemixNotice(null)
@@ -1139,6 +1168,7 @@ export default function AdminQuestionsPage() {
                       setOpinionChanged(false)
                       setNotifyPlayer(false)
                       setMakeGold(false)
+                      setDoNotTrain(false)
                       setError(null)
                       setSources(getInitialSources(q))
                       setRemixNotice(null)

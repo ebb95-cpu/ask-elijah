@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getSourceAction, getSourceIcon } from '@/lib/source-labels'
+import ThreeDots from '@/components/ui/ThreeDots'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,12 +13,37 @@ async function fetchQuestion(id: string) {
   const supabase = getSupabase()
   const { data } = await supabase
     .from('questions')
-    .select('id, question, answer, topic, created_at, status, sources')
+    .select('id, question, answer, topic, created_at, status, sources, email, public')
     .eq('id', id)
     .eq('status', 'approved')
+    .eq('public', true)
     .is('deleted_at', null)
     .single()
   return data
+}
+
+async function isFounderAnswer(email?: string | null) {
+  if (!email) return false
+  const supabase = getSupabase()
+  const normalized = email.toLowerCase()
+
+  const { data: waitlistFounder } = await supabase
+    .from('waitlist')
+    .select('id')
+    .eq('email', normalized)
+    .eq('approved', true)
+    .maybeSingle()
+
+  if (waitlistFounder) return true
+
+  const { data: profileFounder } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', normalized)
+    .eq('founder_badge', true)
+    .maybeSingle()
+
+  return Boolean(profileFounder)
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
@@ -48,6 +74,7 @@ export default async function BrowseAnswerPage({ params }: { params: Params }) {
   const { id } = await params
   const q = await fetchQuestion(id)
   if (!q) notFound()
+  const isFounder = await isFounderAnswer(q.email)
 
   const formattedDate = new Date(q.created_at).toLocaleDateString('en-US', {
     month: 'long', day: 'numeric', year: 'numeric',
@@ -91,9 +118,17 @@ export default async function BrowseAnswerPage({ params }: { params: Params }) {
       </nav>
 
       <article className="flex-1 px-5 py-12 max-w-2xl mx-auto w-full">
-        <p className="text-xs text-gray-600 uppercase tracking-widest mb-6">
-          {q.topic ? q.topic : 'Q&A'} · {formattedDate}
-        </p>
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <p className="text-xs text-gray-600 uppercase tracking-widest">
+            {q.topic ? q.topic : 'Q&A'} · {formattedDate}
+          </p>
+          {isFounder && (
+            <span className="inline-flex items-center gap-2 rounded-full border border-gray-800 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">
+              <ThreeDots size={2.5} />
+              Founder
+            </span>
+          )}
+        </div>
 
         <h1 className="text-3xl sm:text-4xl font-bold leading-tight mb-10">
           &ldquo;{q.question}&rdquo;

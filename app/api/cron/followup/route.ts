@@ -4,6 +4,7 @@ import { getSupabase } from '@/lib/supabase-server'
 import { Resend } from 'resend'
 import { escapeHtml } from '@/lib/escape-html'
 import { logError } from '@/lib/log-error'
+import { sendPushToEmail } from '@/lib/push'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
   // Cap at 50 per run so we don't hit Resend rate limits.
   const { data: questions, error } = await supabase
     .from('questions')
-    .select('id, email, question, approved_at')
+    .select('id, email, question, approved_at, rep_text')
     .eq('status', 'approved')
     .is('followup_sent_at', null)
     .is('deleted_at', null)
@@ -46,6 +47,10 @@ export async function GET(req: NextRequest) {
 
   for (const q of questions || []) {
     try {
+      if (!q.email) {
+        results.push({ id: q.id, ok: false, error: 'missing email' })
+        continue
+      }
       // Pull first_name for personalization if we have it
       const { data: profile } = await supabase
         .from('profiles')
@@ -53,6 +58,14 @@ export async function GET(req: NextRequest) {
         .eq('email', q.email)
         .single()
       const firstName = profile?.first_name || null
+      const repUrl = `${siteUrl}/history`
+
+      await sendPushToEmail(q.email, {
+        title: 'Did you try the rep?',
+        body: 'Tell Elijah what happened, or what got in the way.',
+        url: repUrl,
+        tag: 'rep_followup',
+      }, q.id).catch((err) => logError('cron:followup:push', err, { questionId: q.id }))
 
       await resend.emails.send({
         from: 'Elijah Bryant <elijah@elijahbryant.pro>',
@@ -90,11 +103,11 @@ export async function GET(req: NextRequest) {
           </div>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-            Did what we talked about help? What actually happened? Hit reply and tell me. Or send me a new question . whatever's on your mind now.
+            Did you try the rep? If yes, what happened? If not, what got in the way?
           </p>
 
           <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
-            <a href="${siteUrl}/ask" style="color:#555555;text-decoration:none;">Ask me something new →</a>
+            <a href="${repUrl}" style="color:#555555;text-decoration:none;">Report back →</a>
           </p>
 
           <p style="font-size:14px;color:#ffffff !important;margin:0 0 16px;font-family:-apple-system,sans-serif;">Elijah</p>
@@ -113,9 +126,43 @@ export async function GET(req: NextRequest) {
         .update({ followup_sent_at: new Date().toISOString() })
         .eq('id', q.id)
 
+      try {
+        await supabase.from('crm_email_events').insert({
+          email: q.email,
+          provider: 'resend',
+          action: 'rep_followup_sent',
+          status: 'sent',
+          subject: 'How did it go?',
+          tags: ['transactional', 'followup'],
+          metadata: { question_id: q.id },
+        })
+      } catch {}
+
+      try {
+        await supabase.from('notification_events').insert({
+          email: q.email,
+          channel: 'email',
+          action: 'rep_followup',
+          status: 'sent',
+          question_id: q.id,
+        })
+      } catch {}
+
       results.push({ id: q.id, ok: true })
     } catch (err) {
       await logError('cron:followup:send', err, { questionId: q.id })
+      if (q.email) {
+        try {
+          await supabase.from('notification_events').insert({
+            email: q.email,
+            channel: 'email',
+            action: 'rep_followup',
+            status: 'failed',
+            question_id: q.id,
+            error: err instanceof Error ? err.message : String(err),
+          })
+        } catch {}
+      }
       results.push({ id: q.id, ok: false, error: String(err) })
     }
   }

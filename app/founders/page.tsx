@@ -52,9 +52,14 @@ export default async function FoundersPage() {
         <Link href="/" aria-label="Home">
           <Logo />
         </Link>
-        <Link href="/pricing" className="rounded-full bg-white px-5 py-3 text-sm font-black text-black">
-          Apply →
-        </Link>
+        <div className="flex items-center gap-4">
+          <span className="hidden text-[10px] font-black uppercase tracking-[0.18em] text-gray-600 sm:inline">
+            {seatsLeft} seats left
+          </span>
+          <Link href="/pricing" className="rounded-full bg-white px-5 py-3 text-sm font-black text-black">
+            Apply →
+          </Link>
+        </div>
       </nav>
 
       <section className="mx-auto max-w-6xl px-5 py-16 sm:py-24">

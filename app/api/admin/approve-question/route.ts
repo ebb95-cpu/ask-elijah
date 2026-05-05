@@ -13,12 +13,13 @@ export async function POST(req: NextRequest) {
   if (unauthorized) return unauthorized
 
   const body = await req.json()
-  const { questionId, finalAnswer, scorecard, scorecardOverall, adminNotes, makeGold, revisionNote, opinionChanged, notifyPlayer } = body as {
+  const { questionId, finalAnswer, scorecard, scorecardOverall, adminNotes, makeGold, doNotTrain, revisionNote, opinionChanged, notifyPlayer } = body as {
     questionId?: string
     finalAnswer?: string
     sources?: { title: string; url: string; type?: string }[] | null
     adminNotes?: string | null
     makeGold?: boolean
+    doNotTrain?: boolean
     revisionNote?: string | null
     opinionChanged?: boolean
     notifyPlayer?: boolean
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
     sources: body.sources,
     adminNotes,
     makeGold,
+    doNotTrain,
     revisionNote,
     opinionChanged,
     notifyPlayer,

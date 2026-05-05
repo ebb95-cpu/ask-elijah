@@ -11,6 +11,8 @@ type AccessEntry = {
   challenge: string | null
   confirmed: boolean
   approved: boolean
+  application_status: 'pending' | 'accepted' | 'declined' | 'waitlisted'
+  accepted_at: string | null
   notified: boolean
   invite_sent_at: string | null
   access_expires_at: string | null
@@ -90,10 +92,11 @@ export default function AdminAccessPage() {
   const archivedEntries = useMemo(() => entries.filter((e) => e.archived), [entries])
   const subscriberEntries = useMemo(() => activeEntries.filter(isSubscriber), [activeEntries])
   const subscriberCount = subscriberEntries.length
-  const approvedCount = useMemo(() => activeEntries.filter((e) => e.approved).length, [activeEntries])
+  const approvedCount = useMemo(() => activeEntries.filter((e) => e.application_status === 'accepted' || e.approved).length, [activeEntries])
   const foundingCount = useMemo(() => activeEntries.filter((e) => e.is_founding_member).length, [activeEntries])
   const foundingSeatsLeft = Math.max(0, 200 - foundingCount)
-  const waitingCount = useMemo(() => activeEntries.filter((e) => !e.approved && !e.access_expired).length, [activeEntries])
+  const waitingCount = useMemo(() => activeEntries.filter((e) => e.application_status === 'waitlisted' || (!e.approved && !e.access_expired)).length, [activeEntries])
+  const pendingCount = useMemo(() => activeEntries.filter((e) => e.application_status === 'pending' && !e.approved).length, [activeEntries])
   const expiredCount = useMemo(() => activeEntries.filter((e) => e.access_expired).length, [activeEntries])
   const totalQuestions = useMemo(() => activeEntries.reduce((sum, entry) => sum + entry.question_count, 0), [activeEntries])
   const pendingQuestions = useMemo(() => activeEntries.reduce((sum, entry) => sum + entry.pending_count, 0), [activeEntries])
@@ -112,9 +115,9 @@ export default function AdminAccessPage() {
     if (filter === 'archived') return archivedEntries
     if (filter === 'most_active') return mostActiveEntries
     if (filter === 'subscribers') return subscriberEntries
-    if (filter === 'approved') return activeEntries.filter((e) => e.approved && !e.access_expired)
+    if (filter === 'approved') return activeEntries.filter((e) => e.application_status === 'accepted' || (e.approved && !e.access_expired))
     if (filter === 'founders') return activeEntries.filter((e) => e.is_founding_member)
-    if (filter === 'waiting') return activeEntries.filter((e) => !e.approved && !e.access_expired)
+    if (filter === 'waiting') return activeEntries.filter((e) => e.application_status === 'waitlisted' || (!e.approved && !e.access_expired))
     if (filter === 'expired') return activeEntries.filter((e) => e.access_expired)
     return activeEntries
   }, [activeEntries, archivedEntries, mostActiveEntries, subscriberEntries, filter])
@@ -444,6 +447,7 @@ export default function AdminAccessPage() {
             <Stat label="Subscribers" value={subscriberCount} />
             <Stat label="Founders" value={foundingCount} />
             <Stat label="Seats left" value={foundingSeatsLeft} />
+            <Stat label="Pending" value={pendingCount} />
             <Stat label="Waiting" value={waitingCount} />
             <Stat label="Held spots" value={heldSpots} />
             <Stat label="Questions" value={totalQuestions} />
@@ -709,9 +713,9 @@ export default function AdminAccessPage() {
                 </div>
                 <div className="hidden sm:block">
                   <p className={`text-sm font-semibold ${
-                    entry.archived ? 'text-red-300' : entry.access_expired ? 'text-red-300' : entry.approved ? 'text-green-400' : 'text-yellow-400'
+                    entry.archived || entry.application_status === 'declined' ? 'text-red-300' : entry.access_expired ? 'text-red-300' : entry.approved ? 'text-green-400' : 'text-yellow-400'
                   }`}>
-                    {entry.archived ? 'Archived' : entry.access_expired ? 'Expired' : entry.approved ? 'Approved' : 'Waiting'}
+                    {entry.archived ? 'Declined' : entry.application_status === 'waitlisted' ? 'Waitlisted' : entry.access_expired ? 'Expired' : entry.approved ? 'Accepted' : 'Pending'}
                   </p>
                   <p className="mt-1 text-xs text-gray-700">
                     {entry.has_profile ? 'Has profile' : entry.confirmed ? 'Confirmed' : 'No profile yet'}

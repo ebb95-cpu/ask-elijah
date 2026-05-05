@@ -82,7 +82,7 @@ async function saveToPinecone(
 
 async function logCrmEmailEvent(args: {
   email: string
-  action: 'answer_sent' | 'answer_updated'
+  action: 'answer_sent' | 'answer_updated' | 'followup_scheduled'
   status: 'sent' | 'failed'
   subject: string
   questionId: string
@@ -108,6 +108,16 @@ async function logCrmEmailEvent(args: {
   }
 }
 
+function extractRepText(answer: string, explicit?: string | null) {
+  if (explicit?.trim()) return explicit.trim()
+  const paragraphs = answer
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+  const rep = paragraphs.find((p) => /this week|today|next game|before|rep|try/i.test(p))
+  return (rep || paragraphs[paragraphs.length - 1] || '').slice(0, 1200)
+}
+
 function extractCorrections(aiDraft: string): { hadCorrections: boolean; flaggedClaims: string[] } {
   if (!aiDraft) return { hadCorrections: false, flaggedClaims: [] }
   const re = /<<VERIFY:\s*([^>]+)>>/g
@@ -129,9 +139,11 @@ export async function approveAnswer(args: {
   revisionNote?: string | null
   opinionChanged?: boolean
   notifyPlayer?: boolean
+  doNotTrain?: boolean
 }): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   const { questionId, finalAnswer } = args
   const actionSteps = args.actionSteps ?? null
+  const repText = extractRepText(finalAnswer, actionSteps)
 
   if (!questionId || !finalAnswer) {
     return { ok: false, status: 400, error: 'Missing fields' }
@@ -191,6 +203,10 @@ export async function approveAnswer(args: {
       status: 'approved',
       sources: approvedSources,
       action_steps: actionSteps,
+      rep_text: repText,
+      rep_status: 'not_yet',
+      training_eligible: args.doNotTrain === true ? false : true,
+      do_not_train: args.doNotTrain === true,
       approved_at: new Date().toISOString(),
       // This path is only hit when the admin explicitly approves in the queue.
       // A future auto-approve path (high-confidence KB match) should NOT go
@@ -242,13 +258,17 @@ export async function approveAnswer(args: {
 
   // Some older Supabase projects may not have the learning-loop migration yet.
   // If those columns are missing, approve the answer without blocking email.
-  if (updateError && /answer_quality|is_gold_answer|gold_reason|scorecard/.test(updateError.message || '')) {
+  if (updateError && /answer_quality|is_gold_answer|gold_reason|scorecard|rep_text|rep_status|training_eligible|do_not_train/.test(updateError.message || '')) {
     const fallbackUpdate = { ...baseUpdate }
     delete fallbackUpdate.answer_quality
     delete fallbackUpdate.answer_quality_overall
     delete fallbackUpdate.answer_quality_top_weakness
     delete fallbackUpdate.is_gold_answer
     delete fallbackUpdate.gold_reason
+    delete fallbackUpdate.rep_text
+    delete fallbackUpdate.rep_status
+    delete fallbackUpdate.training_eligible
+    delete fallbackUpdate.do_not_train
     updateError = (await supabase
       .from('questions')
       .update(fallbackUpdate)
@@ -362,19 +382,20 @@ export async function approveAnswer(args: {
     await logError('approve:email', err, { questionId })
   }
 
-  // Pinecone save . best effort, not fatal.
-  try {
-    await saveToPinecone(questionId, record.question, finalAnswer, {
-      topic: record.topic,
-      trigger: record.trigger,
-      level: profile?.level ?? null,
-      age_range: profile?.age_range ?? null,
-      has_corrections: !!corrections,
-      is_gold_answer: Boolean(baseUpdate.is_gold_answer),
-      answer_quality_overall: quality?.overall,
-    })
-  } catch (err) {
-    await logError('approve:pinecone-save', err, { questionId })
+  if (args.doNotTrain !== true) {
+    try {
+      await saveToPinecone(questionId, record.question, finalAnswer, {
+        topic: record.topic,
+        trigger: record.trigger,
+        level: profile?.level ?? null,
+        age_range: profile?.age_range ?? null,
+        has_corrections: !!corrections,
+        is_gold_answer: Boolean(baseUpdate.is_gold_answer),
+        answer_quality_overall: quality?.overall,
+      })
+    } catch (err) {
+      await logError('approve:pinecone-save', err, { questionId })
+    }
   }
 
   return { ok: true }

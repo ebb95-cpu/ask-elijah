@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     const authorized = await requireAuthorizedEmail(req)
     if (authorized instanceof NextResponse) return authorized
 
-    const { email, question_id, text } = await req.json()
+    const { email, question_id, text, outcome } = await req.json()
     if (email && email.trim().toLowerCase() !== authorized) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
@@ -92,11 +92,38 @@ export async function POST(req: NextRequest) {
     }
 
     // Save reflection first (fast path)
-    await supabase.from('reflections').insert({
+    const reflectionPayload: Record<string, unknown> = {
       email: authorized,
       question_id: question_id || null,
       text: text.trim(),
-    })
+    }
+    if (outcome === 'yes' || outcome === 'no') {
+      reflectionPayload.outcome = outcome
+      reflectionPayload.source = 'rep_followup'
+    }
+
+    const reflectionInsert = await supabase.from('reflections').insert(reflectionPayload)
+    if (reflectionInsert.error && /outcome|source/.test(reflectionInsert.error.message || '')) {
+      await supabase.from('reflections').insert({
+        email: authorized,
+        question_id: question_id || null,
+        text: text.trim(),
+      })
+    }
+
+    if (question_id && (outcome === 'yes' || outcome === 'no')) {
+      try {
+        await supabase
+          .from('questions')
+          .update({
+            rep_status: outcome,
+            rep_reflection: text.trim(),
+            rep_reflected_at: new Date().toISOString(),
+          })
+          .eq('id', question_id)
+          .eq('email', authorized)
+      } catch {}
+    }
 
     // Fire-and-forget: detect sentiment, then boost if positive
     ;(async () => {

@@ -7,9 +7,14 @@ type WaitlistRow = {
   id: string
   email: string
   name: string | null
+  age?: string | null
+  level?: string | null
+  position?: string | null
   challenge: string | null
   confirmed: boolean
   approved: boolean
+  application_status?: 'pending' | 'accepted' | 'declined' | 'waitlisted' | null
+  accepted_at?: string | null
   notified: boolean
   invite_sent_at?: string | null
   access_expires_at?: string | null
@@ -73,6 +78,10 @@ function cleanEmail(input: unknown): string {
   return typeof input === 'string' ? input.trim().toLowerCase() : ''
 }
 
+function logAccessError(scope: string, err: unknown, email?: string) {
+  console.error(`admin:access:${scope}`, email || '', err)
+}
+
 const INVITE_EXPIRES_HOURS = 24
 const FOUNDING_SEAT_LIMIT = 200
 
@@ -89,7 +98,7 @@ function inviteWindow() {
 async function fetchWaitlistRows(supabase: ReturnType<typeof getSupabase>) {
   const withArchive = await supabase
     .from('waitlist')
-    .select('id, email, name, challenge, confirmed, approved, notified, invite_sent_at, access_expires_at, archived_at, created_at')
+    .select('id, email, name, age, level, position, challenge, confirmed, approved, application_status, accepted_at, notified, invite_sent_at, access_expires_at, archived_at, created_at')
     .order('created_at', { ascending: false })
     .limit(500)
 
@@ -178,6 +187,14 @@ async function markProfileFoundingMember(supabase: ReturnType<typeof getSupabase
     .from('profiles')
     .update({ is_founding_member: isFoundingMember })
     .eq('email', email)
+}
+
+async function createFounderVideoSlot(supabase: ReturnType<typeof getSupabase>, email: string, waitlistId?: string | null) {
+  const query = supabase
+    .from('founder_video_slots')
+    .upsert({ email, waitlist_id: waitlistId || null, status: 'pending' }, { onConflict: 'waitlist_id', ignoreDuplicates: true })
+  const { error } = await query
+  if (error && !/founder_video_slots|relation/i.test(error.message || '')) throw error
 }
 
 function escapeHtml(value: string): string {
@@ -302,6 +319,8 @@ export async function GET() {
     challenge: string | null
     confirmed: boolean
     approved: boolean
+    application_status: 'pending' | 'accepted' | 'declined' | 'waitlisted'
+    accepted_at: string | null
     notified: boolean
     invite_sent_at: string | null
     access_expires_at: string | null
@@ -359,6 +378,8 @@ export async function GET() {
         challenge: null,
         confirmed: false,
         approved: false,
+        application_status: 'pending',
+        accepted_at: null,
         notified: false,
         invite_sent_at: null,
         access_expires_at: null,
@@ -416,12 +437,16 @@ export async function GET() {
     entry.challenge = row.challenge || entry.challenge
     entry.confirmed = row.confirmed
     entry.approved = row.approved
+    entry.application_status = row.application_status || (row.approved ? 'accepted' : row.archived_at ? 'declined' : 'pending')
+    entry.accepted_at = row.accepted_at || null
     if (row.approved) entry.is_founding_member = true
     entry.notified = row.notified
     entry.invite_sent_at = row.invite_sent_at || null
     entry.access_expires_at = row.access_expires_at || null
     entry.archived_at = row.archived_at || null
     entry.archived = !!row.archived_at
+    entry.position = entry.position || row.position || null
+    entry.level = entry.level || row.level || null
     entry.created_at = row.created_at
   }
 
@@ -579,6 +604,8 @@ export async function POST(req: NextRequest) {
         challenge: challenge || null,
         confirmed: true,
         approved: shouldApprove,
+        application_status: shouldApprove ? 'accepted' : 'waitlisted',
+        accepted_at: shouldApprove ? new Date().toISOString() : null,
         archived_at: null,
       },
       { onConflict: 'email' }
@@ -586,7 +613,7 @@ export async function POST(req: NextRequest) {
     .select('id, email, name, challenge, confirmed, approved, notified, created_at')
     .single()
 
-  if (upsertResult.error && /archived_at/.test(upsertResult.error.message || '')) {
+  if (upsertResult.error && /archived_at|application_status|accepted_at/.test(upsertResult.error.message || '')) {
     upsertResult = await supabase
       .from('waitlist')
       .upsert(
@@ -610,6 +637,9 @@ export async function POST(req: NextRequest) {
   }
 
   await markProfileFoundingMember(supabase, email, shouldApprove).catch(() => {})
+  if (shouldApprove) {
+    await createFounderVideoSlot(supabase, email, data.id).catch((err) => logAccessError('founder-video-slot', err, email))
+  }
 
   let notified = data.notified
   let inviteSentAt: string | null = null
@@ -643,6 +673,8 @@ export async function POST(req: NextRequest) {
       access_expires_at: accessExpiresAt,
       archived_at: null,
       archived: false,
+      application_status: shouldApprove ? 'accepted' : 'waitlisted',
+      accepted_at: shouldApprove ? new Date().toISOString() : null,
       access_expired: false,
       asked_during_invite_window: false,
       waitlist_id: data.id,
@@ -735,9 +767,9 @@ export async function PATCH(req: NextRequest) {
   if (archive) {
     const { data, error } = await supabase
       .from('waitlist')
-      .update({ approved: false, archived_at: new Date().toISOString() })
+      .update({ approved: false, application_status: 'declined', archived_at: new Date().toISOString() })
       .eq('id', id)
-      .select('id, email, name, challenge, confirmed, approved, notified, archived_at, created_at')
+      .select('id, email, name, challenge, confirmed, approved, application_status, accepted_at, notified, archived_at, created_at')
       .single()
 
     if (error || !data) {
@@ -752,6 +784,8 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({
       entry: {
         ...data,
+        application_status: 'declined',
+        accepted_at: null,
         archived: true,
         access_expired: false,
         asked_during_invite_window: false,
@@ -797,13 +831,18 @@ export async function PATCH(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('waitlist')
-    .update({ approved, archived_at: null })
+    .update({
+      approved,
+      application_status: approved ? 'accepted' : 'waitlisted',
+      accepted_at: approved ? new Date().toISOString() : null,
+      archived_at: null,
+    })
     .eq('id', id)
-    .select('id, email, name, challenge, confirmed, approved, notified, archived_at, created_at')
+    .select('id, email, name, challenge, confirmed, approved, application_status, accepted_at, notified, archived_at, created_at')
     .single()
 
   if (error || !data) {
-    if (error && /archived_at/.test(error.message || '')) {
+    if (error && /archived_at|application_status|accepted_at/.test(error.message || '')) {
       const fallback = await supabase
         .from('waitlist')
         .update({ approved })
@@ -816,6 +855,8 @@ export async function PATCH(req: NextRequest) {
           entry: {
             ...fallbackData,
             archived_at: null,
+            application_status: approved ? 'accepted' : 'waitlisted',
+            accepted_at: approved ? new Date().toISOString() : null,
             archived: false,
             access_expired: false,
             asked_during_invite_window: false,
@@ -857,6 +898,7 @@ export async function PATCH(req: NextRequest) {
 
   if (approved) {
     await markProfileFoundingMember(supabase, data.email, true).catch(() => {})
+    await createFounderVideoSlot(supabase, data.email, data.id).catch((err) => logAccessError('founder-video-slot', err, data.email))
   } else {
     await markProfileFoundingMember(supabase, data.email, false).catch(() => {})
   }
@@ -892,6 +934,8 @@ export async function PATCH(req: NextRequest) {
       invite_sent_at: inviteSentAt,
       access_expires_at: accessExpiresAt,
       archived_at: data.archived_at || null,
+      application_status: approved ? 'accepted' : 'waitlisted',
+      accepted_at: approved ? (data.accepted_at || new Date().toISOString()) : null,
       archived: !!data.archived_at,
       access_expired: !!accessExpiresAt && new Date(accessExpiresAt) < new Date(),
       asked_during_invite_window: false,

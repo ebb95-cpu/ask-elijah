@@ -15,6 +15,7 @@
     "@stripe/stripe-js": "^9.1.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.0",
+    "@types/web-push": "^3.6.4",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
     "dotenv": "^17.4.1",
@@ -28,6 +29,7 @@
     "react-dom": "^18",
     "resend": "^6.10.0",
     "stripe": "^22.0.1",
+    "web-push": "^3.6.7",
     "youtubei.js": "^17.0.1"
   },
   "devDependencies": {

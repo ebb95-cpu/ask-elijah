@@ -174,6 +174,7 @@ function ReturningView({
       <nav className="flex items-center justify-between px-5 py-5">
         <Logo dark />
         <div className="flex items-center gap-5">
+          <FoundingSeatCounter className="hidden text-[10px] font-black uppercase tracking-[0.18em] text-gray-600 sm:block" />
           {prevQuestion && (
             <button
               onClick={() => setShowPrev(v => !v)}

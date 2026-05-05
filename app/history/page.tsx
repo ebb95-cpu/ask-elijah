@@ -10,6 +10,7 @@ import ThumbsFeedback from '@/components/ThumbsFeedback'
 import ProfileCapture from '@/components/ProfileCapture'
 import ShareAnswerButton from '@/components/ShareAnswerButton'
 import SignOutButton from '@/components/SignOutButton'
+import PushFollowupOptIn from '@/components/PushFollowupOptIn'
 import { getSourceAction, getSourceIcon } from '@/lib/source-labels'
 
 type Question = {
@@ -20,6 +21,10 @@ type Question = {
   created_at: string
   status?: 'pending' | 'approved' | 'skipped'
   approved_at?: string | null
+  rep_text?: string | null
+  rep_status?: 'not_yet' | 'yes' | 'no'
+  rep_reflection?: string | null
+  rep_reflected_at?: string | null
 }
 
 type PopularQuestion = {
@@ -48,6 +53,11 @@ export default function HistoryPage() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState('')
   const [newAnswer, setNewAnswer] = useState(false)
+  const [search, setSearch] = useState('')
+  const [repChoice, setRepChoice] = useState<'yes' | 'no' | null>(null)
+  const [repText, setRepText] = useState('')
+  const [savingRep, setSavingRep] = useState(false)
+  const [repNotice, setRepNotice] = useState('')
   const knownIdsRef = useRef<Set<string>>(new Set())
   const readIdsRef = useRef<Set<string>>(new Set())
   const router = useRouter()
@@ -103,6 +113,44 @@ export default function HistoryPage() {
   }, [questions])
 
   const openQuestion = openId ? questions.find((q) => q.id === openId) : null
+  const filteredQuestions = questions.filter((q) => {
+    const needle = search.trim().toLowerCase()
+    if (!needle) return true
+    return `${q.question} ${q.answer || ''}`.toLowerCase().includes(needle)
+  })
+
+  async function saveRepReflection(question: Question) {
+    if (!repChoice || !repText.trim()) return
+    setSavingRep(true)
+    setRepNotice('')
+    try {
+      const res = await fetch('/api/reflection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          question_id: question.id,
+          text: repText,
+          outcome: repChoice,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Could not save this yet.')
+      setQuestions((prev) => prev.map((q) => q.id === question.id ? {
+        ...q,
+        rep_status: repChoice,
+        rep_reflection: repText,
+        rep_reflected_at: new Date().toISOString(),
+      } : q))
+      setRepNotice('Saved to your Locker Room Library.')
+      setRepText('')
+      setRepChoice(null)
+    } catch (err) {
+      setRepNotice(err instanceof Error ? err.message : 'Could not save this yet.')
+    } finally {
+      setSavingRep(false)
+    }
+  }
 
   return (
     <div className="min-h-[100dvh] bg-black text-white flex flex-col">
@@ -152,6 +200,7 @@ export default function HistoryPage() {
 
       {/* Content */}
       <div className="flex-1 px-5 pb-28 md:pb-12">
+        <PushFollowupOptIn />
         {loading ? (
           <div className="flex justify-center py-20">
             <LoadingDots label="Loading your questions" className="text-sm text-gray-500" />
@@ -181,8 +230,17 @@ export default function HistoryPage() {
             )}
 
             {/* ── Flashcard grid ── */}
+            <div className="mb-4">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search your Locker Room Library..."
+                className="w-full rounded-full border border-gray-900 bg-[#050505] px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-gray-700 focus:border-gray-700"
+              />
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {questions.map((q) => {
+              {filteredQuestions.map((q) => {
                 const isApproved = q.status === 'approved'
                 const isPending = q.status === 'pending'
                 return (
@@ -190,6 +248,9 @@ export default function HistoryPage() {
                     key={q.id}
                     onClick={() => {
                       setOpenId(q.id)
+                      setRepChoice(null)
+                      setRepText('')
+                      setRepNotice('')
                       if (!readIdsRef.current.has(q.id)) {
                         readIdsRef.current.add(q.id)
                         posthog?.capture('answer_read', { question_id: q.id })
@@ -213,6 +274,11 @@ export default function HistoryPage() {
                           {isApproved ? 'Answered' : isPending ? 'Reviewing' : 'Skipped'}
                         </span>
                       </div>
+                      {isApproved && (
+                        <p className="mb-2 text-[9px] uppercase tracking-widest text-gray-600">
+                          Rep: {q.rep_status === 'yes' ? 'Tried' : q.rep_status === 'no' ? 'Not yet' : 'Not yet'}
+                        </p>
+                      )}
 
                       {/* Question preview . up to 4 lines */}
                       <p
@@ -341,6 +407,53 @@ export default function HistoryPage() {
                 user completes both stages. */}
             {openQuestion.status === 'approved' && userEmail && (
               <ProfileCapture email={userEmail} questionId={openQuestion.id} />
+            )}
+
+            {openQuestion.status === 'approved' && (
+              <div className="mb-8 rounded-2xl border border-gray-900 bg-[#050505] p-4">
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">The rep</p>
+                <p className="text-sm font-semibold leading-relaxed text-gray-300 whitespace-pre-wrap">
+                  {openQuestion.rep_text || 'Try the clearest action from this answer this week, then report back.'}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(['yes', 'no'] as const).map((choice) => (
+                    <button
+                      key={choice}
+                      type="button"
+                      onClick={() => setRepChoice(choice)}
+                      className={`rounded-full border px-4 py-2 text-xs font-bold ${
+                        repChoice === choice ? 'border-white bg-white text-black' : 'border-gray-800 text-gray-500'
+                      }`}
+                    >
+                      {choice === 'yes' ? 'Yes, I tried it' : 'No, not yet'}
+                    </button>
+                  ))}
+                </div>
+                {(repChoice || openQuestion.rep_reflection) && (
+                  <div className="mt-4">
+                    <textarea
+                      value={repText}
+                      onChange={(e) => setRepText(e.target.value)}
+                      placeholder={repChoice === 'no' ? 'What got in the way?' : 'What happened?'}
+                      className="min-h-24 w-full resize-none rounded-xl border border-gray-800 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-gray-700 focus:border-gray-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => saveRepReflection(openQuestion)}
+                      disabled={!repChoice || !repText.trim() || savingRep}
+                      className="mt-3 rounded-full bg-white px-4 py-2 text-xs font-bold text-black disabled:opacity-40"
+                    >
+                      {savingRep ? 'Saving...' : 'Save reflection'}
+                    </button>
+                  </div>
+                )}
+                {openQuestion.rep_reflection && (
+                  <p className="mt-4 text-xs leading-relaxed text-gray-500">
+                    Saved: {openQuestion.rep_reflection}
+                  </p>
+                )}
+                {repNotice && <p className="mt-3 text-xs font-semibold text-gray-500">{repNotice}</p>}
+              </div>
             )}
 
             {/* Sources */}

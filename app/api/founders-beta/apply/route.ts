@@ -14,6 +14,9 @@ export async function POST(req: NextRequest) {
     email?: string
     firstName?: string
     city?: string
+    age?: string
+    level?: string
+    position?: string
     showOnWall?: boolean
     basketballCost?: string
     waitlistOnly?: boolean
@@ -22,6 +25,9 @@ export async function POST(req: NextRequest) {
   const email = body?.email?.trim().toLowerCase() || ''
   const firstName = body?.firstName?.trim() || ''
   const city = body?.city?.trim() || ''
+  const age = body?.age?.trim() || ''
+  const level = body?.level?.trim() || ''
+  const position = body?.position?.trim() || ''
   const showOnWall = body?.showOnWall === true
   const basketballCost = body?.basketballCost?.trim() || ''
   const waitlistOnly = body?.waitlistOnly === true
@@ -49,6 +55,13 @@ export async function POST(req: NextRequest) {
   }
 
   const isFull = (count || 0) >= FOUNDING_SEAT_LIMIT
+  if (isFull || waitlistOnly) {
+    if (!firstName || !city || !level) {
+      return NextResponse.json({ error: 'First name, city, and level are required for the Locker Room waitlist.' }, { status: 400 })
+    }
+  } else if (!firstName || !city || !age || !level || !position) {
+    return NextResponse.json({ error: 'First name, city, age, level, and position are required.' }, { status: 400 })
+  }
   if (!isFull && !waitlistOnly && basketballCost.length < 30) {
     return NextResponse.json({ error: 'Tell Elijah what is actually costing you. Minimum 30 characters.' }, { status: 400 })
   }
@@ -60,17 +73,25 @@ export async function POST(req: NextRequest) {
     challenge?: string
     name?: string
     city?: string
+    age?: string
+    level?: string
+    position?: string
     founders_wall_opt_in?: boolean
+    application_status?: 'pending' | 'waitlisted'
     archived_at?: null
   } = {
     email,
     confirmed: true,
     approved: false,
+    application_status: isFull || waitlistOnly ? 'waitlisted' : 'pending',
     archived_at: null,
   }
 
   if (firstName) payload.name = firstName
   if (city) payload.city = city
+  if (age) payload.age = age
+  if (level) payload.level = level
+  if (position) payload.position = position
   payload.founders_wall_opt_in = showOnWall
 
   if (!isFull && !waitlistOnly) {
@@ -81,11 +102,15 @@ export async function POST(req: NextRequest) {
     .from('waitlist')
     .upsert(payload, { onConflict: 'email' })
 
-  if (result.error && /archived_at|city|founders_wall_opt_in/.test(result.error.message || '')) {
+  if (result.error && /archived_at|city|founders_wall_opt_in|age|level|position|application_status/.test(result.error.message || '')) {
     const fallbackPayload = { ...payload }
     delete fallbackPayload.archived_at
     delete fallbackPayload.city
+    delete fallbackPayload.age
+    delete fallbackPayload.level
+    delete fallbackPayload.position
     delete fallbackPayload.founders_wall_opt_in
+    delete fallbackPayload.application_status
     result = await supabase
       .from('waitlist')
       .upsert(fallbackPayload, { onConflict: 'email' })

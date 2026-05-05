@@ -147,9 +147,14 @@ export async function PricingPageContent({ phase: _phase, isPreview: _isPreview 
         <Link href="/" aria-label="Home">
           <Logo />
         </Link>
-        <Link href="/browse" className="text-sm text-gray-500 transition-colors hover:text-white">
-          Browse answers
-        </Link>
+        <div className="flex items-center gap-4">
+          <span className="hidden text-[10px] font-black uppercase tracking-[0.18em] text-gray-600 sm:inline">
+            {getFoundingSeatsLeft(await getFoundingSeatCount()) ?? 200} seats left
+          </span>
+          <Link href="/browse" className="text-sm text-gray-500 transition-colors hover:text-white">
+            Browse answers
+          </Link>
+        </div>
       </nav>
 
       <PricingBody />

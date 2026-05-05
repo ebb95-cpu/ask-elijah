@@ -16,6 +16,9 @@ export default function FoundersBetaForm({ closed }: Props) {
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [city, setCity] = useState('')
+  const [age, setAge] = useState('')
+  const [level, setLevel] = useState('')
+  const [position, setPosition] = useState('')
   const [showOnWall, setShowOnWall] = useState(false)
   const [basketballCost, setBasketballCost] = useState('')
   const [loading, setLoading] = useState(false)
@@ -23,7 +26,10 @@ export default function FoundersBetaForm({ closed }: Props) {
   const [error, setError] = useState('')
 
   const enoughContext = closed || basketballCost.trim().length >= 30
-  const canSubmit = isEmail(email.trim()) && enoughContext && !loading
+  const profileReady = closed
+    ? firstName.trim() && city.trim() && level.trim()
+    : firstName.trim() && city.trim() && age.trim() && level.trim() && position.trim()
+  const canSubmit = isEmail(email.trim()) && enoughContext && Boolean(profileReady) && !loading
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -39,6 +45,9 @@ export default function FoundersBetaForm({ closed }: Props) {
         email,
         firstName,
         city,
+        age,
+        level,
+        position,
         showOnWall,
         basketballCost: closed ? undefined : basketballCost,
         waitlistOnly: closed,
@@ -78,7 +87,7 @@ export default function FoundersBetaForm({ closed }: Props) {
         {closed ? 'Closed. Waitlist.' : 'Founding seat'}
       </p>
       <h2 className="mt-4 text-3xl font-black leading-tight">
-        {closed ? 'Founding 200 is full.' : 'Tell Elijah what is costing you.'}
+        {closed ? 'Founders 200 is full. Join the Locker Room waitlist.' : 'Tell Elijah what is costing you.'}
       </h2>
 
       <div className="mt-7 space-y-4">
@@ -96,15 +105,52 @@ export default function FoundersBetaForm({ closed }: Props) {
             type="text"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
-            placeholder="First name, optional"
+            placeholder="First name"
             className="w-full rounded-full border border-black/10 bg-white px-5 py-4 text-sm font-semibold outline-none placeholder:text-gray-400 focus:border-black"
+            required={!closed}
           />
           <input
             type="text"
             value={city}
             onChange={(e) => setCity(e.target.value)}
-            placeholder="City, optional"
+            placeholder="City"
             className="w-full rounded-full border border-black/10 bg-white px-5 py-4 text-sm font-semibold outline-none placeholder:text-gray-400 focus:border-black"
+            required={!closed}
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <input
+            type="text"
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
+            placeholder="Age"
+            className="w-full rounded-full border border-black/10 bg-white px-5 py-4 text-sm font-semibold outline-none placeholder:text-gray-400 focus:border-black"
+            required={!closed}
+          />
+          <select
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+            className="w-full rounded-full border border-black/10 bg-white px-5 py-4 text-sm font-semibold outline-none focus:border-black"
+            required={!closed}
+          >
+            <option value="">Level</option>
+            <option value="HS">HS</option>
+            <option value="AAU">AAU</option>
+            <option value="Prep">Prep</option>
+            <option value="JUCO">JUCO</option>
+            <option value="D1">D1</option>
+            <option value="D2">D2</option>
+            <option value="D3">D3</option>
+            <option value="Pro">Pro</option>
+          </select>
+          <input
+            type="text"
+            value={position}
+            onChange={(e) => setPosition(e.target.value)}
+            placeholder="Position"
+            className="w-full rounded-full border border-black/10 bg-white px-5 py-4 text-sm font-semibold outline-none placeholder:text-gray-400 focus:border-black"
+            required={!closed}
           />
         </div>
 

@@ -37,17 +37,10 @@ export async function GET(req: NextRequest) {
     sources?: { title: string; url: string; type?: string | null }[] | null
   }
 
-  // Prefer explicit CMS-public answers. If the migration has not been run yet,
-  // fall back to the legacy approved feed so /browse never goes empty.
-  let questions: BrowseQuestion[] | null = await sbFetch(
+  // Public browse only shows approved answers explicitly marked public.
+  const questions: BrowseQuestion[] | null = await sbFetch(
     '/rest/v1/questions?status=eq.approved&public=eq.true&deleted_at=is.null&select=id,question,answer,topic,created_at,reviewed_by_elijah,asker_label,player_age,themes,parent_relevant,public,age_band,sources&order=created_at.desc&limit=100'
   )
-
-  if (questions === null) {
-    questions = await sbFetch(
-      '/rest/v1/questions?status=eq.approved&deleted_at=is.null&select=id,question,answer,topic,created_at,reviewed_by_elijah,sources&order=created_at.desc&limit=100'
-    )
-  }
 
   if (!questions?.length) return NextResponse.json({ questions: [] })
 
