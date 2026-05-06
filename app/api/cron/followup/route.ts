@@ -10,9 +10,8 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 /**
- * 7 days after Elijah approves an answer, email the user asking how it went.
- * This is the follow-through loop that no competitor closes . turns a one-shot
- * Q&A into a relationship.
+ * 48 hours after Elijah approves an answer, ask the player if they did the rep.
+ * This turns the answer into a training loop and stores the reflection.
  */
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
@@ -22,17 +21,17 @@ export async function GET(req: NextRequest) {
 
   const supabase = getSupabase()
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
 
-  // Find approved answers from exactly ~7 days ago that haven't had a followup yet.
+  // Find approved answers from ~48 hours ago that haven't had a followup yet.
   // Cap at 50 per run so we don't hit Resend rate limits.
   const { data: questions, error } = await supabase
     .from('questions')
-    .select('id, email, question, approved_at, rep_text')
+    .select('id, email, question, approved_at, action_steps, rep_text')
     .eq('status', 'approved')
     .is('followup_sent_at', null)
     .is('deleted_at', null)
-    .lte('approved_at', sevenDaysAgo)
+    .lte('approved_at', fortyEightHoursAgo)
     .not('approved_at', 'is', null)
     .order('approved_at', { ascending: true })
     .limit(50)
@@ -58,11 +57,12 @@ export async function GET(req: NextRequest) {
         .eq('email', q.email)
         .single()
       const firstName = profile?.first_name || null
-      const repUrl = `${siteUrl}/history`
+      const repUrl = `${siteUrl}/history?question=${encodeURIComponent(q.id)}`
+      const steps = (q.action_steps || q.rep_text || '').trim()
 
       await sendPushToEmail(q.email, {
-        title: 'Did you try the rep?',
-        body: 'Tell Elijah what happened, or what got in the way.',
+        title: 'Did you do the steps?',
+        body: 'What did you try? What changed?',
         url: repUrl,
         tag: 'rep_followup',
       }, q.id).catch((err) => logError('cron:followup:push', err, { questionId: q.id }))
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
         from: 'Elijah Bryant <elijah@elijahbryant.pro>',
         replyTo: 'ebb95@mac.com',
         to: q.email,
-        subject: 'How did it go?',
+        subject: 'Did you do the steps?',
         html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -89,21 +89,27 @@ export async function GET(req: NextRequest) {
 
           <p style="text-align:center;margin:0 0 48px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:inline-block;border:0;width:52px;height:8px;" /></p>
 
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Been a week.</p>
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">How'd it go?</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">Did you do</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">the steps?</p>
 
           ${firstName ? `<p style="font-size:15px;color:#ffffff !important;margin:0 0 24px;font-family:-apple-system,sans-serif;">Hey ${escapeHtml(firstName)}.</p>` : ''}
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 24px;font-family:-apple-system,sans-serif;">
-            A week ago you asked me:
+            48 hours ago you asked me:
           </p>
 
           <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
             <p style="font-size:16px;font-weight:600;color:#ffffff !important;line-height:1.5;font-style:italic;margin:0;font-family:-apple-system,sans-serif;">"${escapeHtml(q.question)}"</p>
           </div>
 
+          ${steps ? `
+          <div style="background:#111;border:1px solid #222;padding:20px;margin:0 0 28px;">
+            <p style="font-size:11px;color:#666666 !important;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">Your action steps</p>
+            <p style="font-size:16px;font-weight:800;color:#ffffff !important;line-height:1.6;white-space:pre-wrap;margin:0;font-family:-apple-system,sans-serif;">${escapeHtml(steps)}</p>
+          </div>` : ''}
+
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-            Did you try the rep? If yes, what happened? If not, what got in the way?
+            What did you try? What changed? If you did not do it yet, tell me what got in the way.
           </p>
 
           <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
@@ -132,7 +138,7 @@ export async function GET(req: NextRequest) {
           provider: 'resend',
           action: 'rep_followup_sent',
           status: 'sent',
-          subject: 'How did it go?',
+          subject: 'Did you do the steps?',
           tags: ['transactional', 'followup'],
           metadata: { question_id: q.id },
         })

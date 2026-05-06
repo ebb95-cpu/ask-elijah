@@ -84,6 +84,7 @@ function logAccessError(scope: string, err: unknown, email?: string) {
 
 const INVITE_EXPIRES_HOURS = 24
 const FOUNDING_SEAT_LIMIT = 200
+const FOUNDER_BETA_DAYS = 90
 
 function inviteWindow() {
   const sentAt = new Date()
@@ -92,6 +93,16 @@ function inviteWindow() {
   return {
     invite_sent_at: sentAt.toISOString(),
     access_expires_at: expiresAt.toISOString(),
+  }
+}
+
+function founderBetaWindow(acceptedAtInput?: string | null) {
+  const acceptedAt = acceptedAtInput ? new Date(acceptedAtInput) : new Date()
+  const betaEndsAt = new Date(acceptedAt)
+  betaEndsAt.setDate(betaEndsAt.getDate() + FOUNDER_BETA_DAYS)
+  return {
+    accepted_at: acceptedAt.toISOString(),
+    beta_ends_at: betaEndsAt.toISOString(),
   }
 }
 
@@ -182,11 +193,36 @@ async function canApproveFoundingSeat(supabase: ReturnType<typeof getSupabase>, 
   return { ok: true, error: null }
 }
 
-async function markProfileFoundingMember(supabase: ReturnType<typeof getSupabase>, email: string, isFoundingMember: boolean) {
-  await supabase
+async function markProfileFoundingMember(
+  supabase: ReturnType<typeof getSupabase>,
+  email: string,
+  isFoundingMember: boolean,
+  beta?: { accepted_at: string; beta_ends_at: string } | null,
+) {
+  const update = isFoundingMember
+    ? {
+        is_founding_member: true,
+        subscription_status: 'trialing',
+        subscription_tier: 'founders',
+        trial_source: 'founders_beta',
+        trial_started_at: beta?.accepted_at || new Date().toISOString(),
+        trial_ends_at: beta?.beta_ends_at || null,
+        beta_started_at: beta?.accepted_at || new Date().toISOString(),
+        beta_ends_at: beta?.beta_ends_at || null,
+      }
+    : {
+        is_founding_member: false,
+      }
+
+  const result = await supabase
     .from('profiles')
-    .update({ is_founding_member: isFoundingMember })
-    .eq('email', email)
+    .upsert({ email, ...update }, { onConflict: 'email' })
+
+  if (result.error && /trial_source|trial_started_at|beta_started_at|beta_ends_at|subscription_tier/.test(result.error.message || '')) {
+    await supabase
+      .from('profiles')
+      .upsert({ email, is_founding_member: isFoundingMember }, { onConflict: 'email' })
+  }
 }
 
 async function createFounderVideoSlot(supabase: ReturnType<typeof getSupabase>, email: string, waitlistId?: string | null) {
@@ -206,15 +242,18 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#039;')
 }
 
-async function sendAccessInviteEmail(args: { email: string; name?: string | null }) {
+async function sendAccessInviteEmail(args: { email: string; name?: string | null; question?: string | null; betaEndsAt?: string | null }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
   const firstName = args.name?.trim().split(' ')[0] || 'You'
   const signUpUrl = `${siteUrl}/sign-up?email=${encodeURIComponent(args.email)}`
+  const betaDate = args.betaEndsAt
+    ? new Date(args.betaEndsAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : null
 
   await new Resend(process.env.RESEND_API_KEY).emails.send({
     from: 'Elijah Bryant <elijah@elijahbryant.pro>',
     to: args.email,
-    subject: "You're in.",
+    subject: "You're in. Your first question is already being answered.",
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -234,22 +273,22 @@ async function sendAccessInviteEmail(args: { email: string; name?: string | null
             <img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:inline-block;border:0;width:52px;height:8px;" />
           </p>
 
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">You're in,</p>
-          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">${escapeHtml(firstName)}.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 4px;color:#ffffff !important;font-family:-apple-system,sans-serif;">You're in.</p>
+          <p style="font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin:0 0 48px;color:#555555;font-family:-apple-system,sans-serif;">Your first question is already being answered.</p>
 
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-            Ask the question you've been sitting on. I'll send back one answer you can actually use.
+            Hey ${escapeHtml(firstName)}. Here's what happens next: set up your locker room, keep asking real questions, apply the answer, and report back.
           </p>
+
+          ${args.question ? `
+          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:28px;">
+            <p style="font-size:11px;color:#666666 !important;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">Your first question</p>
+            <p style="font-size:16px;font-weight:600;color:#ffffff !important;line-height:1.5;margin:0;font-family:-apple-system,sans-serif;">${escapeHtml(args.question)}</p>
+          </div>` : ''}
 
           <p style="font-size:14px;color:#bbbbbb !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
-            Your founder seat is held for 24 hours. If you want it, set up your locker room today. If not, I'll give the spot to another player who's ready to work.
+            Your Founder beta is free for 90 days${betaDate ? `, through ${escapeHtml(betaDate)}` : ''}. After that, your $9.99/mo founding rate starts and stays locked as long as your membership stays active.
           </p>
-
-          <div style="border-left:3px solid #ffffff;padding-left:20px;margin-bottom:32px;">
-            <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0;font-family:-apple-system,sans-serif;">
-              Ask. Elijah answers. Apply it.
-            </p>
-          </div>
 
           <p style="font-size:13px;margin:0 0 56px;font-family:-apple-system,sans-serif;">
             <a href="${signUpUrl}" style="color:#777777;text-decoration:none;">Set up my locker room →</a>
@@ -594,6 +633,7 @@ export async function POST(req: NextRequest) {
   const seatCheck = await canApproveFoundingSeat(supabase)
   const shouldApprove = seatCheck.ok
   const shouldActuallySendInvite = shouldApprove && shouldSendInvite
+  const beta = shouldApprove ? founderBetaWindow() : null
 
   let upsertResult = await supabase
     .from('waitlist')
@@ -605,7 +645,8 @@ export async function POST(req: NextRequest) {
         confirmed: true,
         approved: shouldApprove,
         application_status: shouldApprove ? 'accepted' : 'waitlisted',
-        accepted_at: shouldApprove ? new Date().toISOString() : null,
+        accepted_at: beta?.accepted_at || null,
+        beta_ends_at: beta?.beta_ends_at || null,
         archived_at: null,
       },
       { onConflict: 'email' }
@@ -630,13 +671,40 @@ export async function POST(req: NextRequest) {
       .single()
   }
 
-  const { data, error } = upsertResult
+  let data = upsertResult.data
+  let error = upsertResult.error
+
+  if (error || !data) {
+    if (error && /beta_ends_at/.test(error.message || '')) {
+      upsertResult = await supabase
+        .from('waitlist')
+        .upsert(
+          {
+            email,
+            name: name || null,
+            challenge: challenge || null,
+            confirmed: true,
+            approved: shouldApprove,
+            application_status: shouldApprove ? 'accepted' : 'waitlisted',
+            accepted_at: beta?.accepted_at || null,
+            archived_at: null,
+          },
+          { onConflict: 'email' }
+        )
+        .select('id, email, name, challenge, confirmed, approved, notified, created_at')
+        .single()
+      if (!upsertResult.error && upsertResult.data) {
+        data = upsertResult.data
+        error = null
+      }
+    }
+  }
 
   if (error || !data) {
     return NextResponse.json({ error: 'Failed to approve email' }, { status: 500 })
   }
 
-  await markProfileFoundingMember(supabase, email, shouldApprove).catch(() => {})
+  await markProfileFoundingMember(supabase, email, shouldApprove, beta).catch(() => {})
   if (shouldApprove) {
     await createFounderVideoSlot(supabase, email, data.id).catch((err) => logAccessError('founder-video-slot', err, email))
   }
@@ -647,7 +715,7 @@ export async function POST(req: NextRequest) {
   let inviteError: string | null = null
   if (shouldActuallySendInvite) {
     try {
-      await sendAccessInviteEmail({ email, name: name || data.name })
+      await sendAccessInviteEmail({ email, name: name || data.name, question: challenge || data.challenge, betaEndsAt: beta?.beta_ends_at || null })
       notified = true
       const window = inviteWindow()
       const expiryUpdate = await supabase
@@ -674,7 +742,7 @@ export async function POST(req: NextRequest) {
       archived_at: null,
       archived: false,
       application_status: shouldApprove ? 'accepted' : 'waitlisted',
-      accepted_at: shouldApprove ? new Date().toISOString() : null,
+      accepted_at: beta?.accepted_at || null,
       access_expired: false,
       asked_during_invite_window: false,
       waitlist_id: data.id,
@@ -828,13 +896,15 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: seatCheck.error }, { status: 409 })
     }
   }
+  const beta = approved ? founderBetaWindow() : null
 
   const { data, error } = await supabase
     .from('waitlist')
     .update({
       approved,
       application_status: approved ? 'accepted' : 'waitlisted',
-      accepted_at: approved ? new Date().toISOString() : null,
+      accepted_at: beta?.accepted_at || null,
+      beta_ends_at: beta?.beta_ends_at || null,
       archived_at: null,
     })
     .eq('id', id)
@@ -842,7 +912,7 @@ export async function PATCH(req: NextRequest) {
     .single()
 
   if (error || !data) {
-    if (error && /archived_at|application_status|accepted_at/.test(error.message || '')) {
+    if (error && /archived_at|application_status|accepted_at|beta_ends_at/.test(error.message || '')) {
       const fallback = await supabase
         .from('waitlist')
         .update({ approved })
@@ -856,7 +926,7 @@ export async function PATCH(req: NextRequest) {
             ...fallbackData,
             archived_at: null,
             application_status: approved ? 'accepted' : 'waitlisted',
-            accepted_at: approved ? new Date().toISOString() : null,
+            accepted_at: beta?.accepted_at || null,
             archived: false,
             access_expired: false,
             asked_during_invite_window: false,
@@ -897,10 +967,10 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (approved) {
-    await markProfileFoundingMember(supabase, data.email, true).catch(() => {})
+    await markProfileFoundingMember(supabase, data.email, true, beta).catch(() => {})
     await createFounderVideoSlot(supabase, data.email, data.id).catch((err) => logAccessError('founder-video-slot', err, data.email))
   } else {
-    await markProfileFoundingMember(supabase, data.email, false).catch(() => {})
+    await markProfileFoundingMember(supabase, data.email, false, null).catch(() => {})
   }
 
   let notified = data.notified
@@ -909,7 +979,7 @@ export async function PATCH(req: NextRequest) {
   let inviteError: string | null = null
   if (shouldSendInvite) {
     try {
-      await sendAccessInviteEmail({ email: data.email, name: data.name })
+      await sendAccessInviteEmail({ email: data.email, name: data.name, question: data.challenge, betaEndsAt: beta?.beta_ends_at || null })
       notified = true
       const window = inviteWindow()
       const expiryUpdate = await supabase
@@ -935,7 +1005,7 @@ export async function PATCH(req: NextRequest) {
       access_expires_at: accessExpiresAt,
       archived_at: data.archived_at || null,
       application_status: approved ? 'accepted' : 'waitlisted',
-      accepted_at: approved ? (data.accepted_at || new Date().toISOString()) : null,
+      accepted_at: approved ? (data.accepted_at || beta?.accepted_at || null) : null,
       archived: !!data.archived_at,
       access_expired: !!accessExpiresAt && new Date(accessExpiresAt) < new Date(),
       asked_during_invite_window: false,

@@ -24,6 +24,34 @@ function stripeTimestampToIso(value?: number | null) {
   return value ? new Date(value * 1000).toISOString() : null
 }
 
+function addDaysIso(days: number) {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return date.toISOString()
+}
+
+async function updateProfileBilling(
+  supabase: ReturnType<typeof getSupabase>,
+  email: string,
+  update: Record<string, unknown>,
+) {
+  const { error } = await supabase
+    .from('profiles')
+    .update(update)
+    .eq('email', email)
+
+  if (error && /first_charge_at|guarantee_ends_at|payment_failed_at|payment_grace_ends_at|cancelled_at|last_refund_at/.test(error.message || '')) {
+    const fallback = { ...update }
+    delete fallback.first_charge_at
+    delete fallback.guarantee_ends_at
+    delete fallback.payment_failed_at
+    delete fallback.payment_grace_ends_at
+    delete fallback.cancelled_at
+    delete fallback.last_refund_at
+    await supabase.from('profiles').update(fallback).eq('email', email)
+  }
+}
+
 async function findProfileEmail(params: {
   supabase: ReturnType<typeof getSupabase>
   subscriptionId?: string | null
@@ -92,7 +120,9 @@ export async function POST(req: NextRequest) {
 
         if (!email) break
 
-        await supabase
+        const nowIso = new Date().toISOString()
+        const hasTrial = subscriptionStatus === 'trialing' && Boolean(trialEndsAt)
+        const upsert = await supabase
           .from('profiles')
           .upsert({
             email,
@@ -101,12 +131,32 @@ export async function POST(req: NextRequest) {
             subscription_status: subscriptionStatus,
             subscription_tier: tier,
             is_founding_member: isFoundingMember,
-            subscription_started_at: new Date().toISOString(),
-            trial_started_at: trialPromoCode ? new Date().toISOString() : null,
+            subscription_started_at: nowIso,
+            trial_started_at: hasTrial ? nowIso : null,
             trial_ends_at: trialEndsAt,
             trial_source: trialSource || null,
             trial_promo_code: trialPromoCode,
+            first_charge_at: !hasTrial ? nowIso : null,
+            guarantee_ends_at: !hasTrial ? addDaysIso(30) : null,
           }, { onConflict: 'email' })
+
+        if (upsert.error && /first_charge_at|guarantee_ends_at/.test(upsert.error.message || '')) {
+          await supabase
+            .from('profiles')
+            .upsert({
+              email,
+              stripe_customer_id: customerId,
+              stripe_subscription_id: subscriptionId,
+              subscription_status: subscriptionStatus,
+              subscription_tier: tier,
+              is_founding_member: isFoundingMember,
+              subscription_started_at: nowIso,
+              trial_started_at: hasTrial ? nowIso : null,
+              trial_ends_at: trialEndsAt,
+              trial_source: trialSource || null,
+              trial_promo_code: trialPromoCode,
+            }, { onConflict: 'email' })
+        }
 
         if (trialPromoCode) {
           await recordPromoRedemption({
@@ -134,15 +184,16 @@ export async function POST(req: NextRequest) {
 
         if (!email) break
 
-        await supabase
-          .from('profiles')
-          .update({ subscription_status: 'cancelled' })
-          .eq('email', email)
+        await updateProfileBilling(supabase, email, {
+          subscription_status: 'cancelled',
+          cancelled_at: new Date().toISOString(),
+        })
 
         console.log(`Subscription cancelled for ${email}`)
         break
       }
 
+      case 'customer.subscription.created':
       case 'customer.subscription.resumed':
       case 'customer.subscription.updated':
       case 'invoice.payment_succeeded': {
@@ -164,15 +215,27 @@ export async function POST(req: NextRequest) {
 
         if (!email) break
 
-        await supabase
+        const status = mapSubscriptionStatus(subscription.status)
+        const nowIso = new Date().toISOString()
+        const { data: currentProfile } = await supabase
           .from('profiles')
-          .update({
-            subscription_status: mapSubscriptionStatus(subscription.status),
+          .select('first_charge_at')
+          .eq('email', email)
+          .maybeSingle()
+        const isPaidNow = status === 'active' && (!subscription.trial_end || subscription.trial_end * 1000 <= Date.now())
+        const firstChargePatch = isPaidNow && !currentProfile?.first_charge_at
+          ? { first_charge_at: nowIso, guarantee_ends_at: addDaysIso(30) }
+          : {}
+
+        await updateProfileBilling(supabase, email, {
+            subscription_status: status,
             stripe_subscription_id: subscriptionId,
             stripe_customer_id: customerId,
             trial_ends_at: stripeTimestampToIso(subscription.trial_end),
+            payment_failed_at: null,
+            payment_grace_ends_at: null,
+            ...firstChargePatch,
           })
-          .eq('email', email)
 
         break
       }
@@ -192,10 +255,28 @@ export async function POST(req: NextRequest) {
         })
         if (!email) break
 
-        await supabase
-          .from('profiles')
-          .update({ subscription_status: 'past_due' })
-          .eq('email', email)
+        await updateProfileBilling(supabase, email, {
+          subscription_status: 'past_due',
+          payment_failed_at: new Date().toISOString(),
+          payment_grace_ends_at: addDaysIso(7),
+        })
+
+        break
+      }
+
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge
+        const customerId = typeof charge.customer === 'string' ? charge.customer : charge.customer?.id
+        const email = await findProfileEmail({
+          supabase,
+          customerId: customerId || null,
+          metadataEmail: charge.metadata?.email,
+        })
+        if (!email) break
+
+        await updateProfileBilling(supabase, email, {
+          last_refund_at: new Date().toISOString(),
+        })
 
         break
       }

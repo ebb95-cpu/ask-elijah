@@ -144,6 +144,7 @@ export async function approveAnswer(args: {
   const { questionId, finalAnswer } = args
   const actionSteps = args.actionSteps ?? null
   const repText = extractRepText(finalAnswer, actionSteps)
+  const actionBlock = (actionSteps || repText || '').trim()
 
   if (!questionId || !finalAnswer) {
     return { ok: false, status: 400, error: 'Missing fields' }
@@ -326,6 +327,14 @@ export async function approveAnswer(args: {
           </div>
           <p style="font-size:15px;color:#ffffff !important;line-height:1.7;margin:0 0 8px;font-family:-apple-system,sans-serif;">${isUpdateEmail ? 'His thinking changed, so he cleaned this up. Use this newer version.' : 'He read it, shaped it, and this is what he wants you to know.'}</p>
           <div style="font-size:16px;line-height:1.8;color:#ffffff !important;white-space:pre-wrap;margin-bottom:32px;font-family:-apple-system,sans-serif;">${finalAnswer.split(' ').slice(0, 40).join(' ')}...</div>
+          ${actionBlock ? `
+          <div style="background:#111111;border:1px solid #222222;padding:20px;margin:0 0 32px;">
+            <p style="font-size:11px;color:#666666 !important;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.08em;font-family:-apple-system,sans-serif;">Your action steps</p>
+            <p style="font-size:16px;font-weight:800;line-height:1.6;color:#ffffff !important;white-space:pre-wrap;margin:0;font-family:-apple-system,sans-serif;">${escapeHtml(actionBlock)}</p>
+          </div>` : ''}
+          <p style="font-size:14px;color:#bbbbbb !important;line-height:1.7;margin:0 0 28px;font-family:-apple-system,sans-serif;">
+            In 48 hours I'm going to ask you how it went.
+          </p>
           <p style="font-size:13px;margin:0 0 32px;font-family:-apple-system,sans-serif;">
             <a href="${siteUrl}/history" style="color:#555555;text-decoration:none;">Read his full answer →</a>
           </p>

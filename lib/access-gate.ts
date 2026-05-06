@@ -15,17 +15,23 @@ function isTrialStillValid(trialEndsAt?: string | null): boolean {
   return new Date(trialEndsAt) > new Date()
 }
 
+function isGraceStillValid(graceEndsAt?: string | null): boolean {
+  return Boolean(graceEndsAt && new Date(graceEndsAt) > new Date())
+}
+
 export function profileHasEntitlement(profile: {
   is_founding_member?: boolean | null
   subscription_status?: string | null
   trial_ends_at?: string | null
+  payment_grace_ends_at?: string | null
 } | null): boolean {
   if (!profile) return false
   if (profile.is_founding_member === true) return true
 
   const status = (profile.subscription_status || '').toLowerCase()
   if (status === 'trialing') return isTrialStillValid(profile.trial_ends_at)
-  return ['active', 'past_due'].includes(status)
+  if (status === 'past_due') return isGraceStillValid(profile.payment_grace_ends_at)
+  return status === 'active'
 }
 
 export async function hasPlayerAccess(email: string): Promise<boolean> {
@@ -79,7 +85,7 @@ export async function hasPlayerAccess(email: string): Promise<boolean> {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('is_founding_member, subscription_status, trial_ends_at')
+    .select('is_founding_member, subscription_status, trial_ends_at, payment_grace_ends_at')
     .eq('email', cleanEmail)
     .maybeSingle()
 

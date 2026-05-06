@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Resend } from 'resend'
 import { getSupabase } from '@/lib/supabase-server'
+import { escapeHtml } from '@/lib/escape-html'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,6 +9,47 @@ const FOUNDING_SEAT_LIMIT = 200
 
 function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
+
+async function sendApplicationReceivedEmail(args: {
+  email: string
+  firstName?: string
+  question?: string
+  waitlisted: boolean
+}) {
+  if (!process.env.RESEND_API_KEY) return
+
+  const firstName = args.firstName?.trim() || 'there'
+  const headline = args.waitlisted ? "You're on the waitlist." : "Got it. Elijah's reading it."
+  const body = args.waitlisted
+    ? "Founders may be full or you chose the Locker Room waitlist. Either way, your name is in."
+    : "Your application is in. Elijah will read the question and decide if this is a fit for the Founders 200."
+
+  await new Resend(process.env.RESEND_API_KEY).emails.send({
+    from: 'Elijah Bryant <elijah@elijahbryant.pro>',
+    to: args.email,
+    subject: args.waitlisted ? "You're on the Locker Room waitlist." : "Got it. Elijah's reading it.",
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#000;color:#fff;">
+  <div style="max-width:560px;margin:0 auto;padding:48px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+    <p style="margin:0 0 40px;line-height:0;"><img src="https://elijahbryant.pro/logo-email.png" width="52" height="8" alt="" style="display:block;border:0;" /></p>
+    <h1 style="font-size:36px;line-height:1.05;margin:0 0 24px;color:#fff;">${escapeHtml(headline)}</h1>
+    <p style="font-size:15px;line-height:1.7;margin:0 0 22px;color:#bbb;">Hey ${escapeHtml(firstName)}. ${escapeHtml(body)}</p>
+    ${args.question ? `
+      <div style="border-left:3px solid #fff;padding-left:18px;margin:28px 0;">
+        <p style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 8px;">Your question</p>
+        <p style="font-size:16px;line-height:1.5;color:#fff;margin:0;">${escapeHtml(args.question)}</p>
+      </div>
+    ` : ''}
+    <p style="font-size:14px;line-height:1.7;margin:0;color:#777;">If you get accepted, your first question is already in the system. Nothing gets lost.</p>
+  </div>
+</body>
+</html>
+    `,
+  })
 }
 
 export async function POST(req: NextRequest) {
@@ -121,6 +164,13 @@ export async function POST(req: NextRequest) {
   if (error) {
     return NextResponse.json({ error: 'Could not save this application yet.' }, { status: 500 })
   }
+
+  sendApplicationReceivedEmail({
+    email,
+    firstName,
+    question: !isFull && !waitlistOnly ? basketballCost : undefined,
+    waitlisted: isFull || waitlistOnly,
+  }).catch((err) => console.error('founders application email failed', err))
 
   return NextResponse.json({ ok: true, full: isFull, waitlisted: isFull || waitlistOnly, seatsTaken: count || 0 })
 }

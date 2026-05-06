@@ -39,11 +39,24 @@ const PLANS = {
 
 type PlanKey = keyof typeof PLANS
 
-async function isApprovedFounder(email: string) {
+type FounderApproval = {
+  id: string
+  accepted_at?: string | null
+  beta_ends_at?: string | null
+}
+
+function daysUntil(dateIso?: string | null) {
+  if (!dateIso) return 0
+  const ms = new Date(dateIso).getTime() - Date.now()
+  if (!Number.isFinite(ms) || ms <= 0) return 0
+  return Math.ceil(ms / (24 * 60 * 60 * 1000))
+}
+
+async function getApprovedFounder(email: string): Promise<FounderApproval | null> {
   const supabase = getSupabase()
   const { data, error } = await supabase
     .from('waitlist')
-    .select('id')
+    .select('id, accepted_at, beta_ends_at')
     .eq('email', email)
     .eq('approved', true)
     .is('archived_at', null)
@@ -52,14 +65,25 @@ async function isApprovedFounder(email: string) {
   if (error && /archived_at/.test(error.message || '')) {
     const fallback = await supabase
       .from('waitlist')
-      .select('id')
+      .select('id, accepted_at')
       .eq('email', email)
       .eq('approved', true)
       .maybeSingle()
-    return Boolean(fallback.data)
+    return fallback.data as FounderApproval | null
   }
 
-  return Boolean(data)
+  if (error && /beta_ends_at/.test(error.message || '')) {
+    const fallback = await supabase
+      .from('waitlist')
+      .select('id, accepted_at')
+      .eq('email', email)
+      .eq('approved', true)
+      .is('archived_at', null)
+      .maybeSingle()
+    return fallback.data as FounderApproval | null
+  }
+
+  return data as FounderApproval | null
 }
 
 export async function POST(req: NextRequest) {
@@ -94,9 +118,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Plan required' }, { status: 400 })
     }
 
-    if (foundersOnly && !(await isApprovedFounder(normalizedEmail))) {
+    const founderApproval = foundersOnly ? await getApprovedFounder(normalizedEmail) : null
+    if (foundersOnly && !founderApproval) {
       return NextResponse.json({ error: 'This checkout is only for accepted Founders.' }, { status: 403 })
     }
+    const founderTrialDays = foundersOnly ? daysUntil(founderApproval?.beta_ends_at) : 0
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
 
@@ -130,9 +156,9 @@ export async function POST(req: NextRequest) {
       tier: tier || plan?.tier || 'locker_room',
       plan: planKey || '',
       is_founding_member: foundersOnly || isFoundingMember ? 'true' : 'false',
-      trial_source: trialPromo ? 'promo_code' : '',
+      trial_source: foundersOnly && founderTrialDays > 0 ? 'founders_beta' : trialPromo ? 'promo_code' : '',
       trial_promo_code: trialPromo ? promoCode : '',
-      trial_days: trialPromo ? String(trialDays) : '',
+      trial_days: foundersOnly && founderTrialDays > 0 ? String(founderTrialDays) : trialPromo ? String(trialDays) : '',
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -146,7 +172,7 @@ export async function POST(req: NextRequest) {
         address: 'auto',
         name: 'auto',
       },
-      payment_method_collection: trialPromo ? 'always' : undefined,
+      payment_method_collection: (trialPromo || foundersOnly) ? 'always' : undefined,
       line_items: [{
         ...(plan
           ? {
@@ -169,7 +195,11 @@ export async function POST(req: NextRequest) {
       metadata,
       subscription_data: mode === 'subscription' ? {
         metadata,
-        trial_period_days: trialPromo ? trialDays : undefined,
+        trial_period_days: foundersOnly && founderTrialDays > 0
+          ? founderTrialDays
+          : trialPromo
+            ? trialDays
+            : undefined,
       } : undefined,
       payment_intent_data: mode === 'payment' ? { metadata } : undefined,
     })
