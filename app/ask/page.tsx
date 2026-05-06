@@ -557,7 +557,7 @@ function AskPageInner() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleQuestionSubmit() }
   }
 
-  // Step 2: email submitted → check free tier → call API
+  // Step 2: email submitted. Check access, then call API.
   const handleEmailSubmit = async () => {
     if (!email.trim()) { setEmailError('Email is required to get your answer.'); return }
     if (!ageConfirmed) { setEmailError('Please confirm you are 13 or older.'); return }

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { getLocal, setLocal } from '@/lib/safe-storage'
 
 export type CheckoutPlan =
+  | 'founders_monthly'
   | 'locker_monthly'
   | 'locker_annual'
 

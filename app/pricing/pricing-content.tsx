@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import FoundersBetaForm from './founders-beta-form'
+import CheckoutButton from './checkout-button'
 import { FOUNDING_SEAT_LIMIT, getFoundingSeatCount, getFoundingSeatsLeft } from '@/lib/founding-seats'
 import type { PricingPhase } from '@/lib/pricing-phase'
 import { RiskReversal } from '@/components/marketing/ValueStack'
@@ -163,17 +164,39 @@ function PriceSection({ seatsTaken }: { seatsTaken: number | null }) {
           <Link href="#founders-application" className="mt-8 inline-flex rounded-full bg-black px-6 py-4 text-sm font-black text-white">
             {closed ? 'Join Locker Room waitlist →' : 'Apply for a founding seat →'}
           </Link>
+          <CheckoutButton
+            plan="founders_monthly"
+            isFoundingMember
+            className="mt-3 text-left text-xs font-black text-black/45 transition-colors hover:text-black disabled:opacity-40"
+          >
+            Accepted already? Activate $9.99 checkout →
+          </CheckoutButton>
         </div>
 
         <div className="rounded-[2rem] border border-gray-900 bg-[#050505] p-7 text-white">
           <p className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-600">Locker Room</p>
           <p className="mt-5 text-5xl font-black">$14.99/mo</p>
-          <p className="mt-3 text-sm font-black text-gray-500">Opens after the Founders window.</p>
+          <p className="mt-3 text-sm font-black text-gray-500">or $129/year after the Founders window.</p>
           <p className="mt-8 text-base font-semibold leading-relaxed text-gray-500">
             Same room. Public price. No founding rate.
           </p>
-          <Link href="#founders-application" className="mt-8 inline-flex rounded-full bg-white px-6 py-4 text-sm font-black text-black">
-            Join the waitlist →
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <CheckoutButton
+              plan="locker_monthly"
+              showPromoCode
+              className="w-full rounded-full bg-white px-6 py-4 text-sm font-black text-black disabled:opacity-40"
+            >
+              Start monthly →
+            </CheckoutButton>
+            <CheckoutButton
+              plan="locker_annual"
+              className="w-full rounded-full border border-gray-800 px-6 py-4 text-sm font-black text-white transition-colors hover:border-gray-600 disabled:opacity-40"
+            >
+              Start annual →
+            </CheckoutButton>
+          </div>
+          <Link href="#founders-application" className="mt-4 inline-flex text-xs font-black text-gray-600 transition-colors hover:text-white">
+            Not ready? Join the waitlist →
           </Link>
         </div>
       </div>

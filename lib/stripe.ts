@@ -6,19 +6,19 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 export const PLANS = {
-  solo: {
-    name: 'Solo',
-    price: 29,
-    priceId: process.env.STRIPE_SOLO_PRICE_ID || '',
+  founders: {
+    name: 'Founders 200',
+    price: 9.99,
+    priceId: process.env.STRIPE_FOUNDERS_PRICE_ID || '',
   },
-  voice: {
-    name: 'Voice Review',
-    price: 25,
-    priceId: process.env.STRIPE_VOICE_PRICE_ID || '',
+  lockerMonthly: {
+    name: 'Locker Room Monthly',
+    price: 14.99,
+    priceId: process.env.STRIPE_LOCKER_MONTHLY_PRICE_ID || '',
   },
-  video: {
-    name: 'Video Review',
-    price: 50,
-    priceId: process.env.STRIPE_VIDEO_PRICE_ID || '',
+  lockerAnnual: {
+    name: 'Locker Room Annual',
+    price: 129,
+    priceId: process.env.STRIPE_LOCKER_ANNUAL_PRICE_ID || '',
   },
 }
