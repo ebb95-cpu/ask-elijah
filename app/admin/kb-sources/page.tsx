@@ -610,9 +610,8 @@ export default function AdminKbSourcesPage() {
                     {s.topic ? ` · ${s.topic}` : ''}
                     {s.level ? ` · ${s.level}` : ''}
                     {' · '}
-                    {s.published_at
-                      ? `Published ${formatDate(s.published_at)}`
-                      : `Ingested ${formatDate(s.created_at)}`}
+                    {s.published_at ? `Published ${formatDate(s.published_at)} · ` : ''}
+                    {`Ingested ${formatDate(s.created_at)}`}
                     {' · '}
                     {s.chunk_count} chunk{s.chunk_count === 1 ? '' : 's'}
                   </div>
