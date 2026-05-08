@@ -731,10 +731,10 @@ export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
 
-    // Throttle 1: IP-based . protect against anonymous floods (5/day)
-    const ipLimit = await checkLimit('rl:ask:ip', ip, 5, '1 d')
+    // Throttle 1: IP-based . protect against anonymous floods (1/day)
+    const ipLimit = await checkLimit('rl:ask:ip', ip, 1, '1 d')
     if (!ipLimit.success) {
-      return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 })
+      return NextResponse.json({ error: DAILY_LIMIT_MESSAGE }, { status: 429 })
     }
 
     const { question, email, previewAnswer, newsletterOptIn, utm_source, utm_medium, utm_campaign, mode: rawMode, askerType: rawAskerType, level: rawLevel, language: rawLanguage } = await req.json()
@@ -778,7 +778,7 @@ export async function POST(req: NextRequest) {
     // Throttle 2: Email-based . protect our API budget (10/day per email).
     // This is the real cost guard: even behind rotating IPs, a single user
     // can't drain Claude/Voyage/Pinecone spend for a whole day.
-    const emailLimit = await checkLimit('rl:ask:email', cleanEmailEarly, 10, '1 d')
+    const emailLimit = await checkLimit('rl:ask:email', cleanEmailEarly, 1, '1 d')
     if (!emailLimit.success) {
       return NextResponse.json(
         { error: DAILY_LIMIT_MESSAGE },
