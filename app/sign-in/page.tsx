@@ -132,7 +132,7 @@ function SignInInner() {
         password,
       })
       if (signInError) throw signInError
-      router.push(nextUrl || '/home')
+      router.push(nextUrl || '/track')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Wrong password.')
       setLoading(false)

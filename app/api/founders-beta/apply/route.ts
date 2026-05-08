@@ -142,6 +142,16 @@ export async function POST(req: NextRequest) {
     payload.challenge = basketballCost
   }
 
+  // Don't overwrite an already-approved founder's status
+  const existing = await supabase
+    .from('waitlist')
+    .select('approved')
+    .eq('email', email)
+    .maybeSingle()
+  if (existing.data?.approved) {
+    return NextResponse.json({ ok: true, alreadyApproved: true, waitlisted: false, seatsTaken: count || 0 })
+  }
+
   let result = await supabase
     .from('waitlist')
     .upsert(payload, { onConflict: 'email' })
