@@ -6,6 +6,7 @@ import ShareAnswerButton from '@/components/ShareAnswerButton'
 import InlineAskComposer from '@/components/InlineAskComposer'
 import ProfileSyncer from '@/components/ProfileSyncer'
 import SignOutButton from '@/components/SignOutButton'
+import RepReportForm from '@/components/RepReportForm'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,9 @@ type QuestionRow = {
   status: 'pending' | 'approved' | 'skipped' | null
   created_at: string
   approved_at: string | null
+  rep_status: 'not_yet' | 'yes' | 'no' | null
+  rep_reflection: string | null
+  rep_reflected_at: string | null
 }
 
 type PopularQuestion = {
@@ -250,7 +254,7 @@ async function SignedInState({ email }: { email: string }) {
   const [{ data: myData }, popular, profile] = await Promise.all([
     supabase
       .from('questions')
-      .select('id, question, answer, action_steps, status, created_at, approved_at')
+      .select('id, question, answer, action_steps, status, created_at, approved_at, rep_status, rep_reflection, rep_reflected_at')
       .eq('email', email)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -335,6 +339,7 @@ async function SignedInState({ email }: { email: string }) {
         <div className="flex items-center gap-10 mt-7">
           <Stat value={questions.length} label="Asked" />
           <Stat value={approved.length} label="Answered" />
+          <Stat value={approved.filter((q) => q.rep_reflected_at).length} label="Solved" />
           {joinedLabel && <Stat value={joinedLabel} label="Since" />}
         </div>
 
@@ -393,6 +398,24 @@ async function SignedInState({ email }: { email: string }) {
               <p className="text-xs text-emerald-200/60 mt-4">
                 Try this first. Then come back and tell Elijah what happened.
               </p>
+            </div>
+          )}
+
+          {/* Report-back gate — only show if not yet reflected on */}
+          {freshAnswer && !freshAnswer.rep_reflected_at && (
+            <RepReportForm
+              questionId={freshAnswer.id}
+              question={freshAnswer.question}
+            />
+          )}
+
+          {/* Solved confirmation — show once they've reported back */}
+          {freshAnswer?.rep_reflected_at && (
+            <div className="mt-4 rounded-[24px] border border-emerald-500/20 bg-emerald-500/[0.07] p-5">
+              <p className="text-[10px] text-emerald-300 uppercase tracking-[0.22em] font-bold mb-2">
+                ✓ Rep logged
+              </p>
+              <p className="text-sm text-gray-400 leading-relaxed">{freshAnswer.rep_reflection}</p>
             </div>
           )}
         </section>
@@ -498,6 +521,53 @@ async function SignedInState({ email }: { email: string }) {
           </div>
         </div>
       )}
+
+      {/* ── Playbook . solved problems ──────────────────────────────────
+          Every question they applied and reported back on becomes a card
+          in their personal problem-solving playbook. This is the retention
+          mechanism: the more solved problems here, the more identity is
+          built inside the app. */}
+      {(() => {
+        const solved = approved.filter((q) => q.rep_reflected_at)
+        if (solved.length === 0) return null
+        return (
+          <div className="mb-14">
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-[10px] text-gray-700 uppercase tracking-widest">
+                Your playbook
+              </p>
+              <p className="text-[10px] text-gray-700 uppercase tracking-widest tabular-nums">
+                {solved.length} solved
+              </p>
+            </div>
+            <div className="grid gap-3">
+              {solved.map((q) => (
+                <div
+                  key={q.id}
+                  className="rounded-[22px] border border-emerald-500/15 bg-emerald-500/[0.04] p-5"
+                >
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <span className="text-[10px] text-emerald-400 uppercase tracking-[0.2em] font-bold">
+                      ✓ Solved
+                    </span>
+                    <span className="text-[10px] text-gray-700">
+                      {q.rep_reflected_at ? formatDate(q.rep_reflected_at) : ''}
+                    </span>
+                  </div>
+                  <p className="text-sm text-white italic leading-relaxed mb-3">
+                    &ldquo;{q.question}&rdquo;
+                  </p>
+                  {q.rep_reflection && (
+                    <div className="border-l-2 border-emerald-500/30 pl-3">
+                      <p className="text-xs text-gray-500 leading-relaxed">{q.rep_reflection}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Community feed ───────────────────────────────────────────────
           These are already answered questions, so tapping should read the

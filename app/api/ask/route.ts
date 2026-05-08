@@ -800,6 +800,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: DAILY_LIMIT_MESSAGE }, { status: 429 })
     }
 
+    // Report-back gate: player must reflect on their last approved answer
+    // before asking a new question. This enforces apply → report → ask loop.
+    const { data: unreflected } = await supabaseLimitCheck
+      .from('questions')
+      .select('id, question')
+      .eq('email', cleanEmailEarly)
+      .eq('status', 'approved')
+      .is('rep_reflected_at', null)
+      .order('approved_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (unreflected) {
+      return NextResponse.json(
+        {
+          error: 'Before your next question, tell me what you tried from the last answer. What was the situation, what did you do, and what changed?',
+          code: 'report_back_required',
+          questionId: unreflected.id,
+        },
+        { status: 429 }
+      )
+    }
+
     // Duplicate submission guard . same email within 2 minutes
     const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString()
     const { data: recentQ } = await supabaseLimitCheck
