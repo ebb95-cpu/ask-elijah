@@ -140,12 +140,12 @@ export async function GET(req: NextRequest) {
     // 1. Fetch recent videos from TikTok via Apify
     const videos = await fetchTikTokVideos(username, 30)
 
-    // 2. Filter to last 48 hours
-    const cutoff = Date.now() - 48 * 60 * 60 * 1000
+    // 2. Filter to last 8 days (weekly run with 1-day overlap buffer)
+    const cutoff = Date.now() - 8 * 24 * 60 * 60 * 1000
     const recentVideos = videos.filter((v) => v.createTime * 1000 >= cutoff)
 
     if (recentVideos.length === 0) {
-      return NextResponse.json({ ok: true, message: 'No new TikToks in the last 48 hours', ingested: 0 })
+      return NextResponse.json({ ok: true, message: 'No new TikToks in the last 8 days', ingested: 0 })
     }
 
     // 3. Skip already-ingested videos
