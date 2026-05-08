@@ -21,6 +21,10 @@
       "schedule": "0 3 * * *"
     },
     {
+      "path": "/api/cron/ingest-tiktok",
+      "schedule": "0 4 * * *"
+    },
+    {
       "path": "/api/cron/ingest-knowledge",
       "schedule": "0 3 * * 1"
     },
