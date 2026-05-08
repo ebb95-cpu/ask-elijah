@@ -13,7 +13,6 @@ export async function GET(_req: NextRequest) {
   const { data, error } = await supabase
     .from('kb_sources')
     .select('id, source_title, source_type, source_url, topic, level, chunk_count, created_at, thumbnail_url, id_prefix, published_at')
-    .order('published_at', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
     .limit(500)
 
