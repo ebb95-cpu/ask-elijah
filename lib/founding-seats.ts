@@ -11,7 +11,7 @@ export const getFoundingSeatCount = unstable_cache(async () => {
       .eq('approved', true)
       .is('archived_at', null)
 
-    const { count, error } = withArchive.error && /archived_at/.test(withArchive.error.message || '')
+    const { count, error } = withArchive.error
       ? await getSupabase()
         .from('waitlist')
         .select('id', { count: 'exact', head: true })

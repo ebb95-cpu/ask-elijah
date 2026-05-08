@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     .eq('approved', true)
     .is('archived_at', null)
 
-  const { count, error: countError } = activeCount.error && /archived_at/.test(activeCount.error.message || '')
+  const { count, error: countError } = activeCount.error
     ? await supabase
       .from('waitlist')
       .select('id', { count: 'exact', head: true })
