@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { getSupabase } from '@/lib/supabase-server'
 import { escapeHtml } from '@/lib/escape-html'
+import { emailAdmin, esc } from '@/lib/email-admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -171,6 +172,16 @@ export async function POST(req: NextRequest) {
     question: !isFull && !waitlistOnly ? basketballCost : undefined,
     waitlisted: isFull || waitlistOnly,
   }).catch((err) => console.error('founders application email failed', err))
+
+  // Notify Elijah (fire-and-forget)
+  const statusLabel = isFull || waitlistOnly ? 'Locker Room waitlist' : 'Founders 200'
+  emailAdmin(
+    `New ${statusLabel} application — ${esc(firstName)} from ${esc(city)}`,
+    `<p><strong>${esc(firstName)}</strong> (${esc(email)}) from ${esc(city)} applied for <strong>${esc(statusLabel)}</strong>.</p>
+    <p><strong>Level:</strong> ${esc(level)} &nbsp;|&nbsp; <strong>Position:</strong> ${esc(position)} &nbsp;|&nbsp; <strong>Age:</strong> ${esc(age)}</p>
+    ${basketballCost ? `<p><strong>Their question:</strong><br>${esc(basketballCost)}</p>` : ''}
+    <p><a href="https://www.elijahbryant.pro/admin/access">Review &amp; approve →</a></p>`
+  ).catch(() => null)
 
   return NextResponse.json({ ok: true, full: isFull, waitlisted: isFull || waitlistOnly, seatsTaken: count || 0 })
 }
