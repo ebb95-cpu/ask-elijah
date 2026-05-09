@@ -4,14 +4,28 @@ import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
+interface KbRow {
+  id: string
+  source_title: string
+  source_type: string
+  source_url: string | null
+  topic: string | null
+  level: string | null
+  chunk_count: number
+  created_at: string
+  thumbnail_url: string | null
+  id_prefix: string | null
+  published_at: string | null
+}
+
 export async function GET(_req: NextRequest) {
   const unauthorized = await requireAdmin()
-
   if (unauthorized) return unauthorized
 
   const supabase = getSupabase()
-  // Fetch all rows in pages of 1000 (Supabase default max per request)
-  const allRows: Record<string, unknown>[] = []
+
+  // Fetch all rows in pages of 1000 (Supabase hard max per request)
+  const allRows: KbRow[] = []
   let from = 0
   const PAGE = 1000
   while (true) {
@@ -23,16 +37,15 @@ export async function GET(_req: NextRequest) {
       .range(from, from + PAGE - 1)
     if (pageError) return NextResponse.json({ error: 'Fetch failed' }, { status: 500 })
     if (!page || page.length === 0) break
-    allRows.push(...page)
+    allRows.push(...(page as KbRow[]))
     if (page.length < PAGE) break
     from += PAGE
   }
 
-  // Roll up totals by type so the admin can see the KB composition at a glance
-  const rows = allRows
+  // Roll up totals by type
   const totals: Record<string, { sources: number; chunks: number }> = {}
   let totalChunks = 0
-  for (const r of rows) {
+  for (const r of allRows) {
     const t = r.source_type
     totals[t] = totals[t] || { sources: 0, chunks: 0 }
     totals[t].sources += 1
@@ -41,9 +54,9 @@ export async function GET(_req: NextRequest) {
   }
 
   return NextResponse.json({
-    sources: rows,
+    sources: allRows,
     totals,
-    totalSources: rows.length,
+    totalSources: allRows.length,
     totalChunks,
   })
 }
