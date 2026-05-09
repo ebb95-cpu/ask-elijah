@@ -1,7 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import LoadingDots from '@/components/ui/LoadingDots'
@@ -19,6 +19,14 @@ function Logo() {
 }
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <ResetPasswordInner />
+    </Suspense>
+  )
+}
+
+function ResetPasswordInner() {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
