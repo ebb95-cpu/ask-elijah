@@ -960,7 +960,7 @@ export async function POST(req: NextRequest) {
       const supabase = getSupabase()
       const { data: record } = await supabase
         .from('questions')
-        .insert({ question, answer: FALLBACK, ai_draft: FALLBACK, sources: [], ip, email: cleanEmailEarly, status: 'pending', topic: topic ?? null, topic_confidence: topicConfidence, trigger: trigger ?? null, language_detected: responseLanguage !== 'English' ? responseLanguage : null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, mode, asker_type: askerType, level_snapshot: levelSnapshot })
+        .insert({ question, question_english: englishTranslation || null, answer: FALLBACK, ai_draft: FALLBACK, sources: [], ip, email: cleanEmailEarly, status: 'pending', topic: topic ?? null, topic_confidence: topicConfidence, trigger: trigger ?? null, language_detected: responseLanguage !== 'English' ? responseLanguage : null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, mode, asker_type: askerType, level_snapshot: levelSnapshot })
         .select('id').single()
       const playerContext = await playerContextPromise
       if (record?.id) await notifyElijah(record.id, question, FALLBACK, email, playerContext).catch((e) => logError('ask:notify-elijah', e, { questionId: record.id }))
@@ -1093,6 +1093,7 @@ export async function POST(req: NextRequest) {
         topic_confidence: topicConfidence,
         trigger: trigger ?? null,
         language_detected: responseLanguage !== 'English' ? responseLanguage : null,
+        question_english: englishTranslation || null,
         utm_source: utm_source || null,
         utm_medium: utm_medium || null,
         utm_campaign: utm_campaign || null,

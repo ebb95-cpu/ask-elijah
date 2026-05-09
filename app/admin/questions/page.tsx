@@ -29,6 +29,8 @@ interface PlayerQuestion {
   // admin queue (vs. a future auto-approve path). Surfaced as a badge on
   // the card so Elijah can see at a glance which ones he's already touched.
   reviewed_by_elijah?: boolean
+  language_detected?: string | null
+  question_english?: string | null
   // Added by /api/admin/queue when pending questions cluster together by
   // semantic similarity. Representative row is returned with the rest of
   // the cluster collapsed into this field.
@@ -519,9 +521,19 @@ export default function AdminQuestionsPage() {
             )}
             {openItem.source_context && <> · <span style={{ color: '#7dd3fc' }}>{openItem.source_context}</span></>}
           </p>
+          {openItem.language_detected && (
+            <p style={{ fontSize: 11, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: 4 }}>
+              🌐 {openItem.language_detected}
+            </p>
+          )}
           <p style={{ fontSize: 20, fontWeight: 700, color: '#fff', lineHeight: 1.4, margin: 0 }}>
             {openItem.question}
           </p>
+          {openItem.question_english && (
+            <p style={{ fontSize: 13, color: '#9ca3af', fontStyle: 'italic', marginTop: 6, marginBottom: 0 }}>
+              "{openItem.question_english}"
+            </p>
+          )}
         </div>
 
         <div style={{
