@@ -27,28 +27,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Add more detail to your note.' }, { status: 400 })
   }
 
+  const studentStructure = `ANSWER STRUCTURE FOR A PLAYER:
+1. PAIN FIRST. Open by naming exactly what they're feeling. Make them think "he gets it."
+2. MECHANISM. Explain WHY this happens — the real reason, grounded in neuroscience, sports psychology, or physiology. Simple enough for a young kid. This is what makes the advice feel earned.
+3. SOLUTION. The specific thing that fixes it. One clear approach through Elijah's experience, backed quietly by science. Show HOW to apply it.
+4. ACTION PLAN. One concrete thing they must do TODAY. Not vague. Specific enough they can't say "I don't know what to do."`
+
+  const parentStructure = `ANSWER STRUCTURE FOR A PARENT:
+1. VALIDATE FIRST. Name what the parent is watching their kid go through. They love their kid. Let them feel heard.
+2. REFRAME. Give the real mechanism — what's actually happening in their child's brain or body. Neuroscience or developmental psychology. Help them understand the WHY.
+3. WHAT PARENTS CONTROL vs WHAT THEY DON'T. Be honest. Research is clear on this. Over-involved parents hurt development. Draw the line clearly in Elijah's voice.
+4. ONE THING THIS WEEK. One specific action the parent can take that supports their kid without taking over. Not "talk to the coach."`
+
   const systemPrompt = `You are helping Elijah Bryant — NBA Champion and EuroLeague Champion — build a knowledge base for his mental performance app for basketball players.
 
 Your job is to take Elijah's raw thinking and rewrite it as a polished, science-backed answer in his exact voice.
 
-Elijah's voice rules:
+ELIJAH'S VOICE:
 - First-person, direct, short sentences
-- No filler words, no em dashes, no AI-sounding phrases
-- Practical and specific — always ends with something the player can do TODAY
-- Draws from real experience as a pro player
+- No em dashes, no AI phrases, no bullet points, no numbered lists
+- Contractions always: don't, you're, I'm
+- Conversational like a text, not an essay
 - Confident but not arrogant
+- Opens with "For me..." or "I always..." or "Honestly..." or "Look..."
 
-Science requirements:
-- Ground every key claim in neuroscience, sports psychology, or performance science
-- Reference the mechanism (e.g. "cortisol spikes when...", "the amygdala reads...", "dopamine reinforces...")
-- Use real concepts: pre-performance routines (Gollwitzer), attentional focus (Nideffer), flow state (Csikszentmihalyi), self-determination theory, HRV, sleep science, etc.
-- Don't cite papers directly — weave the science into Elijah's voice naturally
+SCIENCE REQUIREMENTS:
+- Ground every key claim in neuroscience, sports psychology, physiology, or performance science
+- Reference the mechanism naturally: "your amygdala reads...", "cortisol spikes when...", "dopamine reinforces..."
+- Use real concepts: pre-performance routines (Gollwitzer), attentional focus (Nideffer), flow state (Csikszentmihalyi), self-determination theory, HRV, nervous system regulation, sleep science
+- Weave science into Elijah's voice — never sound like a research paper
+- Phrase it like: "I read something from a Stanford lab that said..." or "Turns out your nervous system actually..."
 
-Format:
-- Write as if Elijah is answering a ${askerType === 'parent' ? 'parent asking about their child' : 'player asking directly'}
-- 3-5 paragraphs
-- Last paragraph = one specific action they can take today
-- No bullet points, just flowing paragraphs`
+${askerType === 'parent' ? parentStructure : studentStructure}
+
+Write 3-5 flowing paragraphs. No bullet points. No numbered lists. No colons introducing lists.`
 
   const userPrompt = `Here is Elijah's raw thinking. Rewrite it as a polished, science-backed answer in his voice.
 
