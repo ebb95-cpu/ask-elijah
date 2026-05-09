@@ -8,6 +8,7 @@ import ProfileSyncer from '@/components/ProfileSyncer'
 import SignOutButton from '@/components/SignOutButton'
 import RepReportForm from '@/components/RepReportForm'
 import FollowUpComposer from '@/components/FollowUpComposer'
+import PlaybookCard from '@/components/PlaybookCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -550,37 +551,27 @@ async function SignedInState({ email }: { email: string }) {
         if (solved.length === 0) return null
         return (
           <div className="mb-14">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] text-gray-700 uppercase tracking-widest">
                 Your playbook
               </p>
-              <p className="text-[10px] text-gray-700 uppercase tracking-widest tabular-nums">
+              <p className="text-[10px] text-emerald-500/70 uppercase tracking-widest tabular-nums font-bold">
                 {solved.length} solved
               </p>
             </div>
-            <div className="grid gap-3">
+            <p className="text-xs text-gray-600 leading-relaxed mb-6">
+              Problems you fixed. Pull these up anytime the situation comes back.
+            </p>
+            <div className="grid gap-4">
               {solved.map((q) => (
-                <div
+                <PlaybookCard
                   key={q.id}
-                  className="rounded-[22px] border border-emerald-500/15 bg-emerald-500/[0.04] p-5"
-                >
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <span className="text-[10px] text-emerald-400 uppercase tracking-[0.2em] font-bold">
-                      ✓ Solved
-                    </span>
-                    <span className="text-[10px] text-gray-700">
-                      {q.rep_reflected_at ? formatDate(q.rep_reflected_at) : ''}
-                    </span>
-                  </div>
-                  <p className="text-sm text-white italic leading-relaxed mb-3">
-                    &ldquo;{q.question}&rdquo;
-                  </p>
-                  {q.rep_reflection && (
-                    <div className="border-l-2 border-emerald-500/30 pl-3">
-                      <p className="text-xs text-gray-500 leading-relaxed">{q.rep_reflection}</p>
-                    </div>
-                  )}
-                </div>
+                  question={q.question}
+                  answer={q.answer}
+                  actionSteps={q.action_steps}
+                  reflection={q.rep_reflection}
+                  solvedAt={q.rep_reflected_at!}
+                />
               ))}
             </div>
           </div>
