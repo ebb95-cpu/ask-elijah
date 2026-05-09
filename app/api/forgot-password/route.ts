@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     type: 'recovery',
     email: cleanEmail,
     options: {
-      redirectTo: `${siteUrl}/reset-password`,
+      redirectTo: `${siteUrl}/auth/callback?next=/reset-password`,
     },
   })
 
@@ -79,8 +79,8 @@ export async function POST(req: NextRequest) {
 
           <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 56px;">
             <tr>
-              <td>
-                <a href="${resetLink}" style="display:block;width:100%;box-sizing:border-box;background-color:#ffffff;color:#000000 !important;text-decoration:none;text-align:center;border-radius:999px;padding:16px 20px;font-size:15px;font-weight:800;font-family:-apple-system,sans-serif;">Set a new password →</a>
+              <td align="center" bgcolor="#ffffff" style="background-color:#ffffff !important;border-radius:999px;">
+                <a href="${resetLink}" style="display:block;width:100%;box-sizing:border-box;background-color:#ffffff !important;color:#000000 !important;text-decoration:none;text-align:center;border-radius:999px;padding:16px 20px;font-size:15px;font-weight:800;font-family:-apple-system,sans-serif;">Set a new password →</a>
               </td>
             </tr>
           </table>
