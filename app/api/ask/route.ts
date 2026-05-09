@@ -800,6 +800,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: DAILY_LIMIT_MESSAGE }, { status: 429 })
     }
 
+    // Monthly cap: 30 questions per user per calendar month
+    const monthStart = new Date()
+    monthStart.setDate(1)
+    monthStart.setHours(0, 0, 0, 0)
+    const { count: monthCount } = await supabaseLimitCheck
+      .from('questions')
+      .select('id', { count: 'exact', head: true })
+      .eq('email', cleanEmailEarly)
+      .gte('created_at', monthStart.toISOString())
+      .is('deleted_at', null)
+    if ((monthCount || 0) >= 30) {
+      return NextResponse.json({
+        error: "You've asked 30 questions this month. That's a lot of reps. Come back next month — and make sure you've applied everything from this month first.",
+        code: 'monthly_limit',
+      }, { status: 429 })
+    }
+
     // Report-back gate: player must reflect on their last approved answer
     // before asking a new question. This enforces apply → report → ask loop.
     const { data: unreflected } = await supabaseLimitCheck
