@@ -60,6 +60,14 @@ function SignInInner() {
     }
   }, [searchParams])
 
+  // Show a message when redirected here after a failed/expired auth link
+  useEffect(() => {
+    const errorParam = searchParams?.get('error')
+    if (errorParam === 'link_expired') {
+      setError('That link expired or has already been used. Enter your email to get a new one.')
+    }
+  }, [searchParams])
+
   useEffect(() => {
     if (simulated) return
     if (typeof window === 'undefined') return
