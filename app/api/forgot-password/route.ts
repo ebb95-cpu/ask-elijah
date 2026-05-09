@@ -2,11 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 import { Resend } from 'resend'
 import { checkLimit } from '@/lib/rate-limit'
+import { createHmac } from 'crypto'
 
 async function authUserExists(email: string): Promise<boolean> {
   const { data, error } = await getSupabase().auth.admin.listUsers({ page: 1, perPage: 1000 })
   if (error) return false
   return data.users.some((user) => user.email?.toLowerCase() === email)
+}
+
+/**
+ * Build a signed reset token: base64url(email:expiresAt).HMAC
+ * Stateless — no DB needed. Expires in 1 hour.
+ */
+function buildResetToken(email: string): string {
+  const secret = process.env.RESET_TOKEN_SECRET || 'fallback-secret-change-me'
+  const expiresAt = Date.now() + 3600_000 // 1 hour
+  const payload = Buffer.from(`${email}:${expiresAt}`).toString('base64url')
+  const sig = createHmac('sha256', secret).update(payload).digest('base64url')
+  return `${payload}.${sig}`
 }
 
 export async function POST(req: NextRequest) {
@@ -20,30 +33,23 @@ export async function POST(req: NextRequest) {
   }
 
   const cleanEmail = email.trim().toLowerCase()
-  const supabase = getSupabase()
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elijahbryant.pro'
 
-  // Search auth first. If there is no account, do not send anything, but keep
-  // the response neutral so people cannot use this endpoint to enumerate users.
+  // Don't reveal whether the email exists
   const exists = await authUserExists(cleanEmail)
   if (!exists) return NextResponse.json({ ok: true })
 
-  const { data, error } = await supabase.auth.admin.generateLink({
-    type: 'recovery',
-    email: cleanEmail,
-    options: {
-      redirectTo: `${siteUrl}/reset-password`,
-    },
-  })
+  // Build our own signed reset link — no Supabase token complexity
+  const token = buildResetToken(cleanEmail)
+  const resetLink = `${siteUrl}/reset-password?token=${token}`
 
-  if (error || !data?.properties?.action_link) {
-    // Don't leak whether the email exists . always say "sent".
-    return NextResponse.json({ ok: true })
-  }
-
-  const resetLink = data.properties.action_link
-  const firstName =
-    (data.user?.user_metadata as { first_name?: string } | null)?.first_name || 'there'
+  // Get first name for personalisation
+  const { data: profile } = await getSupabase()
+    .from('profiles')
+    .select('first_name')
+    .eq('email', cleanEmail)
+    .maybeSingle()
+  const firstName = profile?.first_name || 'there'
 
   await new Resend(process.env.RESEND_API_KEY).emails.send({
     from: 'Elijah Bryant <elijah@elijahbryant.pro>',
