@@ -7,6 +7,7 @@ import InlineAskComposer from '@/components/InlineAskComposer'
 import ProfileSyncer from '@/components/ProfileSyncer'
 import SignOutButton from '@/components/SignOutButton'
 import RepReportForm from '@/components/RepReportForm'
+import FollowUpComposer from '@/components/FollowUpComposer'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,6 +22,8 @@ type QuestionRow = {
   rep_status: 'not_yet' | 'yes' | 'no' | null
   rep_reflection: string | null
   rep_reflected_at: string | null
+  thread_id: string | null
+  thread_position: number
 }
 
 type PopularQuestion = {
@@ -254,7 +257,7 @@ async function SignedInState({ email }: { email: string }) {
   const [{ data: myData }, popular, profile] = await Promise.all([
     supabase
       .from('questions')
-      .select('id, question, answer, action_steps, status, created_at, approved_at, rep_status, rep_reflection, rep_reflected_at')
+      .select('id, question, answer, action_steps, status, created_at, approved_at, rep_status, rep_reflection, rep_reflected_at, thread_id, thread_position')
       .eq('email', email)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -272,8 +275,15 @@ async function SignedInState({ email }: { email: string }) {
   // First approved question is the "freshest reward" and gets the celebratory
   // glow treatment. Older approved ones render as the accumulating library
   // below . retention lives in the stacked collection, not endless glow.
-  const freshAnswer = approved[0] || null
-  const libraryAnswers = approved.slice(1)
+  // Root questions are ones with no thread_id (original questions, not follow-ups)
+  const rootApproved = approved.filter((q) => !q.thread_id)
+  const freshAnswer = rootApproved[0] || null
+  const libraryAnswers = rootApproved.slice(1)
+
+  // Count follow-ups already sent on freshAnswer's thread
+  const freshFollowUpCount = freshAnswer
+    ? questions.filter((q) => q.thread_id === freshAnswer.id).length
+    : 0
 
   // Member-since = oldest question they've submitted. Cheap "you've been
   // here" signal without a separate users.created_at query.
@@ -399,6 +409,14 @@ async function SignedInState({ email }: { email: string }) {
                 Try this first. Then come back and tell Elijah what happened.
               </p>
             </div>
+          )}
+
+          {/* Follow-up composer — show while answer is fresh and under the cap */}
+          {freshAnswer && (
+            <FollowUpComposer
+              threadId={freshAnswer.id}
+              followUpCount={freshFollowUpCount}
+            />
           )}
 
           {/* Report-back gate — only show if not yet reflected on */}

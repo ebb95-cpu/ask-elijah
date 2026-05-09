@@ -737,7 +737,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: DAILY_LIMIT_MESSAGE }, { status: 429 })
     }
 
-    const { question, email, previewAnswer, newsletterOptIn, utm_source, utm_medium, utm_campaign, mode: rawMode, askerType: rawAskerType, level: rawLevel, language: rawLanguage } = await req.json()
+    const { question, email, previewAnswer, newsletterOptIn, utm_source, utm_medium, utm_campaign, mode: rawMode, askerType: rawAskerType, level: rawLevel, language: rawLanguage, thread_id: rawThreadId } = await req.json()
+    const threadId: string | null = typeof rawThreadId === 'string' && rawThreadId.length > 0 ? rawThreadId : null
 
     const mode: EntryMode = (['bad_game', 'coach', 'playing_time', 'parent', 'general'] as const).includes(rawMode)
       ? (rawMode as EntryMode)
@@ -775,69 +776,101 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Throttle 2: Email-based . protect our API budget (10/day per email).
-    // This is the real cost guard: even behind rotating IPs, a single user
-    // can't drain Claude/Voyage/Pinecone spend for a whole day.
-    const emailLimit = await checkLimit('rl:ask:email', cleanEmailEarly, 1, '1 d')
-    if (!emailLimit.success) {
-      return NextResponse.json(
-        { error: DAILY_LIMIT_MESSAGE },
-        { status: 429 }
-      )
-    }
-
-    // Database fallback/backup: Redis is fail-open by design, so enforce the
-    // same daily cap against questions already saved today. This keeps API
-    // cost protected even if Upstash is missing or temporarily unavailable.
     const supabaseLimitCheck = getSupabase()
-    const { count: todayCount } = await supabaseLimitCheck
-      .from('questions')
-      .select('id', { count: 'exact', head: true })
-      .eq('email', cleanEmailEarly)
-      .gte('created_at', todayStartIso())
-      .is('deleted_at', null)
-    if ((todayCount || 0) >= 10) {
-      return NextResponse.json({ error: DAILY_LIMIT_MESSAGE }, { status: 429 })
-    }
 
-    // Monthly cap: 30 questions per user per calendar month
-    const monthStart = new Date()
-    monthStart.setDate(1)
-    monthStart.setHours(0, 0, 0, 0)
-    const { count: monthCount } = await supabaseLimitCheck
-      .from('questions')
-      .select('id', { count: 'exact', head: true })
-      .eq('email', cleanEmailEarly)
-      .gte('created_at', monthStart.toISOString())
-      .is('deleted_at', null)
-    if ((monthCount || 0) >= 30) {
-      return NextResponse.json({
-        error: "You've asked 30 questions this month. That's a lot of reps. Come back next month — and make sure you've applied everything from this month first.",
-        code: 'monthly_limit',
-      }, { status: 429 })
-    }
+    // ── Follow-up thread logic ─────────────────────────────────────────────
+    // If thread_id is provided this is a follow-up, not a new question.
+    // Follow-ups skip the daily rate limit but are capped at 3 per thread.
+    let threadPosition = 0
 
-    // Report-back gate: player must reflect on their last approved answer
-    // before asking a new question. This enforces apply → report → ask loop.
-    const { data: unreflected } = await supabaseLimitCheck
-      .from('questions')
-      .select('id, question')
-      .eq('email', cleanEmailEarly)
-      .eq('status', 'approved')
-      .is('rep_reflected_at', null)
-      .order('approved_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    if (threadId) {
+      // Verify thread belongs to this user and get follow-up count
+      const { data: threadRoot } = await supabaseLimitCheck
+        .from('questions')
+        .select('id, email, status')
+        .eq('id', threadId)
+        .eq('email', cleanEmailEarly)
+        .maybeSingle()
 
-    if (unreflected) {
-      return NextResponse.json(
-        {
-          error: 'Before your next question, tell me what you tried from the last answer. What was the situation, what did you do, and what changed?',
-          code: 'report_back_required',
-          questionId: unreflected.id,
-        },
-        { status: 429 }
-      )
+      if (!threadRoot) {
+        return NextResponse.json({ error: 'Thread not found.' }, { status: 404 })
+      }
+
+      const { count: followUpCount } = await supabaseLimitCheck
+        .from('questions')
+        .select('id', { count: 'exact', head: true })
+        .eq('thread_id', threadId)
+        .eq('email', cleanEmailEarly)
+
+      if ((followUpCount || 0) >= 3) {
+        return NextResponse.json({
+          error: "You've got everything you need on this one. Go put it to work. Come back tomorrow and tell me what happened.",
+          code: 'thread_limit',
+        }, { status: 429 })
+      }
+
+      threadPosition = (followUpCount || 0) + 1
+      // Follow-ups skip daily/monthly rate limits — fall through to question processing
+    } else {
+      // ── New question: apply all rate limits ────────────────────────────
+      const emailLimit = await checkLimit('rl:ask:email', cleanEmailEarly, 1, '1 d')
+      if (!emailLimit.success) {
+        return NextResponse.json({ error: DAILY_LIMIT_MESSAGE }, { status: 429 })
+      }
+
+      // DB fallback: enforce daily cap even if Redis is unavailable
+      const { count: todayCount } = await supabaseLimitCheck
+        .from('questions')
+        .select('id', { count: 'exact', head: true })
+        .eq('email', cleanEmailEarly)
+        .gte('created_at', todayStartIso())
+        .is('thread_id', null)
+        .is('deleted_at', null)
+      if ((todayCount || 0) >= 1) {
+        return NextResponse.json({ error: DAILY_LIMIT_MESSAGE }, { status: 429 })
+      }
+
+      // Monthly cap: 30 original questions per user per calendar month
+      const monthStart = new Date()
+      monthStart.setDate(1)
+      monthStart.setHours(0, 0, 0, 0)
+      const { count: monthCount } = await supabaseLimitCheck
+        .from('questions')
+        .select('id', { count: 'exact', head: true })
+        .eq('email', cleanEmailEarly)
+        .gte('created_at', monthStart.toISOString())
+        .is('thread_id', null)
+        .is('deleted_at', null)
+      if ((monthCount || 0) >= 30) {
+        return NextResponse.json({
+          error: "You've asked 30 questions this month. That's a lot of reps. Come back next month — and make sure you've applied everything from this month first.",
+          code: 'monthly_limit',
+        }, { status: 429 })
+      }
+
+      // Report-back gate: must reflect on last approved answer before new question
+      // (follow-ups are exempt — they're part of the same learning session)
+      const { data: unreflected } = await supabaseLimitCheck
+        .from('questions')
+        .select('id, question')
+        .eq('email', cleanEmailEarly)
+        .eq('status', 'approved')
+        .is('rep_reflected_at', null)
+        .is('thread_id', null)
+        .order('approved_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (unreflected) {
+        return NextResponse.json(
+          {
+            error: 'Before your next question, tell me what you tried from the last answer. What was the situation, what did you do, and what changed?',
+            code: 'report_back_required',
+            questionId: unreflected.id,
+          },
+          { status: 429 }
+        )
+      }
     }
 
     // Duplicate submission guard . same email within 2 minutes
@@ -977,7 +1010,7 @@ export async function POST(req: NextRequest) {
       const supabase = getSupabase()
       const { data: record } = await supabase
         .from('questions')
-        .insert({ question, question_english: englishTranslation || null, answer: FALLBACK, ai_draft: FALLBACK, sources: [], ip, email: cleanEmailEarly, status: 'pending', topic: topic ?? null, topic_confidence: topicConfidence, trigger: trigger ?? null, language_detected: responseLanguage !== 'English' ? responseLanguage : null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, mode, asker_type: askerType, level_snapshot: levelSnapshot })
+        .insert({ question, question_english: englishTranslation || null, answer: FALLBACK, ai_draft: FALLBACK, sources: [], ip, email: cleanEmailEarly, status: 'pending', topic: topic ?? null, topic_confidence: topicConfidence, trigger: trigger ?? null, language_detected: responseLanguage !== 'English' ? responseLanguage : null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, mode, asker_type: askerType, level_snapshot: levelSnapshot, thread_id: threadId || null, thread_position: threadPosition })
         .select('id').single()
       const playerContext = await playerContextPromise
       if (record?.id) await notifyElijah(record.id, question, FALLBACK, email, playerContext).catch((e) => logError('ask:notify-elijah', e, { questionId: record.id }))
@@ -1117,6 +1150,8 @@ export async function POST(req: NextRequest) {
         mode,
         asker_type: askerType,
         level_snapshot: levelSnapshot,
+        thread_id: threadId || null,
+        thread_position: threadPosition,
       })
       .select('id')
       .single()
