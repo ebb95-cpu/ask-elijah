@@ -326,28 +326,42 @@ async function isAlreadyIngested(videoId: string): Promise<boolean> {
   } catch { return false }
 }
 
-async function transcribeWithAssemblyAI(videoId: string): Promise<string> {
-  // Submit YouTube URL directly . AssemblyAI handles the download
-  const submitRes = await fetch('https://api.assemblyai.com/v2/transcript', {
-    method: 'POST',
-    headers: { Authorization: ASSEMBLYAI_API_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ audio_url: `https://www.youtube.com/watch?v=${videoId}`, language_code: 'en' }),
-  })
-  if (!submitRes.ok) throw new Error(`AssemblyAI submit ${submitRes.status}`)
-  const { id, error: submitError } = await submitRes.json()
-  if (submitError) throw new Error(submitError)
+async function getYouTubeSubtitles(videoId: string): Promise<string> {
+  // Use yt-dlp to download auto-generated subtitles (VTT format)
+  // This runs as a child process and is much more reliable than AssemblyAI + YouTube URL
+  const { execFileSync } = await import('child_process')
+  const { mkdirSync, existsSync, readFileSync, rmSync } = await import('fs')
+  const { join } = await import('path')
+  const tmpDir = `/tmp/yt-subs-${videoId}`
+  mkdirSync(tmpDir, { recursive: true })
+  try {
+    execFileSync('yt-dlp', [
+      '--write-subs', '--write-auto-subs',
+      '--sub-lang', 'en,en-US',
+      '--sub-format', 'vtt',
+      '--skip-download',
+      '--output', join(tmpDir, `${videoId}.%(ext)s`),
+      `https://www.youtube.com/watch?v=${videoId}`,
+    ], { timeout: 30000 })
 
-  // Poll until complete (max 5 min)
-  for (let i = 0; i < 60; i++) {
-    await sleep(5000)
-    const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
-      headers: { Authorization: ASSEMBLYAI_API_KEY },
-    })
-    const data = await pollRes.json()
-    if (data.status === 'completed') return data.text || ''
-    if (data.status === 'error') throw new Error(`AssemblyAI: ${data.error}`)
+    const vttFile = [`${videoId}.en.vtt`, `${videoId}.en-US.vtt`]
+      .map(f => join(tmpDir, f)).find(f => existsSync(f))
+
+    if (!vttFile) return ''
+    const vtt = readFileSync(vttFile, 'utf8')
+    // Parse VTT: strip timing lines and dedupe
+    const seen = new Set<string>()
+    const words: string[] = []
+    for (const line of vtt.split('\n')) {
+      const t = line.trim()
+      if (!t || t === 'WEBVTT' || /^\d+$/.test(t) || /-->/.test(t)) continue
+      const clean = t.replace(/<[^>]+>/g, '').trim()
+      if (clean && !seen.has(clean)) { seen.add(clean); words.push(clean) }
+    }
+    return words.join(' ')
+  } finally {
+    rmSync(tmpDir, { recursive: true, force: true })
   }
-  throw new Error('AssemblyAI timeout')
 }
 
 async function ingestYouTube(): Promise<number> {
@@ -373,10 +387,10 @@ async function ingestYouTube(): Promise<number> {
 
       let transcript: string
       try {
-        transcript = await transcribeWithAssemblyAI(videoId)
-      } catch (e) { console.error(`Transcription failed for ${videoId}:`, e); continue }
+        transcript = await getYouTubeSubtitles(videoId)
+      } catch (e) { console.error(`Subtitles failed for ${videoId}:`, e); continue }
 
-      if (!transcript || transcript.length < 400) continue
+      if (!transcript || transcript.length < 50) continue
 
       const chunks = chunkText(transcript, 600, 100)
       const vectors: any[] = []
@@ -394,7 +408,7 @@ async function ingestYouTube(): Promise<number> {
               source_url: `https://youtube.com/watch?v=${videoId}`,
               channel: channel.label,
               chunk_index: j,
-              transcription: 'assemblyai',
+              transcription: 'yt-dlp-subs',
             },
           })
           await sleep(80)
