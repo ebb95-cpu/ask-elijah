@@ -15,6 +15,7 @@ export type IngestMetadata = {
     | 'newsletter'
     | 'drive_pdf'
     | 'tiktok'
+    | 'note'
   source_url?: string
   topic?: string | null
   level?: string | null

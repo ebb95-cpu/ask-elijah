@@ -306,6 +306,9 @@ export default function AdminKbSourcesPage() {
         <Link href="/admin/questions" style={{ fontSize: '12px', color: '#555555', textDecoration: 'none' }}>
           ← Queue
         </Link>
+        <Link href="/admin/kb-add" style={{ fontSize: '12px', color: '#a78bfa', textDecoration: 'none', fontWeight: 600 }}>
+          + Add note
+        </Link>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
           <button
             onClick={syncLatest}
