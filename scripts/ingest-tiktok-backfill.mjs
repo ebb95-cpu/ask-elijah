@@ -116,7 +116,7 @@ async function getIngestedIds() {
 }
 
 /** Record a successfully ingested video in kb_sources. */
-async function recordKbSource({ videoId, title, url, chunkCount, publishedAt }) {
+async function recordKbSource({ videoId, title, url, chunkCount, publishedAt, thumbnailUrl }) {
   const { error } = await supabase.from('kb_sources').insert({
     id_prefix: `tk_${videoId}`,
     source_title: title,
@@ -124,6 +124,7 @@ async function recordKbSource({ videoId, title, url, chunkCount, publishedAt }) 
     source_url: url,
     chunk_count: chunkCount,
     published_at: publishedAt,
+    thumbnail_url: thumbnailUrl || null,
   })
   if (error) console.error(`  kb_sources insert error: ${error.message}`)
 }
@@ -234,12 +235,18 @@ for (let i = 0; i < toIngest.length; i++) {
       ? new Date(video.timestamp * 1000).toISOString()
       : new Date().toISOString()
 
+    // Pick best thumbnail from yt-dlp metadata
+    const thumbnailUrl = (video.thumbnails && video.thumbnails.length > 0)
+      ? (video.thumbnails.find(t => t.preference === -1) || video.thumbnails[0])?.url || null
+      : null
+
     await recordKbSource({
       videoId: video.id,
       title: sourceTitle,
       url: videoUrl,
       chunkCount,
       publishedAt,
+      thumbnailUrl,
     })
 
     ingested++
