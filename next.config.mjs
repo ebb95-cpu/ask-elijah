@@ -47,6 +47,8 @@ export default withSentryConfig(nextConfig, {
   // Missing token = build skips upload with a warning, which is fine for
   // preview environments where we haven't provisioned the token.
   disableLogger: true,
+  // Disable source map upload — Sentry auth token is not provisioned.
+  sourcemaps: { disable: true },
   // Tunnel through a Next.js rewrite so ad blockers don't stop client
   // events from reaching Sentry. Small perf cost, big reliability win.
   tunnelRoute: '/monitoring',
