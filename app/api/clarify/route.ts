@@ -4,6 +4,7 @@ import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { logError } from '@/lib/log-error'
 import { getSupabase } from '@/lib/supabase-server'
 import { sanitizeStudentFacingText } from '@/lib/answer-sanitize'
+import { checkLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -83,10 +84,19 @@ async function getFirstName(email?: string, providedName?: string): Promise<stri
 }
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
+  const ipLimit = await checkLimit('rl:clarify:ip', ip, 20, '1 h')
+  if (!ipLimit.success) return NextResponse.json({ done: true })
+
   const { question, conversation, mode, email, firstName: providedFirstName } = await req.json()
   // conversation: [{ q: string, a: string }]
 
   if (!question) return NextResponse.json({ error: 'question required' }, { status: 400 })
+
+  if (email) {
+    const emailLimit = await checkLimit('rl:clarify:email', email, 15, '1 d')
+    if (!emailLimit.success) return NextResponse.json({ done: true })
+  }
 
   const rounds = (conversation || []).length
 
