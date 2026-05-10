@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     const { question, profile, memories } = await req.json()
     if (!question?.trim()) return new Response('Question required', { status: 400 })
-    if (question.trim().length > 500) return new Response('Question too long (max 500 characters)', { status: 400 })
+    if (question.trim().length > 2000) return new Response('Question too long (max 2000 characters)', { status: 400 })
 
     const profileParts: string[] = []
     if (profile?.position) profileParts.push(`Position: ${profile.position}`)

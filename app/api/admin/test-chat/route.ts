@@ -103,8 +103,8 @@ export async function POST(req: NextRequest) {
     const { question, profile } = await req.json()
     const cleanQuestion = typeof question === 'string' ? question.trim() : ''
     if (!cleanQuestion) return NextResponse.json({ error: 'Question required' }, { status: 400 })
-    if (cleanQuestion.length > 500) {
-      return NextResponse.json({ error: 'Question too long (max 500 characters)' }, { status: 400 })
+    if (cleanQuestion.length > 2000) {
+      return NextResponse.json({ error: 'Question too long (max 2000 characters)' }, { status: 400 })
     }
 
     let ragContext = ''
