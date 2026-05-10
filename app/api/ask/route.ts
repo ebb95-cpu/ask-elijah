@@ -813,7 +813,7 @@ export async function POST(req: NextRequest) {
       // Follow-ups skip daily/monthly rate limits — fall through to question processing
     } else {
       // ── New question: apply all rate limits ────────────────────────────
-      const emailLimit = await checkLimit('rl:ask:email', cleanEmailEarly, 1, '1 d')
+      const emailLimit = await checkLimit('rl:ask:email', cleanEmailEarly, 3, '1 d')
       if (!emailLimit.success) {
         return NextResponse.json({ error: DAILY_LIMIT_MESSAGE }, { status: 429 })
       }
@@ -826,7 +826,7 @@ export async function POST(req: NextRequest) {
         .gte('created_at', todayStartIso())
         .is('thread_id', null)
         .is('deleted_at', null)
-      if ((todayCount || 0) >= 1) {
+      if ((todayCount || 0) >= 3) {
         return NextResponse.json({ error: DAILY_LIMIT_MESSAGE }, { status: 429 })
       }
 
