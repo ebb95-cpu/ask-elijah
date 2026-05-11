@@ -49,6 +49,12 @@ export default function ProfilePage() {
       fetch(`/api/profile?email=${encodeURIComponent(stored)}`)
         .then(r => r.json())
         .then(d => {
+          if (d.error) {
+            // No active session — show edit mode so they can still fill in their profile
+            setIsEditing(true)
+            setProfileLoaded(true)
+            return
+          }
           if (d.first_name) setFirstName(d.first_name)
           if (d.position) setPosition(d.position)
           if (d.level) setLevel(d.level)
