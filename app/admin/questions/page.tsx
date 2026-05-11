@@ -31,6 +31,9 @@ interface PlayerQuestion {
   reviewed_by_elijah?: boolean
   language_detected?: string | null
   question_english?: string | null
+  player_name?: string | null
+  player_position?: string | null
+  player_level?: string | null
   // Added by /api/admin/queue when pending questions cluster together by
   // semantic similarity. Representative row is returned with the rest of
   // the cluster collapsed into this field.
@@ -175,6 +178,7 @@ export default function AdminQuestionsPage() {
   const [items, setItems] = useState<PlayerQuestion[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<StatusFilter>('pending')
+  const [totalUsers, setTotalUsers] = useState<number | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [researching, setResearching] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -206,6 +210,7 @@ export default function AdminQuestionsPage() {
       const res = await fetch(`/api/admin/queue?status=${status}`)
       if (!res.ok) throw new Error(`${res.status}`)
       const data = await res.json()
+      if (data.totalUsers != null) setTotalUsers(data.totalUsers)
       const loaded = data.questions || []
       setItems(
         status === 'pending'
@@ -516,6 +521,11 @@ export default function AdminQuestionsPage() {
         <div style={{ marginBottom: 20 }}>
           <p style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
             {getAudience(openItem) === 'parent' ? 'parent' : 'player'} · {openItem.item_type === 'pain_point' ? 'discovery' : (openItem.email || 'anon')} · {formatDate(openItem.created_at)}
+            {(openItem.player_name || openItem.player_position || openItem.player_level) && (
+              <> · <span style={{ color: '#a3e635' }}>
+                {[openItem.player_name, openItem.player_position, openItem.player_level].filter(Boolean).join(' · ')}
+              </span></>
+            )}
             {openItem.dupes && openItem.dupes.length > 0 && (
               <> · <span style={{ color: '#fbbf24' }}>+{openItem.dupes.length} asked the same</span></>
             )}
@@ -935,6 +945,11 @@ export default function AdminQuestionsPage() {
           <h1 style={{ fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, color: '#fff', margin: 0, fontFamily: '-apple-system, sans-serif' }}>
             Questions Ready For You
           </h1>
+          {totalUsers != null && (
+            <p style={{ fontSize: 12, color: '#666', margin: '6px 0 0', fontFamily: '-apple-system, sans-serif' }}>
+              <span style={{ color: '#fff', fontWeight: 700 }}>{totalUsers}</span> {totalUsers === 1 ? 'player' : 'players'} signed up
+            </p>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <a

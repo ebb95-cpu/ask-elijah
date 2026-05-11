@@ -115,13 +115,32 @@ export async function GET(req: NextRequest) {
   const pqStatus = status === 'answered' ? ['approved', 'answered'] : [status]
   const orderAsc = status === 'pending'
 
-  const [ppRes, pqRes] = await Promise.all([
+  const [ppRes, pqRes, profilesRes, totalUsersRes] = await Promise.all([
     supabase.from('pain_points').select('*').in('status', ppStatus).order('created_at', { ascending: orderAsc }).limit(100),
     supabase.from('questions').select('*').in('status', pqStatus).order(status === 'answered' ? 'approved_at' : 'created_at', { ascending: false }).limit(100),
+    supabase.from('profiles').select('email, first_name, name, position, level'),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
   ])
 
+  // Build a quick lookup map: email → profile
+  type Profile = { email: string; first_name: string | null; name: string | null; position: string | null; level: string | null }
+  const profileMap = new Map<string, Profile>()
+  for (const p of (profilesRes.data || []) as Profile[]) {
+    if (p.email) profileMap.set(p.email.toLowerCase(), p)
+  }
+
   const painPoints = ((ppRes.data || []) as PainPoint[]).map(painPointToQuestion)
-  let questions = (pqRes.data || []) as Question[]
+  let questions = ((pqRes.data || []) as Question[]).map((q) => {
+    if (!q.email) return q
+    const prof = profileMap.get((q.email as string).toLowerCase())
+    if (!prof) return q
+    return {
+      ...q,
+      player_name: prof.first_name || prof.name || null,
+      player_position: prof.position || null,
+      player_level: prof.level || null,
+    }
+  })
 
   // Dedupe pending questions by semantic similarity. Only pending . answered
   // and skipped stay flat because they're historical records, not triage
@@ -141,5 +160,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     painPoints: ppRes.data || [],
     questions: status === 'pending' ? [...painPoints, ...questions] : [...questions, ...painPoints],
+    totalUsers: totalUsersRes.count ?? 0,
   })
 }
