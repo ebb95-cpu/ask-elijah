@@ -378,8 +378,32 @@ export default function HomePage() {
   const handleSubmit = async () => {
     if (!question.trim() || (mode !== 'idle' && mode !== 'returning')) return
     if (mode === 'idle') {
-      setSession('pending_question', question.trim())
-      window.location.assign(`/sign-up?intent=ask&q=${encodeURIComponent(question.trim())}&next=/ask`)
+      const q = question.trim()
+      setSession('pending_question', q)
+      setMode('loading')
+      // Stream ~150 chars of the preview so the sign-up page can show a teaser
+      try {
+        const res = await fetch('/api/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: q }),
+        })
+        if (res.ok && res.body) {
+          const reader = res.body.getReader()
+          const decoder = new TextDecoder()
+          let snippet = ''
+          while (snippet.length < 160) {
+            const { done, value } = await reader.read()
+            if (done) break
+            snippet += decoder.decode(value, { stream: true })
+          }
+          reader.cancel()
+          setSession('pending_preview', snippet.slice(0, 160).trimEnd())
+        }
+      } catch {
+        // Fail open — still redirect even if preview fetch errors
+      }
+      window.location.assign(`/sign-up?intent=ask&q=${encodeURIComponent(q)}&next=/ask`)
       return
     }
     setAskError('')

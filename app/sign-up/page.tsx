@@ -1,11 +1,12 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import LoadingDots from '@/components/ui/LoadingDots'
 import { getSupabaseClient } from '@/lib/supabase-client'
+import { getSession, removeSession } from '@/lib/safe-storage'
 
 function Logo() {
   return (
@@ -44,7 +45,18 @@ function SignUpInner() {
   const [promoStatus, setPromoStatus] = useState<{ state: 'idle' | 'checking' | 'applied' | 'error'; message: string }>({ state: 'idle', message: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [answerPreview, setAnswerPreview] = useState('')
   const router = useRouter()
+
+  useEffect(() => {
+    if (isAskIntent) {
+      const preview = getSession('pending_preview')
+      if (preview) {
+        setAnswerPreview(preview)
+        removeSession('pending_preview')
+      }
+    }
+  }, [])
   const browserLanguage = typeof navigator !== 'undefined' ? navigator.language || 'en' : 'en'
 
   const updatePromoCode = (value: string) => {
@@ -128,12 +140,26 @@ function SignUpInner() {
           {isAskIntent ? 'Create an account to get it.' : isMeTooIntent ? 'Get the answer for what you are actually dealing with.' : 'Save your answers.'}
         </h1>
         {isAskIntent && (
-          <div className="mb-6 rounded-[1.25rem] border border-black/10 bg-white/60 p-4">
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Your question</p>
-            <p className="text-sm font-semibold leading-relaxed text-black">&ldquo;{painQuestion}&rdquo;</p>
-            <p className="mt-3 text-xs leading-relaxed text-black/50">
-              The answer exists. One account stands between you and it. No card required.
-            </p>
+          <div className="mb-6 rounded-[1.25rem] border border-black/10 bg-white/60 overflow-hidden">
+            <div className="p-4 pb-2">
+              <p className="mb-1 text-[10px] font-black uppercase tracking-[0.2em] text-black/30">Your question</p>
+              <p className="text-xs font-semibold text-black/60 italic">&ldquo;{painQuestion}&rdquo;</p>
+            </div>
+            {answerPreview ? (
+              <div className="relative px-4 pt-3 pb-6">
+                <p className="text-sm leading-relaxed text-black font-medium">{answerPreview}</p>
+                {/* Fade + blur mask */}
+                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#F0EDE7] to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 h-10 backdrop-blur-[2px]" style={{ WebkitMaskImage: 'linear-gradient(to top, black 40%, transparent 100%)', maskImage: 'linear-gradient(to top, black 40%, transparent 100%)' }} />
+                <p className="absolute bottom-2 left-0 right-0 text-center text-[10px] font-black uppercase tracking-[0.18em] text-black/40">Create account to read more</p>
+              </div>
+            ) : (
+              <div className="px-4 pb-4">
+                <p className="text-xs leading-relaxed text-black/50">
+                  The answer exists. One account stands between you and it.
+                </p>
+              </div>
+            )}
           </div>
         )}
         {isMeTooIntent && (
