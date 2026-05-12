@@ -43,6 +43,7 @@ function SignUpInner() {
   const [password, setPassword] = useState('')
   const [promoCode, setPromoCode] = useState(prefillPromoCode)
   const [promoStatus, setPromoStatus] = useState<{ state: 'idle' | 'checking' | 'applied' | 'error'; message: string }>({ state: 'idle', message: '' })
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [answerPreview, setAnswerPreview] = useState('')
@@ -87,9 +88,15 @@ function SignUpInner() {
     }
   }
 
+  const passwordsMatch = !confirmPassword || password === confirmPassword
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password || !firstName) return
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
     setLoading(true)
     setError('')
 
@@ -211,6 +218,19 @@ function SignUpInner() {
             required
           />
           <div>
+            <input
+              type="password"
+              placeholder="Confirm password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              className={`w-full border px-4 py-3 text-sm outline-none transition-colors ${confirmPassword && !passwordsMatch ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-black'}`}
+              required
+            />
+            {confirmPassword && !passwordsMatch && (
+              <p className="mt-1 text-xs text-red-500">Passwords do not match.</p>
+            )}
+          </div>
+          <div>
             <div className="flex border border-gray-200 focus-within:border-black transition-colors">
               <input
                 type="text"
@@ -243,7 +263,7 @@ function SignUpInner() {
           </div>
           <button
             type="submit"
-            disabled={loading || !email || !password || !firstName}
+            disabled={loading || !email || !password || !firstName || !confirmPassword || !passwordsMatch}
             className="w-full bg-black text-white py-3 text-sm font-semibold tracking-tight hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {loading ? <LoadingDots label="Creating account" /> : 'Create account →'}
