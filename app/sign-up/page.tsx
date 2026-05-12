@@ -216,11 +216,6 @@ function SignUpInner() {
 
         <p className="text-xs text-gray-400 mt-6 text-center">No card required.</p>
 
-        <div className="mt-4 text-center">
-          <Link href="/ask" className="text-xs text-gray-400 hover:text-black transition-colors">
-            Continue without account →
-          </Link>
-        </div>
       </div>
     </div>
   )

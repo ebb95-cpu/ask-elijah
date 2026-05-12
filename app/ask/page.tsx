@@ -450,7 +450,11 @@ function AskPageInner() {
 
   useEffect(() => {
     getSupabaseClient().auth.getUser().then(({ data }) => {
-      setIsLoggedIn(!!data.user)
+      if (!data.user) {
+        router.replace('/sign-up')
+        return
+      }
+      setIsLoggedIn(true)
       if (data.user?.email) setEmail(data.user.email)
     })
   }, [])
