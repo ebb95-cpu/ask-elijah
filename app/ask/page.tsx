@@ -451,7 +451,7 @@ function AskPageInner() {
   useEffect(() => {
     getSupabaseClient().auth.getUser().then(({ data }) => {
       if (!data.user) {
-        router.replace('/sign-up')
+        router.replace('/sign-up?next=/chat')
         return
       }
       setIsLoggedIn(true)

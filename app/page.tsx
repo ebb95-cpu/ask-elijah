@@ -403,7 +403,7 @@ export default function HomePage() {
       } catch {
         // Fail open — still redirect even if preview fetch errors
       }
-      window.location.assign(`/sign-up?intent=ask&q=${encodeURIComponent(q)}&next=/ask`)
+      window.location.assign(`/sign-up?intent=ask&q=${encodeURIComponent(q)}&next=/chat`)
       return
     }
     setAskError('')
