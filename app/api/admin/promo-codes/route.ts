@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ code: data })
+  return NextResponse.json({ code: { ...data, redemptions: [] } })
 }
 
 export async function PATCH(req: NextRequest) {

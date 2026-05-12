@@ -216,8 +216,9 @@ export default function PromoCodesPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Could not update code')
-      setCodes((prev) => prev.map((item) => item.code === code.code ? data.code : item))
-      if (selectedCode?.code === code.code) setSelectedCode(data.code)
+      const updated = { redemptions: code.redemptions, ...data.code }
+      setCodes((prev) => prev.map((item) => item.code === code.code ? updated : item))
+      if (selectedCode?.code === code.code) setSelectedCode(updated)
     } catch (e) {
       setCodes((prev) => prev.map((item) => item.code === code.code ? code : item))
       if (selectedCode?.code === code.code) setSelectedCode(code)
@@ -234,8 +235,9 @@ export default function PromoCodesPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Could not update code')
-      setCodes((prev) => prev.map((item) => item.code === code.code ? data.code : item))
-      if (selectedCode?.code === code.code) setSelectedCode(data.code)
+      const updated = { redemptions: code.redemptions, ...data.code }
+      setCodes((prev) => prev.map((item) => item.code === code.code ? updated : item))
+      if (selectedCode?.code === code.code) setSelectedCode(updated)
       setNotice(`Updated ${code.code}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not update code')
