@@ -47,12 +47,13 @@ export async function POST(req: NextRequest) {
 
   const supabase = getSupabase()
 
-  // Find the user by email directly — no pagination needed
-  const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email)
-  if (userError || !userData?.user) {
+  // Find the user by email
+  const { data: listData, error: userError } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+  if (userError) return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 })
+  const user = listData.users.find((u) => u.email?.toLowerCase() === email)
+  if (!user) {
     return NextResponse.json({ error: 'No account found for that email.' }, { status: 400 })
   }
-  const user = userData.user
 
   // Update the password via admin API — no auth tokens needed
   const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, { password })

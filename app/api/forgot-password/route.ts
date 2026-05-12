@@ -5,9 +5,9 @@ import { checkLimit } from '@/lib/rate-limit'
 import { createHmac } from 'crypto'
 
 async function authUserExists(email: string): Promise<boolean> {
-  const { data, error } = await getSupabase().auth.admin.getUserByEmail(email)
-  if (error || !data?.user) return false
-  return true
+  const { data, error } = await getSupabase().auth.admin.listUsers({ page: 1, perPage: 1000 })
+  if (error) return false
+  return data.users.some((u) => u.email?.toLowerCase() === email)
 }
 
 /**
