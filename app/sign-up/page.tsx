@@ -126,7 +126,7 @@ function SignUpInner() {
         return
       }
 
-      router.push(nextUrl || '/home')
+      router.push(nextUrl || '/track')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Try again.')
       setLoading(false)
