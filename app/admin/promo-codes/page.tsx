@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import LoadingDots from '@/components/ui/LoadingDots'
 
 type Redemption = {
@@ -149,6 +150,7 @@ function PromoModal({ code, onClose, onToggle, onEdit }: {
 }
 
 export default function PromoCodesPage() {
+  const router = useRouter()
   const [codes, setCodes] = useState<PromoCode[]>([])
   const [label, setLabel] = useState('Tester trial')
   const [customCode, setCustomCode] = useState('')
@@ -295,7 +297,7 @@ export default function PromoCodesPage() {
           ) : codes.map((code) => (
             <div key={code.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 10, alignItems: 'center', borderBottom: '1px solid #111', padding: '14px 16px' }}>
               <button
-                onClick={() => setSelectedCode(code)}
+                onClick={() => router.push(`/admin/promo-codes/${encodeURIComponent(code.code)}`)}
                 style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer' }}
               >
                 <p style={{ fontSize: 17, fontWeight: 900, letterSpacing: '0.08em', margin: 0, color: '#fff' }}>{code.code}</p>
