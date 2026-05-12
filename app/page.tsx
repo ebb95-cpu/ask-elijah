@@ -277,7 +277,6 @@ export default function HomePage() {
   const [revealed, setRevealed] = useState(false)
   const [askError, setAskError] = useState('')
   const [welcomeBackName, setWelcomeBackName] = useState<string | null>(null)
-  const [showThinkFirst, setShowThinkFirst] = useState(false)
   const fullAnswerRef = useRef('')
   const prevQuestionRef = useRef('')
   const prevAnswerRef = useRef('')
@@ -808,40 +807,6 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-black">
 
-      {showThinkFirst && (
-        <div className="fixed inset-0 z-[60] bg-black/90 px-5 flex items-center justify-center">
-          <div className="w-full max-w-lg rounded-[2rem] border border-white/15 bg-[#070707] p-7 text-left shadow-[0_0_80px_rgba(255,255,255,0.08)]">
-            <p className="mb-5 text-[10px] font-bold uppercase tracking-[0.28em] text-gray-500">
-              Take your time
-            </p>
-            <h3 className="mb-5 text-4xl font-bold leading-[0.98] tracking-tight text-white sm:text-5xl">
-              I&apos;ll be here when you&apos;re ready.
-            </h3>
-            <p className="mb-8 max-w-md text-base leading-relaxed text-gray-400">
-              Don&apos;t ask just to ask. Bring the question you&apos;re actually willing to work on.
-            </p>
-            <div className="flex flex-col gap-3 sm:max-w-sm">
-              <button
-                onClick={() => {
-                  setShowThinkFirst(false)
-                  window.requestAnimationFrame(() => {
-                    ;(document.querySelector('textarea') as HTMLTextAreaElement | null)?.focus()
-                  })
-                }}
-                className="w-full rounded-full bg-white px-5 py-4 text-sm font-bold text-black hover:opacity-80 transition-opacity"
-              >
-                I&apos;m ready →
-              </button>
-              <button
-                onClick={() => setShowThinkFirst(false)}
-                className="w-full px-5 py-3 text-sm font-semibold text-gray-600 hover:text-white transition-colors"
-              >
-                Not yet
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-5">
@@ -921,7 +886,7 @@ export default function HomePage() {
             <p className="mt-3 text-sm text-red-400 leading-relaxed">{askError}</p>
           )}
           <p className="mt-3 text-xs text-gray-500">
-            Submitting takes you to the Founders application. You&apos;ll get a real answer when you get in.
+            No card required. Create a free account to get your answer.
           </p>
         </div>
       </section>
