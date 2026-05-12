@@ -277,9 +277,7 @@ export default function HomePage() {
   const [revealed, setRevealed] = useState(false)
   const [askError, setAskError] = useState('')
   const [welcomeBackName, setWelcomeBackName] = useState<string | null>(null)
-  const [showCommitment, setShowCommitment] = useState(false)
   const [showThinkFirst, setShowThinkFirst] = useState(false)
-  const [hasCommitted, setHasCommitted] = useState(false)
   const fullAnswerRef = useRef('')
   const prevQuestionRef = useRef('')
   const prevAnswerRef = useRef('')
@@ -378,16 +376,8 @@ export default function HomePage() {
     run()
   }, [])
 
-  const handleSubmit = async (commitmentConfirmed = false) => {
+  const handleSubmit = async () => {
     if (!question.trim() || (mode !== 'idle' && mode !== 'returning')) return
-    if (mode === 'idle' && !hasCommitted && !commitmentConfirmed) {
-      setShowCommitment(true)
-      return
-    }
-    if (commitmentConfirmed) {
-      setHasCommitted(true)
-      setShowCommitment(false)
-    }
     if (mode === 'idle') {
       setSession('pending_question', question.trim())
       window.location.assign(`/sign-up?intent=ask&q=${encodeURIComponent(question.trim())}&next=/ask`)
@@ -817,40 +807,6 @@ export default function HomePage() {
   // ── Idle (homepage) ────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-screen bg-black">
-      {showCommitment && (
-        <div className="fixed inset-0 z-[60] bg-black/90 px-5 flex items-center justify-center">
-          <div className="w-full max-w-lg border-l border-white/80 pl-6 pr-2 py-2 text-left">
-            <p className="mb-5 text-[10px] font-bold uppercase tracking-[0.28em] text-gray-500">
-              Locker room standard
-            </p>
-            <h3 className="mb-5 text-4xl font-bold leading-[0.95] tracking-tight text-white sm:text-5xl">
-              Do not ask for motivation.
-              <span className="block text-gray-500">Ask for the rep.</span>
-            </h3>
-            <p className="mb-8 max-w-md text-base leading-relaxed text-gray-400">
-              This is for players who are still trying. Ask something you&apos;re willing to work on today.
-              The answer will give you one move. Your job is to try it.
-            </p>
-            <div className="flex flex-col gap-3 sm:max-w-sm">
-              <button
-                onClick={() => handleSubmit(true)}
-                className="w-full rounded-full bg-white px-5 py-4 text-sm font-bold text-black hover:opacity-80 transition-opacity"
-              >
-                I&apos;ll do the work →
-              </button>
-              <button
-                onClick={() => {
-                  setShowCommitment(false)
-                  setShowThinkFirst(true)
-                }}
-                className="w-full px-5 py-3 text-sm font-semibold text-gray-600 hover:text-white transition-colors"
-              >
-                Let me think first
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showThinkFirst && (
         <div className="fixed inset-0 z-[60] bg-black/90 px-5 flex items-center justify-center">
