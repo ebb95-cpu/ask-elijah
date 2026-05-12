@@ -25,6 +25,10 @@ export default function PromoCodesPage() {
   const [deletingCode, setDeletingCode] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
+  const [editingCode, setEditingCode] = useState<string | null>(null)
+  const [editDays, setEditDays] = useState('')
+  const [editUses, setEditUses] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -65,6 +69,35 @@ export default function PromoCodesPage() {
       setError(e instanceof Error ? e.message : 'Could not create code')
     } finally {
       setSaving(false)
+    }
+  }
+
+  function startEdit(code: PromoCode) {
+    setEditingCode(code.code)
+    setEditDays(String(code.trial_days))
+    setEditUses(String(code.max_redemptions ?? ''))
+    setNotice('')
+    setError('')
+  }
+
+  async function saveEdit(code: PromoCode) {
+    setEditSaving(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/promo-codes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.code, trial_days: editDays, max_redemptions: editUses }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Could not update code')
+      setCodes((prev) => prev.map((item) => item.code === code.code ? data.code : item))
+      setNotice(`Updated ${code.code}`)
+      setEditingCode(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update code')
+    } finally {
+      setEditSaving(false)
     }
   }
 
@@ -146,36 +179,53 @@ export default function PromoCodesPage() {
           ) : codes.length === 0 ? (
             <p style={{ padding: 24, color: '#666', margin: 0 }}>No admin promo codes yet.</p>
           ) : codes.map((code) => (
-            <div key={code.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 10, alignItems: 'center', borderBottom: '1px solid #111', padding: 16 }}>
-              <div>
-                <p style={{ fontSize: 18, fontWeight: 900, letterSpacing: '0.08em', margin: 0 }}>{code.code}</p>
-                <p style={{ color: '#666', fontSize: 12, margin: '6px 0 0' }}>
-                  {code.label} · {code.trial_days} days · {code.redeemed_count}/{code.max_redemptions ?? '∞'} used
-                </p>
+            <div key={code.id} style={{ borderBottom: '1px solid #111', padding: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', gap: 10, alignItems: 'center' }}>
+                <div>
+                  <p style={{ fontSize: 18, fontWeight: 900, letterSpacing: '0.08em', margin: 0 }}>{code.code}</p>
+                  <p style={{ color: '#666', fontSize: 12, margin: '6px 0 0' }}>
+                    {code.label} · {code.trial_days} days · {code.redeemed_count}/{code.max_redemptions ?? '∞'} used
+                  </p>
+                </div>
+                <span style={{ color: code.active ? '#34d399' : '#777', fontSize: 12, fontWeight: 800 }}>
+                  {code.active ? 'Active' : 'Paused'}
+                </span>
+                <button onClick={() => editingCode === code.code ? setEditingCode(null) : startEdit(code)} style={{ border: '1px solid #252525', background: '#080808', color: '#ccc', borderRadius: 999, padding: '8px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 800 }}>
+                  {editingCode === code.code ? 'Cancel' : 'Edit'}
+                </button>
+                <button onClick={() => toggleCode(code)} style={{ border: '1px solid #252525', background: '#080808', color: '#ccc', borderRadius: 999, padding: '8px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 800 }}>
+                  {code.active ? 'Pause' : 'Reactivate'}
+                </button>
+                <button
+                  onClick={() => deleteCode(code)}
+                  disabled={deletingCode === code.code || code.redeemed_count > 0}
+                  title={code.redeemed_count > 0 ? 'Pause used codes instead so redemption history stays intact.' : 'Delete code'}
+                  style={{
+                    border: '1px solid #2a1616', background: '#0a0505',
+                    color: code.redeemed_count > 0 ? '#555' : '#f87171',
+                    borderRadius: 999, padding: '8px 12px',
+                    cursor: code.redeemed_count > 0 ? 'not-allowed' : 'pointer',
+                    fontSize: 12, fontWeight: 800,
+                  }}
+                >
+                  {deletingCode === code.code ? 'Deleting...' : 'Delete'}
+                </button>
               </div>
-              <span style={{ color: code.active ? '#34d399' : '#777', fontSize: 12, fontWeight: 800 }}>
-                {code.active ? 'Active' : 'Paused'}
-              </span>
-              <button onClick={() => toggleCode(code)} style={{ border: '1px solid #252525', background: '#080808', color: '#ccc', borderRadius: 999, padding: '8px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 800 }}>
-                {code.active ? 'Pause' : 'Reactivate'}
-              </button>
-              <button
-                onClick={() => deleteCode(code)}
-                disabled={deletingCode === code.code || code.redeemed_count > 0}
-                title={code.redeemed_count > 0 ? 'Pause used codes instead so redemption history stays intact.' : 'Delete code'}
-                style={{
-                  border: '1px solid #2a1616',
-                  background: '#0a0505',
-                  color: code.redeemed_count > 0 ? '#555' : '#f87171',
-                  borderRadius: 999,
-                  padding: '8px 12px',
-                  cursor: code.redeemed_count > 0 ? 'not-allowed' : 'pointer',
-                  fontSize: 12,
-                  fontWeight: 800,
-                }}
-              >
-                {deletingCode === code.code ? 'Deleting...' : 'Delete'}
-              </button>
+              {editingCode === code.code && (
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginTop: 14, paddingTop: 14, borderTop: '1px solid #1a1a1a' }}>
+                  <label style={{ display: 'grid', gap: 6, color: '#555', fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+                    Days
+                    <input value={editDays} onChange={(e) => setEditDays(e.target.value)} style={{ width: 80, minHeight: 38, borderRadius: 8, border: '1px solid #222', background: '#000', color: '#fff', padding: '0 10px', fontSize: 14, fontWeight: 700 }} />
+                  </label>
+                  <label style={{ display: 'grid', gap: 6, color: '#555', fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+                    Max Uses
+                    <input value={editUses} onChange={(e) => setEditUses(e.target.value)} style={{ width: 80, minHeight: 38, borderRadius: 8, border: '1px solid #222', background: '#000', color: '#fff', padding: '0 10px', fontSize: 14, fontWeight: 700 }} />
+                  </label>
+                  <button onClick={() => saveEdit(code)} disabled={editSaving} style={{ minHeight: 38, borderRadius: 8, border: '1px solid #34d399', background: '#0a1a12', color: '#34d399', fontSize: 12, fontWeight: 900, padding: '0 16px', cursor: editSaving ? 'wait' : 'pointer' }}>
+                    {editSaving ? 'Saving...' : 'Save changes'}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </section>

@@ -64,9 +64,14 @@ export async function PATCH(req: NextRequest) {
   const code = normalizePromoCode(body.code)
   if (!code) return NextResponse.json({ error: 'Code required' }, { status: 400 })
 
+  const update: Record<string, unknown> = {}
+  if (body.active !== undefined) update.active = body.active === true
+  if (body.trial_days !== undefined) update.trial_days = Number(body.trial_days)
+  if (body.max_redemptions !== undefined) update.max_redemptions = Number(body.max_redemptions)
+
   const { data, error } = await getSupabase()
     .from('trial_promo_codes')
-    .update({ active: body.active === true })
+    .update(update)
     .eq('code', code)
     .select('id, code, label, trial_days, max_redemptions, redeemed_count, active, expires_at, created_at')
     .single()
