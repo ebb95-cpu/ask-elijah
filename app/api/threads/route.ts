@@ -69,6 +69,8 @@ export async function POST(req: NextRequest) {
       .from('questions')
       .select('id', { count: 'exact', head: true })
       .eq('email', email)
+      .eq('status', 'chat')
+      .is('thread_id', null)
       .is('deleted_at', null)
 
     if ((count ?? 0) >= FREE_QUESTION_LIMIT) {
