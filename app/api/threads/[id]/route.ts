@@ -21,15 +21,16 @@ async function getAuthEmail(req: NextRequest): Promise<string | null> {
 }
 
 // GET /api/threads/[id]
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const email = await getAuthEmail(req)
   if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { id } = await params
   const supabase = getSupabase()
   const { data, error } = await supabase
     .from('questions')
     .select('id, question, answer, action_steps, solved, solved_at, created_at, conversation, status')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('email', email)
     .single()
 
@@ -38,10 +39,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // PATCH /api/threads/[id] — update conversation, solved status, action steps
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const email = await getAuthEmail(req)
   if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { id } = await params
   const body = await req.json().catch(() => ({}))
   const supabase = getSupabase()
 
@@ -49,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const { data: existing } = await supabase
     .from('questions')
     .select('id, email')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('email', email)
     .single()
 
