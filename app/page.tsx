@@ -390,7 +390,7 @@ export default function HomePage() {
     }
     if (mode === 'idle') {
       setSession('pending_question', question.trim())
-      window.location.assign(`/sign-up?intent=ask&q=${encodeURIComponent(question.trim())}`)
+      window.location.assign(`/sign-up?intent=ask&q=${encodeURIComponent(question.trim())}&next=/ask`)
       return
     }
     setAskError('')
