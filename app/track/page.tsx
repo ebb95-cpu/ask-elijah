@@ -102,7 +102,9 @@ export default function LockerRoomPage() {
   const [authToken, setAuthToken] = useState('')
   const [threads, setThreads] = useState<Thread[]>([])
   const [profile, setProfile] = useState<{ firstName?: string; position?: string; level?: string; country?: string }>({})
+  const [isPro, setIsPro] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   // Active thread
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -137,9 +139,14 @@ export default function LockerRoomPage() {
 
       const email = sessionData.session?.user?.email || ''
       try {
-        const res = await fetch(`/api/profile?email=${encodeURIComponent(email)}`)
-        const p = await res.json()
+        const [profileRes, subRes] = await Promise.all([
+          fetch(`/api/profile?email=${encodeURIComponent(email)}`),
+          fetch(`/api/subscription-status`, { headers: { Authorization: `Bearer ${token}` } }),
+        ])
+        const p = await profileRes.json()
         setProfile({ firstName: p.first_name || p.name || '', position: p.position, level: p.level, country: p.country })
+        const sub = await subRes.json().catch(() => ({}))
+        setIsPro(sub.subscribed === true)
       } catch { /* optional */ }
 
       const res = await fetch('/api/threads', { headers: { Authorization: `Bearer ${token}` } })
@@ -199,6 +206,12 @@ export default function LockerRoomPage() {
         body: JSON.stringify({ question }),
       })
       const data = await res.json()
+      if (res.status === 403 && data.code === 'upgrade_required') {
+        setShowUpgradeModal(true)
+        setCreatingNew(false)
+        setNewInput('')
+        return
+      }
       if (data.thread) {
         const newThread = data.thread as Thread
         const updated = [newThread, ...existingThreads]
@@ -493,15 +506,25 @@ export default function LockerRoomPage() {
                       }
                     </div>
 
-                    {/* Follow-up tap prompt */}
+                    {/* Follow-up tap prompt — Pro only */}
                     {msg.role === 'elijah' && m.followUp && i === messages.length - 1 && !solvedPromptShown && (
-                      <button
-                        onClick={() => { setInput(m.followUp || ''); setTimeout(() => inputRef.current?.focus(), 50) }}
-                        className="mt-3 group flex items-center gap-2 border border-white/10 hover:border-white/20 rounded-full px-3.5 py-2 transition-colors"
-                      >
-                        <span className="text-xs text-gray-500 group-hover:text-gray-300 transition-colors">{m.followUp}</span>
-                        <span className="text-gray-700 group-hover:text-gray-500 text-xs">→</span>
-                      </button>
+                      isPro ? (
+                        <button
+                          onClick={() => { setInput(m.followUp || ''); setTimeout(() => inputRef.current?.focus(), 50) }}
+                          className="mt-3 group flex items-center gap-2 border border-white/10 hover:border-white/20 rounded-full px-3.5 py-2 transition-colors"
+                        >
+                          <span className="text-xs text-gray-500 group-hover:text-gray-300 transition-colors">{m.followUp}</span>
+                          <span className="text-gray-700 group-hover:text-gray-500 text-xs">→</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setShowUpgradeModal(true)}
+                          className="mt-3 flex items-center gap-2 border border-white/8 rounded-full px-3.5 py-2 opacity-50 hover:opacity-100 transition-opacity"
+                        >
+                          <span className="text-xs text-gray-600">Go deeper with Pro</span>
+                          <span className="text-gray-700 text-xs">→</span>
+                        </button>
+                      )
                     )}
                   </div>
                 )
@@ -548,22 +571,42 @@ export default function LockerRoomPage() {
             </div>
 
             {/* Action steps — right panel on desktop */}
-            {hasAnswer && actionSteps.length > 0 && (
+            {hasAnswer && (
               <div className="lg:w-64 xl:w-72 shrink-0 px-4 lg:px-5 pb-4 lg:py-4 border-t border-white/5 lg:border-t-0 lg:border-l lg:border-white/5">
-                <div className="rounded-[14px] border border-white/8 bg-white/[0.03] p-4">
-                  <p className="text-[9px] text-gray-500 uppercase tracking-[0.18em] font-black mb-3">Your rep</p>
-                  <div className="flex flex-col gap-2.5">
-                    {actionSteps.map((step, i) => (
-                      <div key={i} className="flex items-start gap-2">
-                        <div className="w-1 h-1 rounded-full bg-emerald-400 mt-2 shrink-0" />
-                        <p className="text-xs text-gray-200 leading-relaxed">{step}</p>
-                      </div>
-                    ))}
+                {isPro && actionSteps.length > 0 ? (
+                  <div className="rounded-[14px] border border-white/8 bg-white/[0.03] p-4">
+                    <p className="text-[9px] text-gray-500 uppercase tracking-[0.18em] font-black mb-3">Your rep</p>
+                    <div className="flex flex-col gap-2.5">
+                      {actionSteps.map((step, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <div className="w-1 h-1 rounded-full bg-emerald-400 mt-2 shrink-0" />
+                          <p className="text-xs text-gray-200 leading-relaxed">{step}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-700 mt-3 leading-relaxed">
+                      Try this before your next session.
+                    </p>
                   </div>
-                  <p className="text-[10px] text-gray-700 mt-3 leading-relaxed">
-                    Try this before your next session.
-                  </p>
-                </div>
+                ) : !isPro ? (
+                  <div className="rounded-[14px] border border-white/8 bg-white/[0.02] p-4">
+                    <p className="text-[9px] text-gray-600 uppercase tracking-[0.18em] font-black mb-3">Your rep</p>
+                    <div className="flex flex-col gap-2 mb-4 select-none">
+                      {['— — — — — — — —', '— — — — — —', '— — — — — — — — —'].map((l, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <div className="w-1 h-1 rounded-full bg-white/10 mt-2 shrink-0" />
+                          <p className="text-xs text-white/10">{l}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setShowUpgradeModal(true)}
+                      className="w-full text-[10px] font-black uppercase tracking-[0.14em] text-gray-600 hover:text-white border border-white/8 hover:border-white/20 rounded-full py-2 transition-colors"
+                    >
+                      Unlock with Pro →
+                    </button>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
@@ -605,9 +648,44 @@ export default function LockerRoomPage() {
     )
   }
 
+  // ── Upgrade modal ─────────────────────────────────────────────────────────
+  const UpgradeModal = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-5">
+      <div className="w-full max-w-sm rounded-[2rem] bg-[#F7F5F0] text-black p-8">
+        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-black/40 mb-3">Locker room</p>
+        <h2 className="text-2xl font-bold tracking-tight mb-2">You&rsquo;ve hit the free limit.</h2>
+        <p className="text-sm text-gray-500 leading-relaxed mb-6">
+          Free accounts get 3 saved questions. Go Pro to save unlimited questions, get action steps after every answer, and go deeper with follow-ups.
+        </p>
+        <div className="flex flex-col gap-2 mb-4">
+          {['Unlimited saved questions', 'Action steps after every answer', 'Follow-up questions', 'Solved / unsolved tracking'].map(f => (
+            <div key={f} className="flex items-center gap-2.5">
+              <span className="text-emerald-600 text-xs font-black">✓</span>
+              <span className="text-sm text-black/80">{f}</span>
+            </div>
+          ))}
+        </div>
+        <a
+          href="/pricing"
+          className="block w-full bg-black text-white text-center py-3 text-sm font-bold rounded-full hover:opacity-80 transition-opacity mb-3"
+        >
+          Go Pro →
+        </a>
+        <button
+          onClick={() => setShowUpgradeModal(false)}
+          className="block w-full text-center text-xs text-black/40 hover:text-black/60 transition-colors"
+        >
+          Maybe later
+        </button>
+      </div>
+    </div>
+  )
+
   // ── Page layout ────────────────────────────────────────────────────────────
   return (
     <div className="min-h-[100dvh] bg-black text-white flex flex-col">
+      {showUpgradeModal && <UpgradeModal />}
+
       {/* Nav */}
       <nav className="flex items-center justify-between px-5 py-3.5 shrink-0 border-b border-white/5">
         <Logo />
@@ -621,8 +699,14 @@ export default function LockerRoomPage() {
         >
           {sidebarOpen ? '✕ Close' : `Questions (${threads.length})`}
         </button>
-        {/* Desktop: profile link */}
-        <a href="/profile" className="hidden lg:block text-xs text-gray-600 hover:text-white transition-colors">Profile →</a>
+        {/* Desktop: pro badge or upgrade link */}
+        <div className="hidden lg:flex items-center gap-3">
+          {isPro
+            ? <span className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-500 border border-emerald-500/30 rounded-full px-2 py-0.5">Pro</span>
+            : <button onClick={() => setShowUpgradeModal(true)} className="text-xs text-gray-600 hover:text-white transition-colors">Upgrade →</button>
+          }
+          <a href="/profile" className="text-xs text-gray-600 hover:text-white transition-colors">Profile →</a>
+        </div>
       </nav>
 
       {/* Body */}

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
+import { profileHasEntitlement } from '@/lib/access-gate'
 
 export const dynamic = 'force-dynamic'
+
+const FREE_QUESTION_LIMIT = 3
 
 async function getAuthEmail(req: NextRequest): Promise<string | null> {
   const authHeader = req.headers.get('authorization')
@@ -51,6 +54,31 @@ export async function POST(req: NextRequest) {
   if (question.length > 2000) return NextResponse.json({ error: 'Too long' }, { status: 400 })
 
   const supabase = getSupabase()
+
+  // Check free tier limit — Pro users are unlimited, free users get 3 saved questions
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_founding_member, subscription_status, trial_ends_at, payment_grace_ends_at')
+    .eq('email', email)
+    .maybeSingle()
+
+  const isPro = profileHasEntitlement(profile)
+
+  if (!isPro) {
+    const { count } = await supabase
+      .from('questions')
+      .select('id', { count: 'exact', head: true })
+      .eq('email', email)
+      .is('deleted_at', null)
+
+    if ((count ?? 0) >= FREE_QUESTION_LIMIT) {
+      return NextResponse.json(
+        { error: 'Free accounts get 3 saved questions. Upgrade to Pro for unlimited.', code: 'upgrade_required' },
+        { status: 403 },
+      )
+    }
+  }
+
   const { data, error } = await supabase
     .from('questions')
     .insert({
