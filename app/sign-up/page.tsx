@@ -36,6 +36,7 @@ function SignUpInner() {
   const prefillPromoCode = searchParams?.get('promo') || searchParams?.get('code') || ''
   const nextUrl = rawNextUrl.startsWith('/') && !rawNextUrl.startsWith('//') ? rawNextUrl : ''
   const isMeTooIntent = intent === 'me-too' && !!painQuestion
+  const isAskIntent = intent === 'ask' && !!painQuestion
   const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState(prefillEmail)
   const [password, setPassword] = useState('')
@@ -121,11 +122,20 @@ function SignUpInner() {
 
       <div className="w-full max-w-sm rounded-[2rem] bg-[#F7F5F0] text-black p-10">
         <p className="mb-4 text-[10px] font-black uppercase tracking-[0.24em] text-black/40">
-          {isMeTooIntent ? 'Your version matters' : 'Locker room'}
+          {isAskIntent ? 'Your answer is ready' : isMeTooIntent ? 'Your version matters' : 'Locker room'}
         </p>
         <h1 className="text-2xl font-bold tracking-tight mb-3">
-          {isMeTooIntent ? 'Get the answer for what you are actually dealing with.' : 'Save your answers.'}
+          {isAskIntent ? 'Create an account to get it.' : isMeTooIntent ? 'Get the answer for what you are actually dealing with.' : 'Save your answers.'}
         </h1>
+        {isAskIntent && (
+          <div className="mb-6 rounded-[1.25rem] border border-black/10 bg-white/60 p-4">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Your question</p>
+            <p className="text-sm font-semibold leading-relaxed text-black">&ldquo;{painQuestion}&rdquo;</p>
+            <p className="mt-3 text-xs leading-relaxed text-black/50">
+              The answer exists. One account stands between you and it. No card required.
+            </p>
+          </div>
+        )}
         {isMeTooIntent && (
           <div className="mb-6 rounded-[1.25rem] border border-black/10 bg-white/60 p-4">
             <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-black/40">You related to</p>
@@ -138,7 +148,7 @@ function SignUpInner() {
         <p className="text-gray-500 text-sm mb-8">
           Already have an account?{' '}
           <Link
-            href={`/sign-in${isMeTooIntent ? `?intent=me-too&q=${encodeURIComponent(painQuestion)}${nextUrl ? `&next=${encodeURIComponent(nextUrl)}` : ''}` : ''}`}
+            href={`/sign-in${isAskIntent ? `?next=${encodeURIComponent('/ask')}` : isMeTooIntent ? `?intent=me-too&q=${encodeURIComponent(painQuestion)}${nextUrl ? `&next=${encodeURIComponent(nextUrl)}` : ''}` : ''}`}
             className="text-black underline underline-offset-2 hover:opacity-70"
           >
             Sign in
