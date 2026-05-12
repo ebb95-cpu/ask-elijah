@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react'
 import LoadingDots from '@/components/ui/LoadingDots'
 
+type Redemption = {
+  email: string
+  name: string
+  redeemed_at: string
+}
+
 type PromoCode = {
   id: string
   code: string
@@ -13,6 +19,7 @@ type PromoCode = {
   active: boolean
   expires_at: string | null
   created_at: string
+  redemptions: Redemption[]
 }
 
 export default function PromoCodesPage() {
@@ -224,6 +231,18 @@ export default function PromoCodesPage() {
                   <button onClick={() => saveEdit(code)} disabled={editSaving} style={{ minHeight: 38, borderRadius: 8, border: '1px solid #34d399', background: '#0a1a12', color: '#34d399', fontSize: 12, fontWeight: 900, padding: '0 16px', cursor: editSaving ? 'wait' : 'pointer' }}>
                     {editSaving ? 'Saving...' : 'Save changes'}
                   </button>
+                </div>
+              )}
+              {code.redemptions && code.redemptions.length > 0 && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #111' }}>
+                  <p style={{ fontSize: 10, color: '#444', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 8px' }}>Redeemed by</p>
+                  {code.redemptions.map((r) => (
+                    <div key={r.email} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                      <span style={{ fontSize: 13, color: '#fff', fontWeight: 700 }}>{r.name || '—'}</span>
+                      <span style={{ fontSize: 12, color: '#555' }}>{r.email}</span>
+                      <span style={{ fontSize: 11, color: '#333', marginLeft: 'auto' }}>{new Date(r.redeemed_at).toLocaleDateString()}</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

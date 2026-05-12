@@ -9,21 +9,56 @@ export async function GET() {
   const unauthorized = await requireAdmin()
   if (unauthorized) return unauthorized
 
-  const { data, error } = await getSupabase()
-    .from('trial_promo_codes')
-    .select('id, code, label, trial_days, max_redemptions, redeemed_count, active, expires_at, created_at')
-    .order('created_at', { ascending: false })
-    .limit(100)
+  const supabase = getSupabase()
 
-  if (error) {
-    const missing = /trial_promo_codes|relation|schema cache|42P01/i.test(error.message || '')
+  const [codesRes, redemptionsRes, profilesRes] = await Promise.all([
+    supabase
+      .from('trial_promo_codes')
+      .select('id, code, label, trial_days, max_redemptions, redeemed_count, active, expires_at, created_at')
+      .order('created_at', { ascending: false })
+      .limit(100),
+    supabase
+      .from('trial_promo_redemptions')
+      .select('code, email, created_at')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('profiles')
+      .select('email, first_name, name'),
+  ])
+
+  if (codesRes.error) {
+    const missing = /trial_promo_codes|relation|schema cache|42P01/i.test(codesRes.error.message || '')
     return NextResponse.json(
-      { codes: [], error: missing ? 'Promo code storage is missing. Apply supabase/migrations/add-trial-promo-codes.sql.' : error.message },
+      { codes: [], error: missing ? 'Promo code storage is missing. Apply supabase/migrations/add-trial-promo-codes.sql.' : codesRes.error.message },
       { status: missing ? 200 : 500 }
     )
   }
 
-  return NextResponse.json({ codes: data || [] })
+  // Build profile name lookup
+  type Profile = { email: string; first_name: string | null; name: string | null }
+  const profileMap = new Map<string, string>()
+  for (const p of (profilesRes.data || []) as Profile[]) {
+    if (p.email) profileMap.set(p.email.toLowerCase(), p.first_name || p.name || '')
+  }
+
+  // Group redemptions by code
+  type Redemption = { code: string; email: string; created_at: string }
+  const redemptionsByCode = new Map<string, Array<{ email: string; name: string; redeemed_at: string }>>()
+  for (const r of (redemptionsRes.data || []) as Redemption[]) {
+    if (!redemptionsByCode.has(r.code)) redemptionsByCode.set(r.code, [])
+    redemptionsByCode.get(r.code)!.push({
+      email: r.email,
+      name: profileMap.get(r.email.toLowerCase()) || '',
+      redeemed_at: r.created_at,
+    })
+  }
+
+  const codes = (codesRes.data || []).map((c) => ({
+    ...c,
+    redemptions: redemptionsByCode.get(c.code) || [],
+  }))
+
+  return NextResponse.json({ codes })
 }
 
 export async function POST(req: NextRequest) {
