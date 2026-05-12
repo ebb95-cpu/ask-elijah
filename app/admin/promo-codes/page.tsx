@@ -25,6 +25,7 @@ type PromoCode = {
 export default function PromoCodesPage() {
   const [codes, setCodes] = useState<PromoCode[]>([])
   const [label, setLabel] = useState('Tester trial')
+  const [customCode, setCustomCode] = useState('')
   const [maxRedemptions, setMaxRedemptions] = useState('1')
   const [trialDays, setTrialDays] = useState('30')
   const [loading, setLoading] = useState(true)
@@ -66,7 +67,7 @@ export default function PromoCodesPage() {
       const res = await fetch('/api/admin/promo-codes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label, maxRedemptions, trialDays }),
+        body: JSON.stringify({ label, maxRedemptions, trialDays, code: customCode.trim().toUpperCase() || undefined }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Could not create code')
@@ -169,6 +170,7 @@ export default function PromoCodesPage() {
         <form onSubmit={createCode} style={{ border: '1px solid #1c1c1c', borderRadius: 14, padding: 18, background: '#050505', marginBottom: 18 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, alignItems: 'end' }}>
             <Field label="Label" value={label} onChange={setLabel} />
+            <Field label="Code (optional)" value={customCode} onChange={(v) => setCustomCode(v.toUpperCase())} placeholder="e.g. ELIJAH30" />
             <Field label="Days" value={trialDays} onChange={setTrialDays} />
             <Field label="Uses" value={maxRedemptions} onChange={setMaxRedemptions} />
             <button disabled={saving} style={{ minHeight: 44, borderRadius: 8, border: '1px solid #fff', background: '#fff', color: '#000', fontSize: 13, fontWeight: 900, padding: '0 16px', cursor: saving ? 'wait' : 'pointer' }}>
@@ -253,11 +255,11 @@ export default function PromoCodesPage() {
   )
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
   return (
     <label style={{ display: 'grid', gap: 7, color: '#666', fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
       {label}
-      <input value={value} onChange={(e) => onChange(e.target.value)} style={{ minHeight: 42, borderRadius: 8, border: '1px solid #222', background: '#000', color: '#fff', padding: '0 12px', fontSize: 14, fontWeight: 700 }} />
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ minHeight: 42, borderRadius: 8, border: '1px solid #222', background: '#000', color: '#fff', padding: '0 12px', fontSize: 14, fontWeight: 700 }} />
     </label>
   )
 }
